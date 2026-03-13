@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
 import StepWorkExperience from "@/components/onboarding/StepWorkExperience";
+import StepEducation from "@/components/onboarding/StepEducation";
 
 const TOTAL_STEPS = 4;
 
