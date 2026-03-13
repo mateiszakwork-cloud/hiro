@@ -58,6 +58,38 @@ export type Database = {
           },
         ]
       }
+      languages: {
+        Row: {
+          created_at: string
+          id: string
+          language_name: string
+          proficiency: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          language_name: string
+          proficiency: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          language_name?: string
+          proficiency?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "languages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
