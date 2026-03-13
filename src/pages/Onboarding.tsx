@@ -5,6 +5,7 @@ import { Progress } from "@/components/ui/progress";
 import StepWorkExperience from "@/components/onboarding/StepWorkExperience";
 import StepEducation from "@/components/onboarding/StepEducation";
 import StepSkills from "@/components/onboarding/StepSkills";
+import StepLanguages from "@/components/onboarding/StepLanguages";
 
 const TOTAL_STEPS = 4;
 
@@ -18,9 +19,23 @@ const Onboarding = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         navigate("/login");
-      } else {
-        setUserId(session.user.id);
+        return;
       }
+      const uid = session.user.id;
+
+      // Redirect if onboarding already complete
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("onboarding_complete")
+        .eq("id", uid)
+        .single();
+
+      if (profile?.onboarding_complete) {
+        navigate("/dashboard");
+        return;
+      }
+
+      setUserId(uid);
     };
     checkAuth();
   }, [navigate]);
@@ -28,26 +43,11 @@ const Onboarding = () => {
   const progressValue = (currentStep / TOTAL_STEPS) * 100;
 
   const handleNext = () => {
-    if (currentStep < TOTAL_STEPS) {
-      setCurrentStep((s) => s + 1);
-    }
+    if (currentStep < TOTAL_STEPS) setCurrentStep((s) => s + 1);
   };
 
   const handleBack = () => {
-    if (currentStep > 1) {
-      setCurrentStep((s) => s - 1);
-    }
-  };
-
-  const handleFinish = async () => {
-    if (!userId) return;
-    const { error } = await supabase
-      .from("profiles")
-      .update({ onboarding_complete: true })
-      .eq("id", userId);
-    if (!error) {
-      navigate("/dashboard");
-    }
+    if (currentStep > 1) setCurrentStep((s) => s - 1);
   };
 
   if (!userId) return null;
@@ -70,43 +70,11 @@ const Onboarding = () => {
           <StepSkills userId={userId} onBack={handleBack} onNext={handleNext} />
         )}
         {currentStep === 4 && (
-          <Placeholder step={4} onBack={handleBack} onFinish={handleFinish} />
+          <StepLanguages userId={userId} onBack={handleBack} onFinish={() => navigate("/dashboard")} />
         )}
       </div>
     </div>
   );
 };
-
-const Placeholder = ({
-  step,
-  onBack,
-  onNext,
-  onFinish,
-}: {
-  step: number;
-  onBack: () => void;
-  onNext?: () => void;
-  onFinish?: () => void;
-}) => (
-  <div className="rounded-lg bg-card p-8 shadow-sm">
-    <h1 className="text-2xl font-bold text-foreground">Step {step}</h1>
-    <p className="mt-2 text-muted-foreground">Coming soon…</p>
-    <div className="mt-8 flex justify-between">
-      <button onClick={onBack} className="text-sm font-medium text-muted-foreground hover:text-foreground">
-        ← Back
-      </button>
-      {onNext && (
-        <button onClick={onNext} className="rounded-lg bg-primary px-6 py-2 text-sm font-semibold text-primary-foreground hover:bg-accent transition-colors">
-          Next →
-        </button>
-      )}
-      {onFinish && (
-        <button onClick={onFinish} className="rounded-lg bg-primary px-6 py-2 text-sm font-semibold text-primary-foreground hover:bg-accent transition-colors">
-          Finish
-        </button>
-      )}
-    </div>
-  </div>
-);
 
 export default Onboarding;
