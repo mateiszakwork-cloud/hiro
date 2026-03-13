@@ -38,6 +38,56 @@ export type Database = {
         }
         Relationships: []
       }
+      work_experiences: {
+        Row: {
+          bullet_points: string[]
+          company_name: string
+          created_at: string
+          end_month: number | null
+          end_year: number | null
+          id: string
+          is_current: boolean
+          job_title: string
+          start_month: number
+          start_year: number
+          user_id: string
+        }
+        Insert: {
+          bullet_points?: string[]
+          company_name: string
+          created_at?: string
+          end_month?: number | null
+          end_year?: number | null
+          id?: string
+          is_current?: boolean
+          job_title: string
+          start_month: number
+          start_year: number
+          user_id: string
+        }
+        Update: {
+          bullet_points?: string[]
+          company_name?: string
+          created_at?: string
+          end_month?: number | null
+          end_year?: number | null
+          id?: string
+          is_current?: boolean
+          job_title?: string
+          start_month?: number
+          start_year?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_experiences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
