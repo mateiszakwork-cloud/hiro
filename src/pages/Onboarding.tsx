@@ -63,7 +63,7 @@ const Onboarding = () => {
           <StepWorkExperience userId={userId} onNext={handleNext} />
         )}
         {currentStep === 2 && (
-          <Placeholder step={2} onBack={handleBack} onNext={handleNext} />
+          <StepEducation userId={userId} onBack={handleBack} onNext={handleNext} />
         )}
         {currentStep === 3 && (
           <Placeholder step={3} onBack={handleBack} onNext={handleNext} />
