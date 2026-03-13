@@ -14,6 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      education: {
+        Row: {
+          created_at: string
+          degree: string
+          end_year: number | null
+          field_of_study: string
+          id: string
+          institution: string
+          is_expected: boolean
+          start_year: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          degree: string
+          end_year?: number | null
+          field_of_study: string
+          id?: string
+          institution: string
+          is_expected?: boolean
+          start_year: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          degree?: string
+          end_year?: number | null
+          field_of_study?: string
+          id?: string
+          institution?: string
+          is_expected?: boolean
+          start_year?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "education_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string

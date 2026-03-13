@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
 import StepWorkExperience from "@/components/onboarding/StepWorkExperience";
+import StepEducation from "@/components/onboarding/StepEducation";
 
 const TOTAL_STEPS = 4;
 
@@ -62,7 +63,7 @@ const Onboarding = () => {
           <StepWorkExperience userId={userId} onNext={handleNext} />
         )}
         {currentStep === 2 && (
-          <Placeholder step={2} onBack={handleBack} onNext={handleNext} />
+          <StepEducation userId={userId} onBack={handleBack} onNext={handleNext} />
         )}
         {currentStep === 3 && (
           <Placeholder step={3} onBack={handleBack} onNext={handleNext} />
