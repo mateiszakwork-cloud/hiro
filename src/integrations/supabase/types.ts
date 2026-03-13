@@ -82,6 +82,38 @@ export type Database = {
         }
         Relationships: []
       }
+      skills: {
+        Row: {
+          created_at: string
+          hard_skills: string[]
+          id: string
+          soft_skills: string[]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          hard_skills?: string[]
+          id?: string
+          soft_skills?: string[]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          hard_skills?: string[]
+          id?: string
+          soft_skills?: string[]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "skills_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       work_experiences: {
         Row: {
           bullet_points: string[]
