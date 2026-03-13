@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
 import StepWorkExperience from "@/components/onboarding/StepWorkExperience";
 import StepEducation from "@/components/onboarding/StepEducation";
+import StepSkills from "@/components/onboarding/StepSkills";
 
 const TOTAL_STEPS = 4;
 
