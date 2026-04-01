@@ -58,6 +58,74 @@ export type Database = {
           },
         ]
       }
+      jobs: {
+        Row: {
+          application_deadline: string | null
+          company_name: string | null
+          created_at: string
+          duration: string | null
+          function: string | null
+          hard_skills: string[] | null
+          id: string
+          job_title: string | null
+          languages_required: string[] | null
+          location: string | null
+          match_score: number | null
+          notes: string | null
+          soft_skills: string[] | null
+          status: string
+          url: string | null
+          user_id: string
+          work_mode: string | null
+        }
+        Insert: {
+          application_deadline?: string | null
+          company_name?: string | null
+          created_at?: string
+          duration?: string | null
+          function?: string | null
+          hard_skills?: string[] | null
+          id?: string
+          job_title?: string | null
+          languages_required?: string[] | null
+          location?: string | null
+          match_score?: number | null
+          notes?: string | null
+          soft_skills?: string[] | null
+          status?: string
+          url?: string | null
+          user_id: string
+          work_mode?: string | null
+        }
+        Update: {
+          application_deadline?: string | null
+          company_name?: string | null
+          created_at?: string
+          duration?: string | null
+          function?: string | null
+          hard_skills?: string[] | null
+          id?: string
+          job_title?: string | null
+          languages_required?: string[] | null
+          location?: string | null
+          match_score?: number | null
+          notes?: string | null
+          soft_skills?: string[] | null
+          status?: string
+          url?: string | null
+          user_id?: string
+          work_mode?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jobs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       languages: {
         Row: {
           created_at: string
