@@ -59,6 +59,11 @@ const Register = () => {
         <h1 className="text-2xl font-bold text-primary text-center mb-6">Create your account</h1>
         <form onSubmit={handleSubmit} noValidate className="space-y-4">
           <div className="space-y-1">
+            <Label htmlFor="fullName">Full Name</Label>
+            <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} className="rounded-lg" placeholder="John Doe" />
+            {errors.fullName && <InlineError message={errors.fullName} />}
+          </div>
+          <div className="space-y-1">
             <Label htmlFor="email">Email</Label>
             <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="rounded-lg" placeholder="you@example.com" />
             {errors.email && <InlineError message={errors.email} />}

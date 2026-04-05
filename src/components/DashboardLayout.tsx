@@ -70,6 +70,7 @@ const DashboardLayout = () => {
       </nav>
 
       <div className="px-4 pb-5 space-y-3">
+        {fullName && <p className="text-sm text-white font-medium truncate">{fullName}</p>}
         <p className="text-xs text-white/50 truncate">{email}</p>
         <button
           onClick={handleLogout}
