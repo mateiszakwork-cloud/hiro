@@ -4,10 +4,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Briefcase, MapPin, Trash2, ExternalLink } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Briefcase, MapPin, Trash2, ExternalLink, Loader2 } from "lucide-react";
 import { format } from "date-fns";
+import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -54,14 +57,26 @@ const getScoreColor = (score: number | null) => {
   return "text-red-600 border-red-300 bg-red-50";
 };
 
+const isValidUrl = (str: string): boolean => {
+  try {
+    const u = new URL(str);
+    return u.protocol === "http:" || u.protocol === "https:";
+  } catch {
+    return false;
+  }
+};
+
 const JobTracker = () => {
   const navigate = useNavigate();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [url, setUrl] = useState("");
+  const [urlError, setUrlError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [parsing, setParsing] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [deleteJobId, setDeleteJobId] = useState<string | null>(null);
+  const [parseFailedUrl, setParseFailedUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const init = async () => {
@@ -84,53 +99,75 @@ const JobTracker = () => {
 
   const handleAddJob = async () => {
     if (!userId) return;
+    setUrlError("");
     const jobUrl = url.trim();
-    if (!jobUrl) return;
+
+    if (!jobUrl) {
+      setUrlError("Please paste a valid job posting URL");
+      return;
+    }
+    if (!isValidUrl(jobUrl)) {
+      setUrlError("Please paste a valid job posting URL");
+      return;
+    }
+
     setLoading(true);
+    setParsing(true);
+    setUrl("");
 
     try {
-      // First, immediately insert a placeholder row so it appears in the table
-      const { data: placeholder, error: placeholderErr } = await supabase
-        .from("jobs")
-        .insert({ user_id: userId, url: jobUrl, status: "Saved" })
-        .select("id, url, company_name, job_title, function, location, work_mode, duration, status, match_score, created_at")
-        .single();
+      const { data: result, error: fnError } = await supabase.functions.invoke("parse-job", {
+        body: { url: jobUrl },
+      });
 
-      if (placeholderErr || !placeholder) {
+      if (fnError) {
+        toast.error("Failed to add job. Please try again.");
+        setParsing(false);
         setLoading(false);
         return;
       }
 
-      setUrl("");
-      setJobs((prev) => [placeholder, ...prev]);
+      if (result?.success && result.job) {
+        setJobs((prev) => [result.job, ...prev]);
+        toast.success("Job added successfully ✓");
+      } else {
+        const errorType = result?.error;
+        const message = result?.message || "Something went wrong.";
+        toast.error(message);
 
-      // Then trigger async parsing via edge function
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        supabase.functions.invoke("parse-job", {
-          body: { url: jobUrl },
-        }).then(({ data: result }) => {
-          if (result?.success && result.job) {
-            // Replace the placeholder with the fully parsed job
-            setJobs((prev) =>
-              prev.map((j) => (j.id === placeholder.id ? { ...result.job, id: placeholder.id } : j))
-            );
-            // Delete the placeholder and keep the parsed one (they may have different IDs)
-            if (result.job.id !== placeholder.id) {
-              supabase.from("jobs").delete().eq("id", placeholder.id);
-              setJobs((prev) => prev.filter((j) => j.id !== placeholder.id));
-              setJobs((prev) => {
-                if (prev.some((j) => j.id === result.job.id)) return prev;
-                return [result.job, ...prev];
-              });
-            }
-          }
-        });
+        if (errorType === "parse_failed") {
+          setParseFailedUrl(jobUrl);
+        }
       }
     } catch (e) {
       console.error("Add job error:", e);
+      toast.error("An unexpected error occurred. Please try again.");
     }
+
+    setParsing(false);
     setLoading(false);
+  };
+
+  const handleAddManually = async () => {
+    if (!userId || !parseFailedUrl) return;
+    const { data } = await supabase
+      .from("jobs")
+      .insert({ user_id: userId, url: parseFailedUrl, status: "Saved" })
+      .select("id, url, company_name, job_title, function, location, work_mode, duration, status, match_score, created_at")
+      .single();
+    if (data) {
+      setJobs((prev) => [data, ...prev]);
+      setSelectedJob(data);
+      navigate(`/jobs/${data.id}`);
+    }
+    setParseFailedUrl(null);
+  };
+
+  const handleRetryParse = () => {
+    if (parseFailedUrl) {
+      setUrl(parseFailedUrl);
+    }
+    setParseFailedUrl(null);
   };
 
   const handleStatusChange = async (jobId: string, newStatus: string) => {
@@ -147,6 +184,8 @@ const JobTracker = () => {
     setDeleteJobId(null);
   };
 
+  const showTable = parsing || jobs.length > 0;
+
   return (
     <div className="space-y-6">
       <div>
@@ -154,21 +193,26 @@ const JobTracker = () => {
         <p className="text-muted-foreground mt-1">Paste a job URL below to automatically fill in all details.</p>
       </div>
 
-      <div className="flex gap-3">
-        <Input
-          value={url} onChange={(e) => setUrl(e.target.value)}
-          placeholder="Paste a job posting URL here (e.g. from LinkedIn, Workday, or a company careers page)..."
-          className="h-12 flex-1 text-sm"
-          onKeyDown={(e) => e.key === "Enter" && handleAddJob()}
-        />
-        <Button onClick={handleAddJob} disabled={loading} className="h-12 px-6 text-sm font-semibold rounded-lg">
-          Add Job
-        </Button>
+      <div>
+        <div className="flex gap-3">
+          <Input
+            value={url}
+            onChange={(e) => { setUrl(e.target.value); if (urlError) setUrlError(""); }}
+            placeholder="Paste a job posting URL here (e.g. from LinkedIn, Workday, or a company careers page)..."
+            className={`h-12 flex-1 text-sm ${urlError ? "border-destructive" : ""}`}
+            onKeyDown={(e) => e.key === "Enter" && !loading && handleAddJob()}
+            disabled={loading}
+          />
+          <Button onClick={handleAddJob} disabled={loading} className="h-12 px-6 text-sm font-semibold rounded-lg">
+            {loading ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Parsing...</> : "Add Job"}
+          </Button>
+        </div>
+        {urlError && <p className="text-destructive text-xs mt-1.5">{urlError}</p>}
       </div>
 
       <Card className="overflow-hidden">
         <CardContent className="p-0">
-          {jobs.length === 0 ? (
+          {!showTable ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
                 <Briefcase className="h-8 w-8 text-muted-foreground" />
@@ -187,6 +231,25 @@ const JobTracker = () => {
                   </tr>
                 </thead>
                 <tbody>
+                  {parsing && (
+                    <tr className="border-b animate-pulse">
+                      <td className="px-4 py-3"><div className="flex items-center gap-2.5"><Skeleton className="h-8 w-8 rounded" /><Skeleton className="h-4 w-24" /></div></td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                          <span className="text-muted-foreground text-sm italic">Reading job posting...</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
+                      <td className="px-4 py-3"><Skeleton className="h-4 w-28" /></td>
+                      <td className="px-4 py-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
+                      <td className="px-4 py-3"><Skeleton className="h-4 w-20" /></td>
+                      <td className="px-4 py-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
+                      <td className="px-4 py-3"><Skeleton className="h-8 w-8 rounded-full" /></td>
+                      <td className="px-4 py-3"><Skeleton className="h-4 w-12" /></td>
+                      <td className="px-4 py-3"></td>
+                    </tr>
+                  )}
                   {jobs.map((job) => (
                     <tr key={job.id} onClick={() => setSelectedJob(job)} className="group border-b last:border-0 hover:bg-muted/30 cursor-pointer transition-colors">
                       <td className="px-4 py-3">
@@ -250,6 +313,7 @@ const JobTracker = () => {
         </CardContent>
       </Card>
 
+      {/* Side panel */}
       <Sheet open={!!selectedJob} onOpenChange={(open) => !open && setSelectedJob(null)}>
         <SheetContent className="w-[45vw] sm:max-w-none p-0" side="right">
           {selectedJob && (
@@ -274,6 +338,7 @@ const JobTracker = () => {
         </SheetContent>
       </Sheet>
 
+      {/* Delete confirmation */}
       <AlertDialog open={!!deleteJobId} onOpenChange={(open) => !open && setDeleteJobId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -290,6 +355,22 @@ const JobTracker = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Parse failed modal */}
+      <Dialog open={!!parseFailedUrl} onOpenChange={(open) => !open && setParseFailedUrl(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Could not read this job posting</DialogTitle>
+            <DialogDescription>
+              We could not automatically read this job posting. Would you like to add the details manually?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={handleRetryParse}>Try again</Button>
+            <Button onClick={handleAddManually}>Add manually</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
