@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation, Outlet } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Briefcase, Table, User, LogOut, Menu, X } from "lucide-react";
+import { Table, User, LogOut, Menu, X } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useIsMobile } from "@/hooks/use-mobile";
 
