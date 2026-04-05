@@ -1,6 +1,10 @@
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { UserCircle, Link2, FileText, MessageSquare } from "lucide-react";
+import { UserCircle, Link2, FileText, MessageSquare, Upload, Loader2, CheckCircle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import type { ParsedCVData } from "@/types/cv";
 
 const steps = [
   { icon: UserCircle, title: "Build your profile once", desc: "Your experience, skills, and education — all in one place." },
@@ -11,6 +15,79 @@ const steps = [
 
 const Welcome = () => {
   const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [parsed, setParsed] = useState<ParsedCVData | null>(null);
+  const [summary, setSummary] = useState("");
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== "application/pdf") {
+      toast.error("Please upload a PDF file.");
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File too large. Maximum 10MB.");
+      return;
+    }
+
+    setUploading(true);
+    setParsed(null);
+    setSummary("");
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Please log in first.");
+        setUploading(false);
+        return;
+      }
+
+      const userId = session.user.id;
+      const filePath = `${userId}/cv-${Date.now()}.pdf`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("cv-uploads")
+        .upload(filePath, file);
+
+      if (uploadError) {
+        console.error("Upload error:", uploadError);
+        toast.error("Failed to upload CV.");
+        setUploading(false);
+        return;
+      }
+
+      const { data, error: fnError } = await supabase.functions.invoke("parse-cv", {
+        body: { filePath },
+      });
+
+      if (fnError) {
+        console.error("Parse error:", fnError);
+        toast.error("Failed to parse CV. You can still fill in manually.");
+        setUploading(false);
+        return;
+      }
+
+      const cvData = data as ParsedCVData;
+      setParsed(cvData);
+
+      const expCount = cvData.work_experiences?.length || 0;
+      const skillCount = (cvData.hard_skills?.length || 0) + (cvData.soft_skills?.length || 0);
+      setSummary(`We found ${expCount} experience${expCount !== 1 ? "s" : ""} and ${skillCount} skill${skillCount !== 1 ? "s" : ""}. Review and edit below.`);
+    } catch (err) {
+      console.error("CV upload error:", err);
+      toast.error("Something went wrong. You can still fill in manually.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleProceed = () => {
+    navigate("/onboarding", { state: { cvData: parsed } });
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
@@ -32,12 +109,46 @@ const Welcome = () => {
           ))}
         </div>
 
+        {/* CV Upload Section */}
+        <div className="mb-4 rounded-lg border-2 border-dashed border-border p-6 bg-muted/30">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/pdf"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+
+          {uploading ? (
+            <div className="flex flex-col items-center gap-3">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-sm font-medium text-foreground">Parsing your CV...</p>
+              <p className="text-xs text-muted-foreground">This may take a few seconds</p>
+            </div>
+          ) : parsed ? (
+            <div className="flex flex-col items-center gap-3">
+              <CheckCircle className="h-8 w-8 text-primary" />
+              <p className="text-sm font-medium text-foreground">{summary}</p>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center justify-center gap-2 w-full text-sm font-medium text-primary hover:text-accent transition-colors"
+            >
+              <Upload className="h-4 w-4" />
+              Import from CV (PDF)
+            </button>
+          )}
+        </div>
+
         <Button
-          onClick={() => navigate("/onboarding")}
+          onClick={handleProceed}
           size="lg"
+          disabled={uploading}
           className="w-full rounded-lg text-base font-semibold hover:bg-accent transition-colors"
         >
-          Build my profile
+          {parsed ? "Review & edit my profile" : "Build my profile"}
         </Button>
       </div>
     </div>

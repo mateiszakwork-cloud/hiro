@@ -30,10 +30,25 @@ const emptyBlock = (): WorkBlock => ({
   isCurrent: false, bullets: [""],
 });
 
-interface Props { userId: string; onNext: () => void; }
+interface Props { userId: string; onNext: () => void; initialData?: import("@/types/cv").ParsedWorkExperience[]; }
 
-const StepWorkExperience = ({ userId, onNext }: Props) => {
-  const [blocks, setBlocks] = useState<WorkBlock[]>([emptyBlock()]);
+const StepWorkExperience = ({ userId, onNext, initialData }: Props) => {
+  const [blocks, setBlocks] = useState<WorkBlock[]>(() => {
+    if (initialData && initialData.length > 0) {
+      return initialData.map(d => ({
+        companyName: d.company_name || "",
+        jobTitle: d.job_title || "",
+        location: d.location || "",
+        startMonth: d.start_month || "",
+        startYear: d.start_year ? String(d.start_year) : "",
+        endMonth: d.end_month || "",
+        endYear: d.end_year ? String(d.end_year) : "",
+        isCurrent: d.is_current || false,
+        bullets: d.bullet_points?.length ? d.bullet_points : [""],
+      }));
+    }
+    return [emptyBlock()];
+  });
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [removeIdx, setRemoveIdx] = useState<number | null>(null);

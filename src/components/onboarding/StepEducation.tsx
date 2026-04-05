@@ -22,10 +22,24 @@ const emptyBlock = (): EduBlock => ({
   grade: "", activities: "", description: "",
 });
 
-interface Props { userId: string; onNext: () => void; onBack: () => void; }
+interface Props { userId: string; onNext: () => void; onBack: () => void; initialData?: import("@/types/cv").ParsedEducation[]; }
 
-const StepEducation = ({ userId, onNext, onBack }: Props) => {
-  const [blocks, setBlocks] = useState<EduBlock[]>([emptyBlock()]);
+const StepEducation = ({ userId, onNext, onBack, initialData }: Props) => {
+  const [blocks, setBlocks] = useState<EduBlock[]>(() => {
+    if (initialData && initialData.length > 0) {
+      return initialData.map(d => ({
+        institution: d.institution || "",
+        degree: d.degree || "",
+        fieldOfStudy: d.field_of_study || "",
+        startYear: d.start_year ? String(d.start_year) : "",
+        endYear: d.end_year ? String(d.end_year) : "",
+        grade: d.grade || "",
+        activities: d.activities || "",
+        description: d.description || "",
+      }));
+    }
+    return [emptyBlock()];
+  });
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 

@@ -11,10 +11,15 @@ const PROFICIENCIES = ["Basic", "Conversational", "Professional Working", "Fluen
 interface LangRow { name: string; proficiency: string; }
 const emptyRow = (): LangRow => ({ name: "", proficiency: "" });
 
-interface Props { userId: string; onBack: () => void; onNext: () => void; }
+interface Props { userId: string; onBack: () => void; onNext: () => void; initialData?: import("@/types/cv").ParsedLanguage[]; }
 
-const StepLanguages = ({ userId, onBack, onNext }: Props) => {
-  const [rows, setRows] = useState<LangRow[]>([emptyRow()]);
+const StepLanguages = ({ userId, onBack, onNext, initialData }: Props) => {
+  const [rows, setRows] = useState<LangRow[]>(() => {
+    if (initialData && initialData.length > 0) {
+      return initialData.map(d => ({ name: d.name || "", proficiency: d.proficiency || "" }));
+    }
+    return [emptyRow()];
+  });
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
