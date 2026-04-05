@@ -887,7 +887,7 @@ const JobDetail = () => {
               )}
             </div>
             <Button
-              onClick={handleGenerateCv}
+              onClick={() => handleGenerateCv()}
               disabled={cvLoading}
               className="gap-1.5 bg-[#950606] hover:bg-[#7a0505] text-white"
             >
