@@ -84,16 +84,51 @@ const JobTracker = () => {
 
   const handleAddJob = async () => {
     if (!userId) return;
+    const jobUrl = url.trim();
+    if (!jobUrl) return;
     setLoading(true);
-    const jobUrl = url.trim() || null;
-    const { data, error } = await supabase
-      .from("jobs")
-      .insert({ user_id: userId, url: jobUrl, status: "Saved" })
-      .select("id, url, company_name, job_title, function, location, work_mode, duration, status, match_score, created_at")
-      .single();
-    if (!error && data) {
+
+    try {
+      // First, immediately insert a placeholder row so it appears in the table
+      const { data: placeholder, error: placeholderErr } = await supabase
+        .from("jobs")
+        .insert({ user_id: userId, url: jobUrl, status: "Saved" })
+        .select("id, url, company_name, job_title, function, location, work_mode, duration, status, match_score, created_at")
+        .single();
+
+      if (placeholderErr || !placeholder) {
+        setLoading(false);
+        return;
+      }
+
       setUrl("");
-      setJobs((prev) => [data, ...prev]);
+      setJobs((prev) => [placeholder, ...prev]);
+
+      // Then trigger async parsing via edge function
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        supabase.functions.invoke("parse-job", {
+          body: { url: jobUrl },
+        }).then(({ data: result }) => {
+          if (result?.success && result.job) {
+            // Replace the placeholder with the fully parsed job
+            setJobs((prev) =>
+              prev.map((j) => (j.id === placeholder.id ? { ...result.job, id: placeholder.id } : j))
+            );
+            // Delete the placeholder and keep the parsed one (they may have different IDs)
+            if (result.job.id !== placeholder.id) {
+              supabase.from("jobs").delete().eq("id", placeholder.id);
+              setJobs((prev) => prev.filter((j) => j.id !== placeholder.id));
+              setJobs((prev) => {
+                if (prev.some((j) => j.id === result.job.id)) return prev;
+                return [result.job, ...prev];
+              });
+            }
+          }
+        });
+      }
+    } catch (e) {
+      console.error("Add job error:", e);
     }
     setLoading(false);
   };
