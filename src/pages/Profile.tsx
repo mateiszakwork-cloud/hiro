@@ -131,7 +131,40 @@ const Profile = () => {
     if (int.data) setInterests((int.data as any).interests || []);
   };
 
-  const startEdit = (section: string) => {
+  const handleCvReimport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !userId) return;
+    if (file.type !== "application/pdf" || file.size > 10 * 1024 * 1024) { setCvError(true); return; }
+    setCvUploading(true); setCvError(false); setCvSuccess("");
+    try {
+      const filePath = `${userId}/cv-${Date.now()}.pdf`;
+      const { error: upErr } = await supabase.storage.from("cv-uploads").upload(filePath, file);
+      if (upErr) { setCvError(true); setCvUploading(false); return; }
+      const { data, error: fnErr } = await supabase.functions.invoke("parse-cv", { body: { filePath } });
+      if (fnErr || !data) { setCvError(true); setCvUploading(false); return; }
+      const cv = data as ParsedCVData;
+      // Pre-fill edit states and open all sections for review
+      if (cv.work_experiences?.length) {
+        const mapped = cv.work_experiences.map(d => ({ company_name: d.company_name || "", job_title: d.job_title || "", location: d.location || null, start_month: d.start_month ? MONTHS.indexOf(d.start_month) + 1 : 1, start_year: d.start_year || 2024, end_month: d.end_month ? MONTHS.indexOf(d.end_month) + 1 : null, end_year: d.end_year || null, is_current: d.is_current || false, bullet_points: d.bullet_points?.length ? d.bullet_points : [""] }));
+        setEditWork(mapped as any); setEditSection("work");
+      }
+      if (cv.education?.length) {
+        const mapped = cv.education.map(d => ({ institution: d.institution || "", degree: d.degree || "", field_of_study: d.field_of_study || "", start_year: d.start_year || 2024, end_year: d.end_year || null, is_expected: false, grade: d.grade || null, activities: d.activities || null, description: d.description || null }));
+        setEditEdu(mapped as any);
+      }
+      if (cv.hard_skills?.length || cv.soft_skills?.length) {
+        setEditSkills({ hard_skills: cv.hard_skills || [], soft_skills: cv.soft_skills || [] });
+      }
+      if (cv.languages?.length) {
+        setEditLangs(cv.languages.map(l => ({ language_name: l.name || "", proficiency: l.proficiency || "Professional Working" })));
+      }
+      const expCount = cv.work_experiences?.length || 0;
+      const skillCount = (cv.hard_skills?.length || 0) + (cv.soft_skills?.length || 0);
+      setCvSuccess(`Imported ${expCount} experience${expCount !== 1 ? "s" : ""} and ${skillCount} skill${skillCount !== 1 ? "s" : ""}. Review and save each section.`);
+      toast.success("CV imported! Review each section and save.");
+    } catch { setCvError(true); } finally { setCvUploading(false); if (cvInputRef.current) cvInputRef.current.value = ""; }
+  };
+
     setEditSection(section);
     if (section === "work") setEditWork(workExps.map(w => ({ ...w, bullet_points: [...w.bullet_points] })));
     if (section === "edu") setEditEdu(edus.map(e => ({ ...e })));
