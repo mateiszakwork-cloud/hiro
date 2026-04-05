@@ -1,9 +1,8 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { UserCircle, Link2, FileText, MessageSquare, Upload, Loader2, CheckCircle } from "lucide-react";
+import { UserCircle, Link2, FileText, MessageSquare, Upload, Loader2, CheckCircle, AlertTriangle, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import type { ParsedCVData } from "@/types/cv";
 
 const steps = [
@@ -19,35 +18,50 @@ const Welcome = () => {
   const [uploading, setUploading] = useState(false);
   const [parsed, setParsed] = useState<ParsedCVData | null>(null);
   const [summary, setSummary] = useState("");
+  const [parseError, setParseError] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  // Wait for auth session to be ready (handles post-registration timing)
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUserId(session?.user?.id ?? null);
+    });
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUserId(session?.user?.id ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (file.type !== "application/pdf") {
-      toast.error("Please upload a PDF file.");
+      setParseError(true);
       return;
     }
 
     if (file.size > 10 * 1024 * 1024) {
-      toast.error("File too large. Maximum 10MB.");
+      setParseError(true);
       return;
     }
 
     setUploading(true);
     setParsed(null);
     setSummary("");
+    setParseError(false);
 
     try {
+      // Re-fetch session right before upload to guarantee freshness
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        toast.error("Please log in first.");
+        setParseError(true);
         setUploading(false);
         return;
       }
 
-      const userId = session.user.id;
-      const filePath = `${userId}/cv-${Date.now()}.pdf`;
+      const uid = session.user.id;
+      const filePath = `${uid}/cv-${Date.now()}.pdf`;
 
       const { error: uploadError } = await supabase.storage
         .from("cv-uploads")
@@ -55,7 +69,7 @@ const Welcome = () => {
 
       if (uploadError) {
         console.error("Upload error:", uploadError);
-        toast.error("Failed to upload CV.");
+        setParseError(true);
         setUploading(false);
         return;
       }
@@ -66,7 +80,7 @@ const Welcome = () => {
 
       if (fnError) {
         console.error("Parse error:", fnError);
-        toast.error("Failed to parse CV. You can still fill in manually.");
+        setParseError(true);
         setUploading(false);
         return;
       }
@@ -79,10 +93,18 @@ const Welcome = () => {
       setSummary(`We found ${expCount} experience${expCount !== 1 ? "s" : ""} and ${skillCount} skill${skillCount !== 1 ? "s" : ""}. Review and edit below.`);
     } catch (err) {
       console.error("CV upload error:", err);
-      toast.error("Something went wrong. You can still fill in manually.");
+      setParseError(true);
     } finally {
       setUploading(false);
     }
+  };
+
+  const handleRetry = () => {
+    setParseError(false);
+    setParsed(null);
+    setSummary("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    fileInputRef.current?.click();
   };
 
   const handleProceed = () => {
@@ -124,6 +146,20 @@ const Welcome = () => {
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
               <p className="text-sm font-medium text-foreground">Parsing your CV...</p>
               <p className="text-xs text-muted-foreground">This may take a few seconds</p>
+            </div>
+          ) : parseError ? (
+            <div className="flex flex-col items-center gap-3">
+              <AlertTriangle className="h-8 w-8 text-destructive" />
+              <p className="text-sm font-medium text-foreground">We had trouble reading your CV.</p>
+              <p className="text-xs text-muted-foreground">You can try again or fill in your profile manually.</p>
+              <div className="flex gap-3 mt-1">
+                <Button variant="outline" size="sm" onClick={handleRetry} className="gap-1.5">
+                  <RotateCcw className="h-3.5 w-3.5" /> Retry
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleProceed}>
+                  Fill in manually
+                </Button>
+              </div>
             </div>
           ) : parsed ? (
             <div className="flex flex-col items-center gap-3">

@@ -1,4 +1,4 @@
-import { useEffect, useState, type KeyboardEvent, type ChangeEvent } from "react";
+import { useEffect, useState, useRef, type KeyboardEvent, type ChangeEvent } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,9 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Pencil, Trash2, X } from "lucide-react";
+import { Pencil, Trash2, X, Upload, Loader2, CheckCircle, AlertTriangle, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import type { ParsedCVData } from "@/types/cv";
 
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const WORK_YEARS = Array.from({ length: 27 }, (_, i) => 2000 + i);
@@ -91,6 +92,12 @@ const Profile = () => {
   const [saving, setSaving] = useState(false);
   const [removeWorkIdx, setRemoveWorkIdx] = useState<number | null>(null);
 
+  // CV re-import state
+  const cvInputRef = useRef<HTMLInputElement>(null);
+  const [cvUploading, setCvUploading] = useState(false);
+  const [cvError, setCvError] = useState(false);
+  const [cvSuccess, setCvSuccess] = useState("");
+
   useEffect(() => {
     const init = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -122,6 +129,40 @@ const Profile = () => {
     if (a.data) setAwards(a.data as any);
     if (v.data) setVols(v.data as any);
     if (int.data) setInterests((int.data as any).interests || []);
+  };
+
+  const handleCvReimport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !userId) return;
+    if (file.type !== "application/pdf" || file.size > 10 * 1024 * 1024) { setCvError(true); return; }
+    setCvUploading(true); setCvError(false); setCvSuccess("");
+    try {
+      const filePath = `${userId}/cv-${Date.now()}.pdf`;
+      const { error: upErr } = await supabase.storage.from("cv-uploads").upload(filePath, file);
+      if (upErr) { setCvError(true); setCvUploading(false); return; }
+      const { data, error: fnErr } = await supabase.functions.invoke("parse-cv", { body: { filePath } });
+      if (fnErr || !data) { setCvError(true); setCvUploading(false); return; }
+      const cv = data as ParsedCVData;
+      // Pre-fill edit states and open all sections for review
+      if (cv.work_experiences?.length) {
+        const mapped = cv.work_experiences.map(d => ({ company_name: d.company_name || "", job_title: d.job_title || "", location: d.location || null, start_month: d.start_month ? MONTHS.indexOf(d.start_month) + 1 : 1, start_year: d.start_year || 2024, end_month: d.end_month ? MONTHS.indexOf(d.end_month) + 1 : null, end_year: d.end_year || null, is_current: d.is_current || false, bullet_points: d.bullet_points?.length ? d.bullet_points : [""] }));
+        setEditWork(mapped as any); setEditSection("work");
+      }
+      if (cv.education?.length) {
+        const mapped = cv.education.map(d => ({ institution: d.institution || "", degree: d.degree || "", field_of_study: d.field_of_study || "", start_year: d.start_year || 2024, end_year: d.end_year || null, is_expected: false, grade: d.grade || null, activities: d.activities || null, description: d.description || null }));
+        setEditEdu(mapped as any);
+      }
+      if (cv.hard_skills?.length || cv.soft_skills?.length) {
+        setEditSkills({ hard_skills: cv.hard_skills || [], soft_skills: cv.soft_skills || [] });
+      }
+      if (cv.languages?.length) {
+        setEditLangs(cv.languages.map(l => ({ language_name: l.name || "", proficiency: l.proficiency || "Professional Working" })));
+      }
+      const expCount = cv.work_experiences?.length || 0;
+      const skillCount = (cv.hard_skills?.length || 0) + (cv.soft_skills?.length || 0);
+      setCvSuccess(`Imported ${expCount} experience${expCount !== 1 ? "s" : ""} and ${skillCount} skill${skillCount !== 1 ? "s" : ""}. Review and save each section.`);
+      toast.success("CV imported! Review each section and save.");
+    } catch { setCvError(true); } finally { setCvUploading(false); if (cvInputRef.current) cvInputRef.current.value = ""; }
   };
 
   const startEdit = (section: string) => {
@@ -229,9 +270,26 @@ const Profile = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[28px] font-bold text-primary">Profile</h1>
-        <p className="text-muted-foreground mt-0.5">{email}</p>
-        {memberSince && <p className="text-sm text-muted-foreground">Member since {memberSince}</p>}
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-[28px] font-bold text-primary">Profile</h1>
+            <p className="text-muted-foreground mt-0.5">{email}</p>
+            {memberSince && <p className="text-sm text-muted-foreground">Member since {memberSince}</p>}
+          </div>
+          <div className="flex flex-col items-end gap-2">
+            <input ref={cvInputRef} type="file" accept="application/pdf" onChange={handleCvReimport} className="hidden" />
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => cvInputRef.current?.click()} disabled={cvUploading}>
+              {cvUploading ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Parsing CV...</> : <><Upload className="h-3.5 w-3.5" /> Re-import from CV</>}
+            </Button>
+            {cvError && (
+              <div className="flex items-center gap-2 text-xs text-destructive">
+                <AlertTriangle className="h-3 w-3" /> Failed to parse CV.
+                <button onClick={() => { setCvError(false); cvInputRef.current?.click(); }} className="underline">Retry</button>
+              </div>
+            )}
+            {cvSuccess && <p className="text-xs text-primary flex items-center gap-1"><CheckCircle className="h-3 w-3" /> {cvSuccess}</p>}
+          </div>
+        </div>
       </div>
 
       {/* ─── Work Experience ─── */}
