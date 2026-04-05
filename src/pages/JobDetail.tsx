@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
@@ -224,6 +224,8 @@ const ContactCard = ({ contact, onUpdate, onDelete }: {
 const JobDetail = () => {
   const { jobId } = useParams<{ jobId: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const defaultTab = searchParams.get("tab") || "overview";
   const [job, setJob] = useState<Job | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [linkedinUrl, setLinkedinUrl] = useState("");
@@ -581,7 +583,7 @@ const JobDetail = () => {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="overview">
+      <Tabs defaultValue={defaultTab}>
         <TabsList className="w-full justify-start border-b rounded-none bg-transparent p-0 h-auto">
           {["overview", "outreach", "cv", "notes"].map(tab => (
             <TabsTrigger

@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Briefcase, MapPin, Trash2, ExternalLink, Loader2, CalendarIcon, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { Briefcase, MapPin, Trash2, ExternalLink, Loader2, CalendarIcon, ArrowUp, ArrowDown, ArrowUpDown, FileText, FileCheck } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -98,6 +99,7 @@ const COLUMNS: { label: string; key: SortKey | null }[] = [
   { label: "Duration", key: "duration" },
   { label: "Status", key: "status" },
   { label: "Match", key: "match_score" },
+  { label: "CV", key: null },
   { label: "Priority", key: "priority" },
   { label: "Added", key: "created_at" },
   { label: "Applied", key: "applied_date" },
@@ -124,6 +126,7 @@ const JobTracker = () => {
   const [parseFailedUrl, setParseFailedUrl] = useState<string | null>(null);
   const [manualOpen, setManualOpen] = useState(false);
   const [manualPrefillUrl, setManualPrefillUrl] = useState("");
+  const [cvMap, setCvMap] = useState<Record<string, string>>({}); // job_id -> updated_at
 
   // Sort & filter state
   const [sortKey, setSortKey] = useState<SortKey>("created_at");
@@ -181,6 +184,16 @@ const JobTracker = () => {
       if (!session) return;
       setUserId(session.user.id);
       fetchJobs(session.user.id);
+      // Fetch CV statuses
+      const { data: cvData } = await supabase
+        .from("cv_outputs")
+        .select("job_id, updated_at")
+        .eq("user_id", session.user.id);
+      if (cvData) {
+        const map: Record<string, string> = {};
+        for (const row of cvData) map[row.job_id] = row.updated_at;
+        setCvMap(map);
+      }
     };
     init();
   }, []);
@@ -532,6 +545,26 @@ const JobTracker = () => {
                         {job.match_score !== null ? (
                           <span className={`inline-flex items-center justify-center h-8 w-8 rounded-full border text-xs font-bold ${getScoreColor(job.match_score)}`}>{job.match_score}</span>
                         ) : <span className="text-muted-foreground">–</span>}
+                      </td>
+                      <td className="px-4 py-3" onClick={(e) => { e.stopPropagation(); navigate(`/jobs/${job.id}?tab=cv`); }}>
+                        <TooltipProvider delayDuration={200}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button className="transition-colors">
+                                {cvMap[job.id] ? (
+                                  <FileCheck className="h-4 w-4 text-[#950606]" />
+                                ) : (
+                                  <FileText className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                                )}
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {cvMap[job.id]
+                                ? `CV ready — last generated ${format(new Date(cvMap[job.id]), "MMM d, yyyy")}`
+                                : "Generate tailored CV"}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </td>
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                         <Select value={job.priority} onValueChange={(v) => handlePriorityChange(job.id, v)}>
