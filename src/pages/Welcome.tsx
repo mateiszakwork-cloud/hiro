@@ -127,8 +127,8 @@ const Welcome = () => {
             </div>
           ) : parsed ? (
             <div className="flex flex-col items-center gap-3">
-              <CheckCircle className="h-8 w-8 text-green-600" />
-              <p className="text-sm font-medium text-green-700">{summary}</p>
+              <CheckCircle className="h-8 w-8 text-primary" />
+              <p className="text-sm font-medium text-foreground">{summary}</p>
             </div>
           ) : (
             <button
