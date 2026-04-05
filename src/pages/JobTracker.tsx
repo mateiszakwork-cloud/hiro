@@ -130,6 +130,19 @@ const JobTracker = () => {
       if (result?.success && result.job) {
         setJobs((prev) => [result.job, ...prev]);
         toast.success("Job added successfully ✓");
+
+        // Trigger match scoring in background
+        supabase.functions.invoke("calculate-match-score", {
+          body: { job_id: result.job.id },
+        }).then(({ data: scoreResult }) => {
+          if (scoreResult?.success && scoreResult.score !== null) {
+            setJobs((prev) =>
+              prev.map((j) =>
+                j.id === result.job.id ? { ...j, match_score: scoreResult.score } : j
+              )
+            );
+          }
+        }).catch(() => {});
       } else {
         const errorType = result?.error;
         const message = result?.message || "Something went wrong.";
