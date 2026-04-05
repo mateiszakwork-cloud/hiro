@@ -6,10 +6,13 @@ const Landing = () => {
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="text-center max-w-2xl px-6">
         <h1 className="text-5xl font-bold text-primary mb-4 tracking-tight">
-          Your entire job search, in one place
+          Hiro
         </h1>
-        <p className="text-lg text-muted-foreground mb-10">
-          Track applications, tailor your CV, and reach out to the right people, all from a single URL
+        <p className="text-lg text-muted-foreground mb-6">
+          Paste a job URL. Get a tailored CV, contacts to reach out to, and your full application tracked.
+        </p>
+        <p className="text-base italic text-muted-foreground mb-10">
+          Become the obvious hire.
         </p>
         <div className="flex items-center justify-center gap-4">
           <Button asChild size="lg" className="px-8 rounded-lg text-base font-semibold transition-colors hover:bg-accent">

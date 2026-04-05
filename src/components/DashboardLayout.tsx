@@ -49,9 +49,9 @@ const DashboardLayout = () => {
 
   const sidebarContent = (
     <div className="flex flex-col h-full">
-      <div className="flex items-center gap-2 px-5 py-6">
-        <Briefcase className="h-5 w-5 text-white" />
-        <span className="text-xl font-bold text-white">Tappy</span>
+      <div className="flex flex-col px-5 py-6">
+        <span className="text-xl font-bold text-white">Hiro</span>
+        <span className="text-xs text-white/50">Become the obvious hire.</span>
       </div>
 
       <nav className="flex-1 px-3 space-y-1">
@@ -112,7 +112,7 @@ const DashboardLayout = () => {
             <button onClick={() => setSidebarOpen(true)}>
               <Menu className="h-5 w-5 text-foreground" />
             </button>
-            <span className="ml-3 font-bold text-foreground">Tappy</span>
+            <span className="ml-3 font-bold text-foreground">Hiro</span>
           </header>
         )}
 
