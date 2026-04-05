@@ -223,14 +223,14 @@ const JobTracker = () => {
                 <SheetTitle className="text-xl text-primary">{selectedJob.job_title || "Untitled Position"}</SheetTitle>
                 <p className="text-muted-foreground text-sm">{selectedJob.company_name || "Unknown Company"}</p>
               </SheetHeader>
-              <p className="text-muted-foreground flex-1">Details loading...</p>
+              <div className="mb-4">
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { setSelectedJob(null); navigate(`/jobs/${selectedJob.id}`); }}>
+                  <ExternalLink className="h-3.5 w-3.5" /> Open full page
+                </Button>
+              </div>
+              <p className="text-muted-foreground flex-1">Click "Open full page" to see all details, outreach, CV, and notes.</p>
               <div className="pt-4 border-t mt-auto">
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => setDeleteJobId(selectedJob.id)}
-                >
+                <Button variant="destructive" size="sm" className="gap-1.5" onClick={() => setDeleteJobId(selectedJob.id)}>
                   <Trash2 className="h-3.5 w-3.5" /> Delete Job
                 </Button>
               </div>
