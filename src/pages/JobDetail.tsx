@@ -405,6 +405,94 @@ const JobDetail = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Match Analysis */}
+          <Card className="mt-6">
+            <CardContent className="p-6">
+              <h3 className="font-semibold text-foreground mb-4">Match Analysis</h3>
+              {matchLoading ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <Skeleton className="h-16 w-16 rounded-full" />
+                    <div className="space-y-2 flex-1">
+                      <Skeleton className="h-4 w-48" />
+                      <Skeleton className="h-4 w-64" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    {[1,2,3,4].map(i => (
+                      <div key={i} className="space-y-2">
+                        <Skeleton className="h-3 w-20" />
+                        <Skeleton className="h-3 w-full rounded-full" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : job.match_score !== null && job.match_details ? (
+                <div className="space-y-6">
+                  {/* Score + Summary */}
+                  <div className="flex items-center gap-5">
+                    <span className={`inline-flex items-center justify-center h-16 w-16 rounded-full border-2 text-2xl font-bold shrink-0 ${getScoreColor(job.match_score)}`}>
+                      {job.match_score}
+                    </span>
+                    {job.match_details.match_summary && (
+                      <p className="text-sm text-muted-foreground italic">{job.match_details.match_summary}</p>
+                    )}
+                  </div>
+
+                  {/* Sub-score bars */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {[
+                      { label: "Hard Skills", value: job.match_details.hard_skills_match },
+                      { label: "Soft Skills", value: job.match_details.soft_skills_match },
+                      { label: "Experience", value: job.match_details.experience_match },
+                      { label: "Languages", value: job.match_details.language_match },
+                    ].map(({ label, value }) => (
+                      <div key={label} className="space-y-1.5">
+                        <div className="flex justify-between text-xs">
+                          <span className="font-medium text-muted-foreground">{label}</span>
+                          <span className="font-semibold text-foreground">{value ?? "–"}</span>
+                        </div>
+                        <Progress value={value ?? 0} className="h-2" />
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Strengths & Missing Skills */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    {job.match_details.strengths?.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Strengths</p>
+                        <ul className="space-y-1.5">
+                          {job.match_details.strengths.map((s, i) => (
+                            <li key={i} className="flex items-start gap-2 text-sm text-foreground">
+                              <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+                              {s}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {job.match_details.missing_skills?.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Missing Skills</p>
+                        <ul className="space-y-1.5">
+                          {job.match_details.missing_skills.map((s, i) => (
+                            <li key={i} className="flex items-start gap-2 text-sm text-foreground">
+                              <XCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+                              {s}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No match analysis available yet. Complete your profile to enable scoring.</p>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Outreach Tab */}
