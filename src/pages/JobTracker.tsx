@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import ManualJobModal from "@/components/ManualJobModal";
 
 type Job = {
   id: string; url: string | null; company_name: string | null; job_title: string | null;
@@ -77,6 +78,8 @@ const JobTracker = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [deleteJobId, setDeleteJobId] = useState<string | null>(null);
   const [parseFailedUrl, setParseFailedUrl] = useState<string | null>(null);
+  const [manualOpen, setManualOpen] = useState(false);
+  const [manualPrefillUrl, setManualPrefillUrl] = useState("");
 
   useEffect(() => {
     const init = async () => {
@@ -161,19 +164,42 @@ const JobTracker = () => {
     setLoading(false);
   };
 
-  const handleAddManually = async () => {
-    if (!userId || !parseFailedUrl) return;
-    const { data } = await supabase
+  const handleAddManually = () => {
+    setManualPrefillUrl(parseFailedUrl || "");
+    setParseFailedUrl(null);
+    setManualOpen(true);
+  };
+
+  const handleManualSave = async (data: any) => {
+    if (!userId) return;
+    const insertData: any = {
+      user_id: userId, status: "Saved",
+      job_title: data.job_title.trim(), company_name: data.company_name.trim(),
+      url: data.url.trim() || null, function: data.function || null,
+      location: data.location.trim() || null, work_mode: data.work_mode || null,
+      duration: data.duration.trim() || null, hard_skills: data.hard_skills,
+      soft_skills: data.soft_skills, languages_required: data.languages_required,
+      application_deadline: data.application_deadline || null,
+    };
+    const { data: job, error } = await supabase
       .from("jobs")
-      .insert({ user_id: userId, url: parseFailedUrl, status: "Saved" })
+      .insert(insertData)
       .select("id, url, company_name, job_title, function, location, work_mode, duration, status, match_score, created_at")
       .single();
-    if (data) {
-      setJobs((prev) => [data, ...prev]);
-      setSelectedJob(data);
-      navigate(`/jobs/${data.id}`);
+    if (error || !job) { toast.error("Failed to save job."); return; }
+    setJobs((prev) => [job, ...prev]);
+    toast.success("Job added successfully ✓");
+
+    // Trigger match scoring if job description was provided
+    if (data.job_description?.trim()) {
+      supabase.functions.invoke("calculate-match-score", {
+        body: { job_id: job.id },
+      }).then(({ data: scoreResult }) => {
+        if (scoreResult?.success && scoreResult.score !== null) {
+          setJobs((prev) => prev.map((j) => j.id === job.id ? { ...j, match_score: scoreResult.score } : j));
+        }
+      }).catch(() => {});
     }
-    setParseFailedUrl(null);
   };
 
   const handleRetryParse = () => {
@@ -220,7 +246,16 @@ const JobTracker = () => {
             {loading ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Parsing...</> : "Add Job"}
           </Button>
         </div>
-        {urlError && <p className="text-destructive text-xs mt-1.5">{urlError}</p>}
+        <div className="flex items-center gap-3 mt-1.5">
+          {urlError && <p className="text-destructive text-xs">{urlError}</p>}
+          <button
+            type="button"
+            onClick={() => { setManualPrefillUrl(url.trim()); setManualOpen(true); }}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors ml-auto"
+          >
+            Add manually
+          </button>
+        </div>
       </div>
 
       <Card className="overflow-hidden">
@@ -384,6 +419,14 @@ const JobTracker = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Manual entry modal */}
+      <ManualJobModal
+        open={manualOpen}
+        onOpenChange={setManualOpen}
+        prefillUrl={manualPrefillUrl}
+        onSave={handleManualSave}
+      />
     </div>
   );
 };
