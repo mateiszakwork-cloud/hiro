@@ -165,6 +165,7 @@ const Profile = () => {
     } catch { setCvError(true); } finally { setCvUploading(false); if (cvInputRef.current) cvInputRef.current.value = ""; }
   };
 
+  const startEdit = (section: string) => {
     setEditSection(section);
     if (section === "work") setEditWork(workExps.map(w => ({ ...w, bullet_points: [...w.bullet_points] })));
     if (section === "edu") setEditEdu(edus.map(e => ({ ...e })));
