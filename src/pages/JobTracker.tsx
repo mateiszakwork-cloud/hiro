@@ -78,6 +78,8 @@ const JobTracker = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [deleteJobId, setDeleteJobId] = useState<string | null>(null);
   const [parseFailedUrl, setParseFailedUrl] = useState<string | null>(null);
+  const [manualOpen, setManualOpen] = useState(false);
+  const [manualPrefillUrl, setManualPrefillUrl] = useState("");
 
   useEffect(() => {
     const init = async () => {
