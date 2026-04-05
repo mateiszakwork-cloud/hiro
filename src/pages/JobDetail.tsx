@@ -281,6 +281,24 @@ const JobDetail = () => {
         .eq("user_id", session.user.id)
         .order("created_at", { ascending: true });
       if (contactData) setContacts(contactData as any);
+
+      // Fetch existing CV output
+      const { data: cvData } = await supabase
+        .from("cv_outputs")
+        .select("*")
+        .eq("job_id", jobId!)
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+      if (cvData) setCvOutput(cvData as any);
+      setCvFetched(true);
+
+      // Fetch user profile for CV header
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("full_name, email")
+        .eq("id", session.user.id)
+        .single();
+      if (profileData) setUserProfile(profileData);
     };
     init();
   }, [jobId, navigate]);
