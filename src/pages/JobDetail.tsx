@@ -11,7 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, ExternalLink, MapPin, Copy, Check, Trash2, ChevronDown, ChevronUp, FileText, Download, CheckCircle2, XCircle, CalendarIcon, RefreshCw, Lightbulb } from "lucide-react";
+import { ArrowLeft, ExternalLink, MapPin, Copy, Check, Trash2, ChevronDown, ChevronUp, FileText, Download, CheckCircle2, XCircle, CalendarIcon, RefreshCw, Lightbulb, History, RotateCcw } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -240,6 +242,10 @@ const JobDetail = () => {
   const [cvFetched, setCvFetched] = useState(false);
   const [userProfile, setUserProfile] = useState<{ full_name: string | null; email: string | null }>({ full_name: null, email: null });
   const [copiedCv, setCopiedCv] = useState(false);
+  const [cvHistory, setCvHistory] = useState<any[]>([]);
+  const [regenConfirmOpen, setRegenConfirmOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [previewVersion, setPreviewVersion] = useState<any | null>(null);
 
   useEffect(() => {
     const init = async () => {
@@ -293,6 +299,15 @@ const JobDetail = () => {
         .maybeSingle();
       if (cvData) setCvOutput(cvData as any);
       setCvFetched(true);
+
+      // Fetch CV history
+      const { data: histData } = await supabase
+        .from("cv_output_history")
+        .select("*")
+        .eq("job_id", jobId!)
+        .eq("user_id", session.user.id)
+        .order("created_at", { ascending: false });
+      if (histData) setCvHistory(histData);
 
       // Fetch user profile for CV header
       const { data: profileData } = await supabase
@@ -358,10 +373,52 @@ const JobDetail = () => {
     setContacts(prev => prev.filter(c => c.id !== id));
   };
 
-  const handleGenerateCv = async () => {
+  const handleGenerateCv = async (skipConfirm = false) => {
     if (!jobId || !userId) return;
+
+    // If CV exists and not confirmed, show confirmation
+    if (cvOutput && !skipConfirm) {
+      setRegenConfirmOpen(true);
+      return;
+    }
+
+    setRegenConfirmOpen(false);
     setCvLoading(true);
     try {
+      // Save current version to history before regenerating
+      if (cvOutput) {
+        const snapshot = {
+          profile_headline: cvOutput.profile_headline,
+          selected_experiences: cvOutput.selected_experiences,
+          selected_hard_skills: cvOutput.selected_hard_skills,
+          selected_soft_skills: cvOutput.selected_soft_skills,
+          selected_education: cvOutput.selected_education,
+          selected_languages: cvOutput.selected_languages,
+          selected_awards: cvOutput.selected_awards,
+          selected_volunteering: cvOutput.selected_volunteering,
+          tailoring_notes: cvOutput.tailoring_notes,
+          updated_at: cvOutput.updated_at,
+        };
+        await supabase.from("cv_output_history").insert({
+          cv_output_id: cvOutput.id,
+          job_id: jobId,
+          user_id: userId,
+          snapshot,
+        });
+
+        // Enforce max 5 history entries — delete oldest if over limit
+        const { data: allHist } = await supabase
+          .from("cv_output_history")
+          .select("id, created_at")
+          .eq("job_id", jobId)
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false });
+        if (allHist && allHist.length > 5) {
+          const toDelete = allHist.slice(5).map(h => h.id);
+          await supabase.from("cv_output_history").delete().in("id", toDelete);
+        }
+      }
+
       const { data, error } = await supabase.functions.invoke("tailor-cv", {
         body: { job_id: jobId },
       });
@@ -371,11 +428,50 @@ const JobDetail = () => {
       }
       setCvOutput(data.data as CvOutput);
       toast.success("CV generated successfully!");
+
+      // Refresh history
+      const { data: histData } = await supabase
+        .from("cv_output_history")
+        .select("*")
+        .eq("job_id", jobId)
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+      if (histData) setCvHistory(histData);
     } catch {
       toast.error("CV generation failed. Please try again.");
     } finally {
       setCvLoading(false);
     }
+  };
+
+  const handleRestoreVersion = async (historyEntry: any) => {
+    if (!cvOutput || !jobId || !userId) return;
+    const snapshot = historyEntry.snapshot;
+    const { error } = await supabase
+      .from("cv_outputs")
+      .update({
+        profile_headline: snapshot.profile_headline,
+        selected_experiences: snapshot.selected_experiences,
+        selected_hard_skills: snapshot.selected_hard_skills,
+        selected_soft_skills: snapshot.selected_soft_skills,
+        selected_education: snapshot.selected_education,
+        selected_languages: snapshot.selected_languages,
+        selected_awards: snapshot.selected_awards,
+        selected_volunteering: snapshot.selected_volunteering,
+        tailoring_notes: snapshot.tailoring_notes,
+      })
+      .eq("id", cvOutput.id);
+    if (error) {
+      toast.error("Failed to restore version.");
+      return;
+    }
+    setCvOutput(prev => prev ? {
+      ...prev,
+      ...snapshot,
+      updated_at: new Date().toISOString(),
+    } : prev);
+    setPreviewVersion(null);
+    toast.success("Version restored successfully!");
   };
 
   const buildCvPlainText = () => {
@@ -791,7 +887,7 @@ const JobDetail = () => {
               )}
             </div>
             <Button
-              onClick={handleGenerateCv}
+              onClick={() => handleGenerateCv()}
               disabled={cvLoading}
               className="gap-1.5 bg-[#950606] hover:bg-[#7a0505] text-white"
             >
@@ -987,6 +1083,40 @@ const JobDetail = () => {
                 </Card>
               )}
 
+              {/* Version History */}
+              {cvHistory.length > 0 && (
+                <Collapsible open={historyOpen} onOpenChange={setHistoryOpen}>
+                  <CollapsibleTrigger asChild>
+                    <button className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                      <History className="h-4 w-4" />
+                      Previous versions ({cvHistory.length})
+                      {historyOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-3">
+                    <Card>
+                      <CardContent className="p-4 space-y-2">
+                        {cvHistory.map((h) => (
+                          <button
+                            key={h.id}
+                            onClick={() => setPreviewVersion(h)}
+                            className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors text-left"
+                          >
+                            <div className="flex items-center gap-2">
+                              <FileText className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-sm text-foreground">
+                                {format(new Date(h.created_at), "MMM d, yyyy 'at' h:mm a")}
+                              </span>
+                            </div>
+                            <span className="text-xs text-muted-foreground">View →</span>
+                          </button>
+                        ))}
+                      </CardContent>
+                    </Card>
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
+
               {/* Action Buttons */}
               <div className="flex gap-3 justify-end">
                 <Button variant="outline" size="sm" className="gap-1.5" onClick={handleCopyCv}>
@@ -999,6 +1129,72 @@ const JobDetail = () => {
               </div>
             </>
           )}
+
+          {/* Regeneration Confirmation */}
+          <AlertDialog open={regenConfirmOpen} onOpenChange={setRegenConfirmOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Regenerate CV?</AlertDialogTitle>
+                <AlertDialogDescription>The current version will be saved to history.</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => handleGenerateCv(true)} className="bg-[#950606] hover:bg-[#7a0505]">Regenerate</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          {/* History Preview Modal */}
+          <Dialog open={!!previewVersion} onOpenChange={(open) => !open && setPreviewVersion(null)}>
+            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>CV Version — {previewVersion && format(new Date(previewVersion.created_at), "MMM d, yyyy 'at' h:mm a")}</DialogTitle>
+                <DialogDescription>Preview of a previous CV version.</DialogDescription>
+              </DialogHeader>
+              {previewVersion?.snapshot && (
+                <div className="space-y-4 text-sm">
+                  {previewVersion.snapshot.profile_headline && (
+                    <p className="italic text-muted-foreground">{previewVersion.snapshot.profile_headline}</p>
+                  )}
+                  {previewVersion.snapshot.selected_experiences?.length > 0 && (
+                    <div>
+                      <h4 className="font-bold text-xs uppercase tracking-widest border-b pb-1 mb-2">Experience</h4>
+                      {previewVersion.snapshot.selected_experiences.map((exp: any, i: number) => (
+                        <div key={i} className="mb-3">
+                          <p className="font-semibold">{exp.company} — {exp.job_title}</p>
+                          <p className="text-xs text-muted-foreground">{exp.start_date} – {exp.end_date}{exp.location ? ` | ${exp.location}` : ""}</p>
+                          <ul className="list-disc list-outside ml-4 mt-1 space-y-0.5">
+                            {(exp.selected_bullets || []).map((b: string, j: number) => <li key={j}>{b}</li>)}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {(previewVersion.snapshot.selected_hard_skills?.length > 0 || previewVersion.snapshot.selected_soft_skills?.length > 0) && (
+                    <div>
+                      <h4 className="font-bold text-xs uppercase tracking-widest border-b pb-1 mb-2">Skills</h4>
+                      {previewVersion.snapshot.selected_hard_skills?.length > 0 && <p>Hard: {previewVersion.snapshot.selected_hard_skills.join(", ")}</p>}
+                      {previewVersion.snapshot.selected_soft_skills?.length > 0 && <p>Soft: {previewVersion.snapshot.selected_soft_skills.join(", ")}</p>}
+                    </div>
+                  )}
+                  {previewVersion.snapshot.selected_education?.length > 0 && (
+                    <div>
+                      <h4 className="font-bold text-xs uppercase tracking-widest border-b pb-1 mb-2">Education</h4>
+                      {previewVersion.snapshot.selected_education.map((edu: any, i: number) => (
+                        <p key={i}><strong>{edu.institution}</strong> — {edu.degree}, {edu.field}</p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setPreviewVersion(null)}>Close</Button>
+                <Button onClick={() => handleRestoreVersion(previewVersion)} className="gap-1.5 bg-[#950606] hover:bg-[#7a0505] text-white">
+                  <RotateCcw className="h-3.5 w-3.5" /> Restore this version
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
 
         {/* Notes Tab */}
