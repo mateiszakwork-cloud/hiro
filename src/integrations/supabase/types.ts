@@ -44,6 +44,59 @@ export type Database = {
         }
         Relationships: []
       }
+      contacts: {
+        Row: {
+          connection_note_draft: string | null
+          created_at: string
+          current_title: string | null
+          headline: string | null
+          id: string
+          inmail_draft: string | null
+          is_alumni: boolean
+          job_id: string
+          linkedin_url: string | null
+          name: string | null
+          outreach_status: string
+          user_id: string
+        }
+        Insert: {
+          connection_note_draft?: string | null
+          created_at?: string
+          current_title?: string | null
+          headline?: string | null
+          id?: string
+          inmail_draft?: string | null
+          is_alumni?: boolean
+          job_id: string
+          linkedin_url?: string | null
+          name?: string | null
+          outreach_status?: string
+          user_id: string
+        }
+        Update: {
+          connection_note_draft?: string | null
+          created_at?: string
+          current_title?: string | null
+          headline?: string | null
+          id?: string
+          inmail_draft?: string | null
+          is_alumni?: boolean
+          job_id?: string
+          linkedin_url?: string | null
+          name?: string | null
+          outreach_status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contacts_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       education: {
         Row: {
           activities: string | null
