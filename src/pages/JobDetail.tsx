@@ -11,11 +11,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, ExternalLink, MapPin, Copy, Check, Trash2, ChevronDown, ChevronUp, FileText, Download, CheckCircle2, XCircle, CalendarIcon } from "lucide-react";
+import { ArrowLeft, ExternalLink, MapPin, Copy, Check, Trash2, ChevronDown, ChevronUp, FileText, Download, CheckCircle2, XCircle, CalendarIcon, RefreshCw, Lightbulb } from "lucide-react";
 import { toast } from "sonner";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+
+type CvOutput = {
+  id: string;
+  profile_headline: string | null;
+  selected_experiences: any[];
+  selected_hard_skills: string[];
+  selected_soft_skills: string[];
+  selected_education: any[];
+  selected_languages: any[];
+  selected_awards: any[];
+  selected_volunteering: any[];
+  tailoring_notes: string[];
+  created_at: string;
+  updated_at: string;
+};
 
 type MatchDetails = {
   hard_skills_match: number | null;
