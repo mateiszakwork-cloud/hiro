@@ -10,6 +10,7 @@ import Welcome from "./pages/Welcome";
 import Onboarding from "./pages/Onboarding";
 import DashboardLayout from "./components/DashboardLayout";
 import JobTracker from "./pages/JobTracker";
+import JobDetail from "./pages/JobDetail";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
@@ -29,6 +30,7 @@ const App = () => (
           <Route path="/onboarding" element={<Onboarding />} />
           <Route element={<DashboardLayout />}>
             <Route path="/dashboard" element={<JobTracker />} />
+            <Route path="/jobs/:jobId" element={<JobDetail />} />
             <Route path="/profile" element={<Profile />} />
           </Route>
           <Route path="*" element={<NotFound />} />
