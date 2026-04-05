@@ -8,15 +8,27 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { ArrowLeft, ExternalLink, MapPin, Copy, Check, Trash2, ChevronDown, ChevronUp, FileText, Download } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ArrowLeft, ExternalLink, MapPin, Copy, Check, Trash2, ChevronDown, ChevronUp, FileText, Download, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
+
+type MatchDetails = {
+  hard_skills_match: number | null;
+  soft_skills_match: number | null;
+  experience_match: number | null;
+  language_match: number | null;
+  match_summary: string | null;
+  missing_skills: string[];
+  strengths: string[];
+};
 
 type Job = {
   id: string; url: string | null; company_name: string | null; job_title: string | null;
   function: string | null; location: string | null; work_mode: string | null;
   duration: string | null; hard_skills: string[] | null; soft_skills: string[] | null;
   languages_required: string[] | null; application_deadline: string | null;
-  status: string; match_score: number | null; notes: string | null; created_at: string;
+  status: string; match_score: number | null; match_details: MatchDetails | null; notes: string | null; created_at: string;
 };
 
 type Contact = {
