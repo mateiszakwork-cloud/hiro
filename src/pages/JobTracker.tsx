@@ -441,11 +441,31 @@ const JobTracker = () => {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b bg-muted/40">
-                    {["Company","Job Title","Function","Location","Work Mode","Duration","Status","Match","Priority","Added","Applied",""].map(h => (
-                      <th key={h} className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{h}</th>
-                    ))}
-                  </tr>
+                   <tr className="border-b bg-muted/40">
+                     {COLUMNS.map((col) => (
+                       <th
+                         key={col.label || "_actions"}
+                         className={cn(
+                           "px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap",
+                           col.key && "cursor-pointer select-none hover:text-foreground transition-colors group/th"
+                         )}
+                         onClick={() => handleSort(col.key)}
+                       >
+                         {col.label && (
+                           <span className="inline-flex items-center gap-1">
+                             {col.label}
+                             {col.key && (
+                               sortKey === col.key ? (
+                                 sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                               ) : (
+                                 <ArrowUpDown className="h-3 w-3 opacity-0 group-hover/th:opacity-50 transition-opacity" />
+                               )
+                             )}
+                           </span>
+                         )}
+                       </th>
+                     ))}
+                   </tr>
                 </thead>
                 <tbody>
                   {parsing && (
