@@ -238,13 +238,11 @@ const JobTracker = () => {
     }
     await supabase.from("jobs").update(updates).eq("id", jobId);
     setJobs((prev) => prev.map((j) => (j.id === jobId ? { ...j, ...updates } : j)));
-    if (selectedJob?.id === jobId) setSelectedJob((p) => p ? { ...p, ...updates } : p);
   };
 
   const handlePriorityChange = async (jobId: string, newPriority: string) => {
     await supabase.from("jobs").update({ priority: newPriority }).eq("id", jobId);
     setJobs((prev) => prev.map((j) => (j.id === jobId ? { ...j, priority: newPriority } : j)));
-    if (selectedJob?.id === jobId) setSelectedJob((p) => p ? { ...p, priority: newPriority } : p);
   };
 
   const handleAppliedDateChange = async (jobId: string, date: Date | undefined) => {
