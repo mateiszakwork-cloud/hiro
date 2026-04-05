@@ -194,6 +194,8 @@ const JobTracker = () => {
         for (const row of cvData) map[row.job_id] = row.updated_at;
         setCvMap(map);
       }
+    };
+    init();
   }, []);
 
   const fetchJobs = async (uid: string) => {
