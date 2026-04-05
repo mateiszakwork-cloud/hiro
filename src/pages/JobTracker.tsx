@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Briefcase, MapPin, Trash2, ExternalLink, Loader2, CalendarIcon } from "lucide-react";
+import { Briefcase, MapPin, Trash2, ExternalLink, Loader2, CalendarIcon, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -86,6 +86,32 @@ const isValidUrl = (str: string): boolean => {
   }
 };
 
+type SortKey = "company_name" | "job_title" | "function" | "location" | "work_mode" | "duration" | "status" | "match_score" | "priority" | "created_at" | "applied_date";
+type SortDir = "asc" | "desc";
+
+const COLUMNS: { label: string; key: SortKey | null }[] = [
+  { label: "Company", key: "company_name" },
+  { label: "Job Title", key: "job_title" },
+  { label: "Function", key: "function" },
+  { label: "Location", key: "location" },
+  { label: "Work Mode", key: "work_mode" },
+  { label: "Duration", key: "duration" },
+  { label: "Status", key: "status" },
+  { label: "Match", key: "match_score" },
+  { label: "Priority", key: "priority" },
+  { label: "Added", key: "created_at" },
+  { label: "Applied", key: "applied_date" },
+  { label: "", key: null },
+];
+
+const FUNCTION_VALUES = ["Strategy", "Finance", "Marketing", "Product", "Operations", "HR", "Consulting", "Other"];
+
+const compareStr = (a: string | null, b: string | null, dir: SortDir) => {
+  const av = (a || "").toLowerCase();
+  const bv = (b || "").toLowerCase();
+  return dir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
+};
+
 const JobTracker = () => {
   const navigate = useNavigate();
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -98,6 +124,56 @@ const JobTracker = () => {
   const [parseFailedUrl, setParseFailedUrl] = useState<string | null>(null);
   const [manualOpen, setManualOpen] = useState(false);
   const [manualPrefillUrl, setManualPrefillUrl] = useState("");
+
+  // Sort & filter state
+  const [sortKey, setSortKey] = useState<SortKey>("created_at");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [filterStatus, setFilterStatus] = useState("All");
+  const [filterFunction, setFilterFunction] = useState("All");
+  const [filterPriority, setFilterPriority] = useState("All");
+
+  const handleSort = (key: SortKey | null) => {
+    if (!key) return;
+    if (sortKey === key) {
+      setSortDir(prev => prev === "asc" ? "desc" : "asc");
+    } else {
+      setSortKey(key);
+      setSortDir(key === "match_score" || key === "created_at" || key === "applied_date" ? "desc" : "asc");
+    }
+  };
+
+  const filtersActive = filterStatus !== "All" || filterFunction !== "All" || filterPriority !== "All";
+
+  const filteredAndSorted = useMemo(() => {
+    let result = [...jobs];
+    if (filterStatus !== "All") result = result.filter(j => j.status === filterStatus);
+    if (filterFunction !== "All") result = result.filter(j => j.function === filterFunction);
+    if (filterPriority !== "All") result = result.filter(j => j.priority === filterPriority);
+
+    result.sort((a, b) => {
+      if (sortKey === "match_score") {
+        const av = a.match_score ?? -1;
+        const bv = b.match_score ?? -1;
+        return sortDir === "desc" ? bv - av : av - bv;
+      }
+      if (sortKey === "created_at") {
+        return sortDir === "desc"
+          ? new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          : new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      }
+      if (sortKey === "applied_date") {
+        // nulls always last
+        if (!a.applied_date && !b.applied_date) return 0;
+        if (!a.applied_date) return 1;
+        if (!b.applied_date) return -1;
+        return sortDir === "desc"
+          ? new Date(b.applied_date).getTime() - new Date(a.applied_date).getTime()
+          : new Date(a.applied_date).getTime() - new Date(b.applied_date).getTime();
+      }
+      return compareStr(a[sortKey] as string | null, b[sortKey] as string | null, sortDir);
+    });
+    return result;
+  }, [jobs, sortKey, sortDir, filterStatus, filterFunction, filterPriority]);
 
   useEffect(() => {
     const init = async () => {
@@ -293,6 +369,64 @@ const JobTracker = () => {
         </div>
       </div>
 
+      {/* Filters */}
+      {showTable && (
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="ml-auto flex items-center gap-2">
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="h-8 w-auto gap-1 px-3 text-xs border rounded-lg">
+                <SelectValue placeholder="Status" />
+                {filterStatus !== "All" && (
+                  <span className="ml-1 inline-flex items-center justify-center h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
+                    {jobs.filter(j => j.status === filterStatus).length}
+                  </span>
+                )}
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All">All Statuses</SelectItem>
+                {STATUS_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.value}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={filterFunction} onValueChange={setFilterFunction}>
+              <SelectTrigger className="h-8 w-auto gap-1 px-3 text-xs border rounded-lg">
+                <SelectValue placeholder="Function" />
+                {filterFunction !== "All" && (
+                  <span className="ml-1 inline-flex items-center justify-center h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
+                    {jobs.filter(j => j.function === filterFunction).length}
+                  </span>
+                )}
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All">All Functions</SelectItem>
+                {FUNCTION_VALUES.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={filterPriority} onValueChange={setFilterPriority}>
+              <SelectTrigger className="h-8 w-auto gap-1 px-3 text-xs border rounded-lg">
+                <SelectValue placeholder="Priority" />
+                {filterPriority !== "All" && (
+                  <span className="ml-1 inline-flex items-center justify-center h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
+                    {jobs.filter(j => j.priority === filterPriority).length}
+                  </span>
+                )}
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All">All Priorities</SelectItem>
+                {PRIORITY_OPTIONS.map(p => <SelectItem key={p.value} value={p.value}>{p.value}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            {filtersActive && (
+              <button
+                onClick={() => { setFilterStatus("All"); setFilterFunction("All"); setFilterPriority("All"); }}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Clear filters
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       <Card className="overflow-hidden">
         <CardContent className="p-0">
           {!showTable ? (
@@ -307,11 +441,31 @@ const JobTracker = () => {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b bg-muted/40">
-                    {["Company","Job Title","Function","Location","Work Mode","Duration","Status","Match","Priority","Added","Applied",""].map(h => (
-                      <th key={h} className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{h}</th>
-                    ))}
-                  </tr>
+                   <tr className="border-b bg-muted/40">
+                     {COLUMNS.map((col) => (
+                       <th
+                         key={col.label || "_actions"}
+                         className={cn(
+                           "px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap",
+                           col.key && "cursor-pointer select-none hover:text-foreground transition-colors group/th"
+                         )}
+                         onClick={() => handleSort(col.key)}
+                       >
+                         {col.label && (
+                           <span className="inline-flex items-center gap-1">
+                             {col.label}
+                             {col.key && (
+                               sortKey === col.key ? (
+                                 sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                               ) : (
+                                 <ArrowUpDown className="h-3 w-3 opacity-0 group-hover/th:opacity-50 transition-opacity" />
+                               )
+                             )}
+                           </span>
+                         )}
+                       </th>
+                     ))}
+                   </tr>
                 </thead>
                 <tbody>
                   {parsing && (
@@ -335,7 +489,7 @@ const JobTracker = () => {
                       <td className="px-4 py-3"></td>
                     </tr>
                   )}
-                  {jobs.map((job) => (
+                  {filteredAndSorted.map((job) => (
                     <tr key={job.id} onClick={() => navigate(`/jobs/${job.id}`)} className="group border-b last:border-0 hover:bg-[#fff5f5] cursor-pointer transition-colors">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2.5">
