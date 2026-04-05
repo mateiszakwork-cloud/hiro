@@ -10,8 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, ExternalLink, MapPin, Copy, Check, Trash2, ChevronDown, ChevronUp, FileText, Download, CheckCircle2, XCircle } from "lucide-react";
+import { ArrowLeft, ExternalLink, MapPin, Copy, Check, Trash2, ChevronDown, ChevronUp, FileText, Download, CheckCircle2, XCircle, CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 type MatchDetails = {
   hard_skills_match: number | null;
@@ -29,7 +32,8 @@ type Job = {
   duration: string | null; hard_skills: string[] | null; soft_skills: string[] | null;
   skills_nice_to_have: string[] | null; languages_required: string[] | null;
   languages_nice_to_have: string[] | null; application_deadline: string | null;
-  status: string; match_score: number | null; match_details: MatchDetails | null; notes: string | null; created_at: string;
+  status: string; match_score: number | null; match_details: MatchDetails | null;
+  notes: string | null; created_at: string; priority: string; applied_date: string | null;
 };
 
 type Contact = {
@@ -262,8 +266,19 @@ const JobDetail = () => {
 
   const handleStatusChange = async (newStatus: string) => {
     if (!job) return;
-    await supabase.from("jobs").update({ status: newStatus }).eq("id", job.id);
-    setJob(prev => prev ? { ...prev, status: newStatus } : prev);
+    const updates: any = { status: newStatus };
+    if (newStatus === "Applied" && !job.applied_date) {
+      updates.applied_date = format(new Date(), "yyyy-MM-dd");
+    }
+    await supabase.from("jobs").update(updates).eq("id", job.id);
+    setJob(prev => prev ? { ...prev, ...updates } : prev);
+  };
+
+  const handleAppliedDateChange = async (date: Date | undefined) => {
+    if (!job) return;
+    const applied_date = date ? format(date, "yyyy-MM-dd") : null;
+    await supabase.from("jobs").update({ applied_date }).eq("id", job.id);
+    setJob(prev => prev ? { ...prev, applied_date } : prev);
   };
 
   const handleNotesChange = useCallback((value: string) => {
@@ -328,14 +343,33 @@ const JobDetail = () => {
             <h1 className="text-[28px] font-bold text-primary">{job.job_title || "Untitled Position"}</h1>
             <p className="text-lg text-muted-foreground">{job.company_name || "Unknown Company"}</p>
           </div>
-          <Select value={job.status} onValueChange={handleStatusChange}>
-            <SelectTrigger className={`h-9 w-auto border-0 gap-1.5 px-4 rounded-full text-sm font-medium ${getStatusColor(job.status)}`}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {STATUS_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.value}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-3">
+            {/* Applied Date */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className={cn("gap-1.5 text-sm", !job.applied_date && "text-muted-foreground")}>
+                  <CalendarIcon className="h-3.5 w-3.5" />
+                  {job.applied_date ? `Applied ${format(new Date(job.applied_date), "MMM d, yyyy")}` : "Set applied date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  mode="single"
+                  selected={job.applied_date ? new Date(job.applied_date) : undefined}
+                  onSelect={handleAppliedDateChange}
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+            <Select value={job.status} onValueChange={handleStatusChange}>
+              <SelectTrigger className={`h-9 w-auto border-0 gap-1.5 px-4 rounded-full text-sm font-medium ${getStatusColor(job.status)}`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {STATUS_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.value}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 

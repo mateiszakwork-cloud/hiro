@@ -5,7 +5,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Briefcase, MapPin, Trash2, ExternalLink, Loader2 } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Briefcase, MapPin, Trash2, ExternalLink, Loader2, CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -20,6 +23,7 @@ type Job = {
   id: string; url: string | null; company_name: string | null; job_title: string | null;
   function: string | null; location: string | null; work_mode: string | null;
   duration: string | null; status: string; match_score: number | null; created_at: string;
+  priority: string; applied_date: string | null;
 };
 
 const FUNCTION_COLORS: Record<string, string> = {
@@ -58,6 +62,22 @@ const getScoreColor = (score: number | null) => {
   return "text-red-600 border-red-300 bg-red-50";
 };
 
+const PRIORITY_OPTIONS = [
+  { value: "High", color: "bg-primary/15 text-primary" },
+  { value: "Medium", color: "bg-amber-100 text-amber-700" },
+  { value: "Low", color: "bg-gray-200 text-gray-500" },
+];
+
+const getPriorityColor = (priority: string) =>
+  PRIORITY_OPTIONS.find((p) => p.value === priority)?.color || "bg-gray-200 text-gray-500";
+
+const getPriorityFromScore = (score: number | null): string => {
+  if (score === null) return "Medium";
+  if (score > 75) return "High";
+  if (score >= 40) return "Medium";
+  return "Low";
+};
+
 const isValidUrl = (str: string): boolean => {
   try {
     const u = new URL(str);
@@ -94,10 +114,10 @@ const JobTracker = () => {
   const fetchJobs = async (uid: string) => {
     const { data } = await supabase
       .from("jobs")
-      .select("id, url, company_name, job_title, function, location, work_mode, duration, status, match_score, created_at")
+      .select("id, url, company_name, job_title, function, location, work_mode, duration, status, match_score, created_at, priority, applied_date")
       .eq("user_id", uid)
       .order("created_at", { ascending: false });
-    if (data) setJobs(data);
+    if (data) setJobs(data as any);
   };
 
   const handleAddJob = async () => {
@@ -131,17 +151,20 @@ const JobTracker = () => {
       }
 
       if (result?.success && result.job) {
-        setJobs((prev) => [result.job, ...prev]);
+        const newJob = { ...result.job, priority: result.job.priority || "Medium", applied_date: result.job.applied_date || null };
+        setJobs((prev) => [newJob, ...prev]);
         toast.success("Job added successfully ✓");
 
         // Trigger match scoring in background
         supabase.functions.invoke("calculate-match-score", {
           body: { job_id: result.job.id },
-        }).then(({ data: scoreResult }) => {
+        }).then(async ({ data: scoreResult }) => {
           if (scoreResult?.success && scoreResult.score !== null) {
+            const priority = getPriorityFromScore(scoreResult.score);
+            await supabase.from("jobs").update({ priority }).eq("id", result.job.id);
             setJobs((prev) =>
               prev.map((j) =>
-                j.id === result.job.id ? { ...j, match_score: scoreResult.score } : j
+                j.id === result.job.id ? { ...j, match_score: scoreResult.score, priority } : j
               )
             );
           }
@@ -184,10 +207,10 @@ const JobTracker = () => {
     const { data: job, error } = await supabase
       .from("jobs")
       .insert(insertData)
-      .select("id, url, company_name, job_title, function, location, work_mode, duration, status, match_score, created_at")
+      .select("id, url, company_name, job_title, function, location, work_mode, duration, status, match_score, created_at, priority, applied_date")
       .single();
     if (error || !job) { toast.error("Failed to save job."); return; }
-    setJobs((prev) => [job, ...prev]);
+    setJobs((prev) => [job as any, ...prev]);
     toast.success("Job added successfully ✓");
 
     // Trigger match scoring if job description was provided
@@ -210,9 +233,26 @@ const JobTracker = () => {
   };
 
   const handleStatusChange = async (jobId: string, newStatus: string) => {
-    await supabase.from("jobs").update({ status: newStatus }).eq("id", jobId);
-    setJobs((prev) => prev.map((j) => (j.id === jobId ? { ...j, status: newStatus } : j)));
-    if (selectedJob?.id === jobId) setSelectedJob((p) => p ? { ...p, status: newStatus } : p);
+    const updates: any = { status: newStatus };
+    const currentJob = jobs.find(j => j.id === jobId);
+    if (newStatus === "Applied" && !currentJob?.applied_date) {
+      updates.applied_date = format(new Date(), "yyyy-MM-dd");
+    }
+    await supabase.from("jobs").update(updates).eq("id", jobId);
+    setJobs((prev) => prev.map((j) => (j.id === jobId ? { ...j, ...updates } : j)));
+    if (selectedJob?.id === jobId) setSelectedJob((p) => p ? { ...p, ...updates } : p);
+  };
+
+  const handlePriorityChange = async (jobId: string, newPriority: string) => {
+    await supabase.from("jobs").update({ priority: newPriority }).eq("id", jobId);
+    setJobs((prev) => prev.map((j) => (j.id === jobId ? { ...j, priority: newPriority } : j)));
+    if (selectedJob?.id === jobId) setSelectedJob((p) => p ? { ...p, priority: newPriority } : p);
+  };
+
+  const handleAppliedDateChange = async (jobId: string, date: Date | undefined) => {
+    const applied_date = date ? format(date, "yyyy-MM-dd") : null;
+    await supabase.from("jobs").update({ applied_date }).eq("id", jobId);
+    setJobs((prev) => prev.map((j) => (j.id === jobId ? { ...j, applied_date } : j)));
   };
 
   const confirmDeleteJob = async () => {
@@ -273,7 +313,7 @@ const JobTracker = () => {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-muted/40">
-                    {["Company","Job Title","Function","Location","Work Mode","Duration","Status","Match","Added",""].map(h => (
+                    {["Company","Job Title","Function","Location","Work Mode","Duration","Status","Match","Priority","Added","Applied",""].map(h => (
                       <th key={h} className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -294,7 +334,9 @@ const JobTracker = () => {
                       <td className="px-4 py-3"><Skeleton className="h-4 w-20" /></td>
                       <td className="px-4 py-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
                       <td className="px-4 py-3"><Skeleton className="h-8 w-8 rounded-full" /></td>
+                      <td className="px-4 py-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
                       <td className="px-4 py-3"><Skeleton className="h-4 w-12" /></td>
+                      <td className="px-4 py-3"><Skeleton className="h-4 w-16" /></td>
                       <td className="px-4 py-3"></td>
                     </tr>
                   )}
@@ -342,7 +384,38 @@ const JobTracker = () => {
                           <span className={`inline-flex items-center justify-center h-8 w-8 rounded-full border text-xs font-bold ${getScoreColor(job.match_score)}`}>{job.match_score}</span>
                         ) : <span className="text-muted-foreground">–</span>}
                       </td>
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        <Select value={job.priority} onValueChange={(v) => handlePriorityChange(job.id, v)}>
+                          <SelectTrigger className={`h-7 w-auto border-0 gap-1 px-2.5 rounded-full text-xs font-medium ${getPriorityColor(job.priority)}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {PRIORITY_OPTIONS.map(p => <SelectItem key={p.value} value={p.value}>{p.value}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </td>
                       <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">{format(new Date(job.created_at), "MMM d")}</td>
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        {job.status === "Saved" && !job.applied_date ? (
+                          <span className="text-muted-foreground">–</span>
+                        ) : (
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <button className="text-sm text-foreground hover:text-primary transition-colors whitespace-nowrap">
+                                {job.applied_date ? format(new Date(job.applied_date), "MMM d") : <span className="flex items-center gap-1 text-muted-foreground"><CalendarIcon className="h-3 w-3" /> Set</span>}
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={job.applied_date ? new Date(job.applied_date) : undefined}
+                                onSelect={(d) => handleAppliedDateChange(job.id, d)}
+                                className={cn("p-3 pointer-events-auto")}
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        )}
+                      </td>
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={() => setDeleteJobId(job.id)}
