@@ -224,6 +224,8 @@ const ContactCard = ({ contact, onUpdate, onDelete }: {
 const JobDetail = () => {
   const { jobId } = useParams<{ jobId: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const defaultTab = searchParams.get("tab") || "overview";
   const [job, setJob] = useState<Job | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [linkedinUrl, setLinkedinUrl] = useState("");
