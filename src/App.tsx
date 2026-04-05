@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Landing from "./pages/Landing";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
+import Welcome from "./pages/Welcome";
 import Onboarding from "./pages/Onboarding";
 import DashboardLayout from "./components/DashboardLayout";
 import JobTracker from "./pages/JobTracker";
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/" element={<Landing />} />
           <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/welcome" element={<Welcome />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route element={<DashboardLayout />}>
             <Route path="/dashboard" element={<JobTracker />} />

@@ -14,12 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      awards: {
+        Row: {
+          award_name: string
+          created_at: string
+          description: string | null
+          id: string
+          issuing_organization: string | null
+          user_id: string
+          year: number | null
+        }
+        Insert: {
+          award_name: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          issuing_organization?: string | null
+          user_id: string
+          year?: number | null
+        }
+        Update: {
+          award_name?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          issuing_organization?: string | null
+          user_id?: string
+          year?: number | null
+        }
+        Relationships: []
+      }
       education: {
         Row: {
+          activities: string | null
           created_at: string
           degree: string
+          description: string | null
           end_year: number | null
           field_of_study: string
+          grade: string | null
           id: string
           institution: string
           is_expected: boolean
@@ -27,10 +60,13 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          activities?: string | null
           created_at?: string
           degree: string
+          description?: string | null
           end_year?: number | null
           field_of_study: string
+          grade?: string | null
           id?: string
           institution: string
           is_expected?: boolean
@@ -38,10 +74,13 @@ export type Database = {
           user_id: string
         }
         Update: {
+          activities?: string | null
           created_at?: string
           degree?: string
+          description?: string | null
           end_year?: number | null
           field_of_study?: string
+          grade?: string | null
           id?: string
           institution?: string
           is_expected?: boolean
@@ -57,6 +96,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      interests: {
+        Row: {
+          created_at: string
+          id: string
+          interests: string[]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          interests?: string[]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          interests?: string[]
+          user_id?: string
+        }
+        Relationships: []
       }
       jobs: {
         Row: {
@@ -214,6 +274,42 @@ export type Database = {
           },
         ]
       }
+      volunteering: {
+        Row: {
+          created_at: string
+          description: string | null
+          end_year: number | null
+          id: string
+          is_ongoing: boolean
+          organization: string
+          role: string | null
+          start_year: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          end_year?: number | null
+          id?: string
+          is_ongoing?: boolean
+          organization: string
+          role?: string | null
+          start_year?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          end_year?: number | null
+          id?: string
+          is_ongoing?: boolean
+          organization?: string
+          role?: string | null
+          start_year?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       work_experiences: {
         Row: {
           bullet_points: string[]
@@ -224,6 +320,7 @@ export type Database = {
           id: string
           is_current: boolean
           job_title: string
+          location: string | null
           start_month: number
           start_year: number
           user_id: string
@@ -237,6 +334,7 @@ export type Database = {
           id?: string
           is_current?: boolean
           job_title: string
+          location?: string | null
           start_month: number
           start_year: number
           user_id: string
@@ -250,6 +348,7 @@ export type Database = {
           id?: string
           is_current?: boolean
           job_title?: string
+          location?: string | null
           start_month?: number
           start_year?: number
           user_id?: string

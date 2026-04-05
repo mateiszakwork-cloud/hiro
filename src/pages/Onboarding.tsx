@@ -6,8 +6,11 @@ import StepWorkExperience from "@/components/onboarding/StepWorkExperience";
 import StepEducation from "@/components/onboarding/StepEducation";
 import StepSkills from "@/components/onboarding/StepSkills";
 import StepLanguages from "@/components/onboarding/StepLanguages";
+import StepAwards from "@/components/onboarding/StepAwards";
+import StepVolunteering from "@/components/onboarding/StepVolunteering";
+import StepInterests from "@/components/onboarding/StepInterests";
 
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 7;
 
 const Onboarding = () => {
   const navigate = useNavigate();
@@ -17,38 +20,18 @@ const Onboarding = () => {
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        navigate("/login");
-        return;
-      }
+      if (!session) { navigate("/login"); return; }
       const uid = session.user.id;
-
-      // Redirect if onboarding already complete
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("onboarding_complete")
-        .eq("id", uid)
-        .single();
-
-      if (profile?.onboarding_complete) {
-        navigate("/dashboard");
-        return;
-      }
-
+      const { data: profile } = await supabase.from("profiles").select("onboarding_complete").eq("id", uid).single();
+      if (profile?.onboarding_complete) { navigate("/dashboard"); return; }
       setUserId(uid);
     };
     checkAuth();
   }, [navigate]);
 
   const progressValue = (currentStep / TOTAL_STEPS) * 100;
-
-  const handleNext = () => {
-    if (currentStep < TOTAL_STEPS) setCurrentStep((s) => s + 1);
-  };
-
-  const handleBack = () => {
-    if (currentStep > 1) setCurrentStep((s) => s - 1);
-  };
+  const handleNext = () => { if (currentStep < TOTAL_STEPS) setCurrentStep(s => s + 1); };
+  const handleBack = () => { if (currentStep > 1) setCurrentStep(s => s - 1); };
 
   if (!userId) return null;
 
@@ -60,18 +43,13 @@ const Onboarding = () => {
         </div>
         <Progress value={progressValue} className="mb-8 h-2" />
 
-        {currentStep === 1 && (
-          <StepWorkExperience userId={userId} onNext={handleNext} />
-        )}
-        {currentStep === 2 && (
-          <StepEducation userId={userId} onBack={handleBack} onNext={handleNext} />
-        )}
-        {currentStep === 3 && (
-          <StepSkills userId={userId} onBack={handleBack} onNext={handleNext} />
-        )}
-        {currentStep === 4 && (
-          <StepLanguages userId={userId} onBack={handleBack} onFinish={() => navigate("/dashboard")} />
-        )}
+        {currentStep === 1 && <StepWorkExperience userId={userId} onNext={handleNext} />}
+        {currentStep === 2 && <StepEducation userId={userId} onBack={handleBack} onNext={handleNext} />}
+        {currentStep === 3 && <StepSkills userId={userId} onBack={handleBack} onNext={handleNext} />}
+        {currentStep === 4 && <StepLanguages userId={userId} onBack={handleBack} onNext={handleNext} />}
+        {currentStep === 5 && <StepAwards userId={userId} onBack={handleBack} onNext={handleNext} />}
+        {currentStep === 6 && <StepVolunteering userId={userId} onBack={handleBack} onNext={handleNext} />}
+        {currentStep === 7 && <StepInterests userId={userId} onBack={handleBack} onFinish={() => navigate("/dashboard")} />}
       </div>
     </div>
   );
