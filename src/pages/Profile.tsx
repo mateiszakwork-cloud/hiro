@@ -8,9 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Pencil, Trash2, X } from "lucide-react";
+import { Pencil, Trash2, X, Upload, Loader2, CheckCircle, AlertTriangle, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import type { ParsedCVData } from "@/types/cv";
 
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const WORK_YEARS = Array.from({ length: 27 }, (_, i) => 2000 + i);
