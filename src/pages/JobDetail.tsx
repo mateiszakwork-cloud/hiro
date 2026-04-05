@@ -233,6 +233,11 @@ const JobDetail = () => {
   const saveTimer = useRef<ReturnType<typeof setTimeout>>();
 
   const [matchLoading, setMatchLoading] = useState(false);
+  const [cvOutput, setCvOutput] = useState<CvOutput | null>(null);
+  const [cvLoading, setCvLoading] = useState(false);
+  const [cvFetched, setCvFetched] = useState(false);
+  const [userProfile, setUserProfile] = useState<{ full_name: string | null; email: string | null }>({ full_name: null, email: null });
+  const [copiedCv, setCopiedCv] = useState(false);
 
   useEffect(() => {
     const init = async () => {
