@@ -97,6 +97,48 @@ export type Database = {
           },
         ]
       }
+      cv_output_history: {
+        Row: {
+          created_at: string
+          cv_output_id: string
+          id: string
+          job_id: string
+          snapshot: Json
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          cv_output_id: string
+          id?: string
+          job_id: string
+          snapshot?: Json
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          cv_output_id?: string
+          id?: string
+          job_id?: string
+          snapshot?: Json
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cv_output_history_cv_output_id_fkey"
+            columns: ["cv_output_id"]
+            isOneToOne: false
+            referencedRelation: "cv_outputs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cv_output_history_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cv_outputs: {
         Row: {
           created_at: string
