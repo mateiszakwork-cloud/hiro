@@ -71,6 +71,7 @@ const InterestTagInput = ({ tags, onAdd, onRemove, suggestions }: { tags: string
 const Profile = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [email, setEmail] = useState("");
+  const [fullName, setFullName] = useState("");
   const [memberSince, setMemberSince] = useState("");
 
   const [workExps, setWorkExps] = useState<WorkExp[]>([]);
