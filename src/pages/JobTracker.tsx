@@ -55,6 +55,7 @@ const getScoreColor = (score: number | null) => {
 };
 
 const JobTracker = () => {
+  const navigate = useNavigate();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
