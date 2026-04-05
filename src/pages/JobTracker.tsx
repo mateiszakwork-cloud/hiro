@@ -164,19 +164,42 @@ const JobTracker = () => {
     setLoading(false);
   };
 
-  const handleAddManually = async () => {
-    if (!userId || !parseFailedUrl) return;
-    const { data } = await supabase
+  const handleAddManually = () => {
+    setManualPrefillUrl(parseFailedUrl || "");
+    setParseFailedUrl(null);
+    setManualOpen(true);
+  };
+
+  const handleManualSave = async (data: any) => {
+    if (!userId) return;
+    const insertData: any = {
+      user_id: userId, status: "Saved",
+      job_title: data.job_title.trim(), company_name: data.company_name.trim(),
+      url: data.url.trim() || null, function: data.function || null,
+      location: data.location.trim() || null, work_mode: data.work_mode || null,
+      duration: data.duration.trim() || null, hard_skills: data.hard_skills,
+      soft_skills: data.soft_skills, languages_required: data.languages_required,
+      application_deadline: data.application_deadline || null,
+    };
+    const { data: job, error } = await supabase
       .from("jobs")
-      .insert({ user_id: userId, url: parseFailedUrl, status: "Saved" })
+      .insert(insertData)
       .select("id, url, company_name, job_title, function, location, work_mode, duration, status, match_score, created_at")
       .single();
-    if (data) {
-      setJobs((prev) => [data, ...prev]);
-      setSelectedJob(data);
-      navigate(`/jobs/${data.id}`);
+    if (error || !job) { toast.error("Failed to save job."); return; }
+    setJobs((prev) => [job, ...prev]);
+    toast.success("Job added successfully ✓");
+
+    // Trigger match scoring if job description was provided
+    if (data.job_description?.trim()) {
+      supabase.functions.invoke("calculate-match-score", {
+        body: { job_id: job.id },
+      }).then(({ data: scoreResult }) => {
+        if (scoreResult?.success && scoreResult.score !== null) {
+          setJobs((prev) => prev.map((j) => j.id === job.id ? { ...j, match_score: scoreResult.score } : j));
+        }
+      }).catch(() => {});
     }
-    setParseFailedUrl(null);
   };
 
   const handleRetryParse = () => {
