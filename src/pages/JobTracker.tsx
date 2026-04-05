@@ -546,6 +546,26 @@ const JobTracker = () => {
                           <span className={`inline-flex items-center justify-center h-8 w-8 rounded-full border text-xs font-bold ${getScoreColor(job.match_score)}`}>{job.match_score}</span>
                         ) : <span className="text-muted-foreground">–</span>}
                       </td>
+                      <td className="px-4 py-3" onClick={(e) => { e.stopPropagation(); navigate(`/jobs/${job.id}?tab=cv`); }}>
+                        <TooltipProvider delayDuration={200}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button className="transition-colors">
+                                {cvMap[job.id] ? (
+                                  <FileCheck className="h-4 w-4 text-[#950606]" />
+                                ) : (
+                                  <FileText className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                                )}
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {cvMap[job.id]
+                                ? `CV ready — last generated ${format(new Date(cvMap[job.id]), "MMM d, yyyy")}`
+                                : "Generate tailored CV"}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </td>
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                         <Select value={job.priority} onValueChange={(v) => handlePriorityChange(job.id, v)}>
                           <SelectTrigger className={`h-7 w-auto border-0 gap-1 px-2.5 rounded-full text-xs font-medium ${getPriorityColor(job.priority)}`}>
