@@ -208,6 +208,8 @@ const JobDetail = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout>>();
 
+  const [matchLoading, setMatchLoading] = useState(false);
+
   useEffect(() => {
     const init = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -223,6 +225,25 @@ const JobDetail = () => {
       if (!jobData) { navigate("/dashboard"); return; }
       setJob(jobData as any);
       setNotes(jobData.notes || "");
+
+      // If no match score yet, it might be calculating — poll for it
+      if (jobData.match_score === null) {
+        setMatchLoading(true);
+        const pollInterval = setInterval(async () => {
+          const { data: updated } = await supabase
+            .from("jobs")
+            .select("match_score, match_details")
+            .eq("id", jobId!)
+            .single();
+          if (updated?.match_score !== null) {
+            setJob(prev => prev ? { ...prev, match_score: updated.match_score, match_details: updated.match_details as any } : prev);
+            setMatchLoading(false);
+            clearInterval(pollInterval);
+          }
+        }, 3000);
+        // Stop polling after 60s
+        setTimeout(() => { clearInterval(pollInterval); setMatchLoading(false); }, 60000);
+      }
 
       const { data: contactData } = await supabase
         .from("contacts")
