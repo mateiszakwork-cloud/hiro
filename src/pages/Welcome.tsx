@@ -114,8 +114,9 @@ const Welcome = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="max-w-lg w-full text-center">
-        <h1 className="text-3xl font-bold text-primary mb-2">Welcome to Reachboard</h1>
-        <p className="text-muted-foreground mb-10">Here's how it works:</p>
+        <h1 className="text-3xl font-bold text-primary mb-2">Welcome to Hiro</h1>
+        <p className="text-muted-foreground mb-6">Paste a job URL. Get a tailored CV, contacts to reach out to, and your full application tracked.</p>
+        <p className="text-sm text-muted-foreground mb-10">Here's how it works:</p>
 
         <div className="space-y-6 text-left mb-10">
           {steps.map((step, i) => (
