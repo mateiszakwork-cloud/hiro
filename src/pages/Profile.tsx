@@ -270,9 +270,26 @@ const Profile = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[28px] font-bold text-primary">Profile</h1>
-        <p className="text-muted-foreground mt-0.5">{email}</p>
-        {memberSince && <p className="text-sm text-muted-foreground">Member since {memberSince}</p>}
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-[28px] font-bold text-primary">Profile</h1>
+            <p className="text-muted-foreground mt-0.5">{email}</p>
+            {memberSince && <p className="text-sm text-muted-foreground">Member since {memberSince}</p>}
+          </div>
+          <div className="flex flex-col items-end gap-2">
+            <input ref={cvInputRef} type="file" accept="application/pdf" onChange={handleCvReimport} className="hidden" />
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => cvInputRef.current?.click()} disabled={cvUploading}>
+              {cvUploading ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Parsing CV...</> : <><Upload className="h-3.5 w-3.5" /> Re-import from CV</>}
+            </Button>
+            {cvError && (
+              <div className="flex items-center gap-2 text-xs text-destructive">
+                <AlertTriangle className="h-3 w-3" /> Failed to parse CV.
+                <button onClick={() => { setCvError(false); cvInputRef.current?.click(); }} className="underline">Retry</button>
+              </div>
+            )}
+            {cvSuccess && <p className="text-xs text-primary flex items-center gap-1"><CheckCircle className="h-3 w-3" /> {cvSuccess}</p>}
+          </div>
+        </div>
       </div>
 
       {/* ─── Work Experience ─── */}
