@@ -194,7 +194,7 @@ const JobTracker = () => {
                       </td>
                       {/* Job Title */}
                       <td className="px-4 py-3 font-medium whitespace-nowrap">
-                        {job.job_title || "–"}
+                        {job.job_title || (job.url ? <span className="text-muted-foreground italic">Parsing...</span> : "–")}
                       </td>
                       {/* Function */}
                       <td className="px-4 py-3">
