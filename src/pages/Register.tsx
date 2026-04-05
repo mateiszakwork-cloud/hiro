@@ -16,6 +16,7 @@ const InlineError = ({ message }: { message: string }) => (
 
 const Register = () => {
   const navigate = useNavigate();
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -24,6 +25,7 @@ const Register = () => {
 
   const validate = () => {
     const e: Record<string, string> = {};
+    if (!fullName.trim()) e.fullName = "Full name is required";
     if (!email.trim()) e.email = "Email is required";
     if (!password) e.password = "Password is required";
     else if (password.length < 6) e.password = "Password must be at least 6 characters";
@@ -37,14 +39,18 @@ const Register = () => {
     e.preventDefault();
     if (!validate()) return;
     setLoading(true);
-    const { error } = await supabase.auth.signUp({ email, password });
+    const { data, error } = await supabase.auth.signUp({ email, password });
     setLoading(false);
     if (error) {
       toast.error(error.message);
-    } else {
-      toast.success("Account created!");
-      navigate("/welcome");
+      return;
     }
+    // Save full name to profiles table
+    if (data.user) {
+      await supabase.from("profiles").update({ full_name: fullName.trim() }).eq("id", data.user.id);
+    }
+    toast.success("Account created!");
+    navigate("/welcome");
   };
 
   return (
