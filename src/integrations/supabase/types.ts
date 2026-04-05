@@ -174,6 +174,7 @@ export type Database = {
       jobs: {
         Row: {
           application_deadline: string | null
+          applied_date: string | null
           company_name: string | null
           created_at: string
           duration: string | null
@@ -187,6 +188,7 @@ export type Database = {
           match_details: Json | null
           match_score: number | null
           notes: string | null
+          priority: string
           skills_nice_to_have: string[] | null
           soft_skills: string[] | null
           status: string
@@ -196,6 +198,7 @@ export type Database = {
         }
         Insert: {
           application_deadline?: string | null
+          applied_date?: string | null
           company_name?: string | null
           created_at?: string
           duration?: string | null
@@ -209,6 +212,7 @@ export type Database = {
           match_details?: Json | null
           match_score?: number | null
           notes?: string | null
+          priority?: string
           skills_nice_to_have?: string[] | null
           soft_skills?: string[] | null
           status?: string
@@ -218,6 +222,7 @@ export type Database = {
         }
         Update: {
           application_deadline?: string | null
+          applied_date?: string | null
           company_name?: string | null
           created_at?: string
           duration?: string | null
@@ -231,6 +236,7 @@ export type Database = {
           match_details?: Json | null
           match_score?: number | null
           notes?: string | null
+          priority?: string
           skills_nice_to_have?: string[] | null
           soft_skills?: string[] | null
           status?: string
