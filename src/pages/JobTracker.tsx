@@ -246,7 +246,16 @@ const JobTracker = () => {
             {loading ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Parsing...</> : "Add Job"}
           </Button>
         </div>
-        {urlError && <p className="text-destructive text-xs mt-1.5">{urlError}</p>}
+        <div className="flex items-center gap-3 mt-1.5">
+          {urlError && <p className="text-destructive text-xs">{urlError}</p>}
+          <button
+            type="button"
+            onClick={() => { setManualPrefillUrl(url.trim()); setManualOpen(true); }}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors ml-auto"
+          >
+            Add manually
+          </button>
+        </div>
       </div>
 
       <Card className="overflow-hidden">
