@@ -27,7 +27,8 @@ type Job = {
   id: string; url: string | null; company_name: string | null; job_title: string | null;
   function: string | null; location: string | null; work_mode: string | null;
   duration: string | null; hard_skills: string[] | null; soft_skills: string[] | null;
-  languages_required: string[] | null; application_deadline: string | null;
+  skills_nice_to_have: string[] | null; languages_required: string[] | null;
+  languages_nice_to_have: string[] | null; application_deadline: string | null;
   status: string; match_score: number | null; match_details: MatchDetails | null; notes: string | null; created_at: string;
 };
 
@@ -59,12 +60,15 @@ const getScoreColor = (score: number | null) => {
 };
 
 /* ── Tag list renderer ── */
-const TagList = ({ tags, className = "" }: { tags: string[] | null; className?: string }) => {
+const TagList = ({ tags, className = "", soft = false }: { tags: string[] | null; className?: string; soft?: boolean }) => {
   if (!tags?.length) return <span className="text-muted-foreground">–</span>;
+  const base = soft
+    ? "inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500 border border-gray-200"
+    : "inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground";
   return (
     <div className="flex flex-wrap gap-1.5">
       {tags.map((t, i) => (
-        <span key={i} className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground ${className}`}>{t}</span>
+        <span key={i} className={`${base} ${className}`}>{t}</span>
       ))}
     </div>
   );
@@ -383,17 +387,25 @@ const JobDetail = () => {
                   </span>
                 </div>
                 <div className="space-y-1 col-span-full">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Hard Skills</p>
-                  <TagList tags={job.hard_skills} />
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Required Skills</p>
+                  <TagList tags={[...(job.hard_skills || []), ...(job.soft_skills || [])]} />
                 </div>
+                {(job.skills_nice_to_have?.length ?? 0) > 0 && (
+                  <div className="space-y-1 col-span-full">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Nice-to-Have Skills</p>
+                    <TagList tags={job.skills_nice_to_have} soft />
+                  </div>
+                )}
                 <div className="space-y-1 col-span-full">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Soft Skills</p>
-                  <TagList tags={job.soft_skills} />
-                </div>
-                <div className="space-y-1 col-span-full">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Languages Required</p>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Required Languages</p>
                   <TagList tags={job.languages_required} />
                 </div>
+                {(job.languages_nice_to_have?.length ?? 0) > 0 && (
+                  <div className="space-y-1 col-span-full">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Nice-to-Have Languages</p>
+                    <TagList tags={job.languages_nice_to_have} soft />
+                  </div>
+                )}
                 {job.url && (
                   <div className="space-y-1 col-span-full">
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Job URL</p>

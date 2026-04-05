@@ -100,11 +100,16 @@ serve(async (req) => {
 - location: string (city and country, e.g. "Paris, France")
 - work_mode: string (must be exactly one of: Onsite, Hybrid, Remote)
 - duration: string (e.g. "6 months", "12 months", "Permanent", "Fixed-term")
-- hard_skills: array of strings (specific tools, software, methodologies, technical skills explicitly mentioned)
-- soft_skills: array of strings (interpersonal and professional skills explicitly mentioned)
-- languages_required: array of strings (e.g. ["English", "French"])
+- hard_skills: array of strings (specific tools, software, methodologies, technical skills that are explicitly required, essential, or mandatory)
+- soft_skills: array of strings (interpersonal and professional skills that are explicitly required, essential, or mandatory)
+- skills_nice_to_have: array of strings (any skills — hard or soft — described as optional, a plus, bonus, preferred, advantageous, nice to have, or would be beneficial)
+- languages_required: array of strings (languages explicitly marked as required, mandatory, or essential, e.g. ["English", "French"])
+- languages_nice_to_have: array of strings (languages described as a plus, bonus, preferred, advantageous, nice to have, or would be beneficial)
 - application_deadline: string in ISO 8601 format (YYYY-MM-DD) or null if not mentioned
 - job_description_summary: string (a neutral 3-sentence summary of the role, responsibilities, and ideal candidate)
+
+Pay close attention to language that signals optionality vs requirement. Words like required, essential, must have, and mandatory indicate required fields. Words like plus, bonus, preferred, advantageous, nice to have, ideally, and would be beneficial indicate optional fields. When in doubt, classify as nice to have rather than required.
+
 If any field cannot be determined from the text, use null for strings and empty array [] for arrays. Never invent information not present in the text.`;
 
     let parsed: Record<string, unknown>;
@@ -163,10 +168,12 @@ If any field cannot be determined from the text, use null for strings and empty 
         duration: parsed.duration as string | null,
         hard_skills: (parsed.hard_skills as string[]) || [],
         soft_skills: (parsed.soft_skills as string[]) || [],
+        skills_nice_to_have: (parsed.skills_nice_to_have as string[]) || [],
         languages_required: (parsed.languages_required as string[]) || [],
+        languages_nice_to_have: (parsed.languages_nice_to_have as string[]) || [],
         application_deadline: parsed.application_deadline as string | null,
       })
-      .select("id, url, company_name, job_title, function, location, work_mode, duration, status, match_score, created_at, hard_skills, soft_skills, languages_required, application_deadline")
+      .select("id, url, company_name, job_title, function, location, work_mode, duration, status, match_score, created_at, hard_skills, soft_skills, skills_nice_to_have, languages_required, languages_nice_to_have, application_deadline")
       .single();
 
     if (insertError || !job) {
