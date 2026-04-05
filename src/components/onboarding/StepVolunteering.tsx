@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-const YEARS = Array.from({ length: 27 }, (_, i) => 2000 + i);
+const YEARS = Array.from({ length: 37 }, (_, i) => 1990 + i);
 
 interface VolBlock { organization: string; role: string; startYear: string; endYear: string; isOngoing: boolean; description: string; }
 const emptyBlock = (): VolBlock => ({ organization: "", role: "", startYear: "", endYear: "", isOngoing: false, description: "" });

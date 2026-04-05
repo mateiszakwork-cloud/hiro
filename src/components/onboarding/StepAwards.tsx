@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Trash2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
-const YEARS = Array.from({ length: 27 }, (_, i) => 2000 + i);
+const YEARS = Array.from({ length: 37 }, (_, i) => 1990 + i);
 
 interface AwardBlock { awardName: string; issuingOrg: string; year: string; description: string; }
 const emptyBlock = (): AwardBlock => ({ awardName: "", issuingOrg: "", year: "", description: "" });
