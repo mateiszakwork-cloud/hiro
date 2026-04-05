@@ -369,6 +369,64 @@ const JobTracker = () => {
         </div>
       </div>
 
+      {/* Filters */}
+      {showTable && (
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="ml-auto flex items-center gap-2">
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="h-8 w-auto gap-1 px-3 text-xs border rounded-lg">
+                <SelectValue placeholder="Status" />
+                {filterStatus !== "All" && (
+                  <span className="ml-1 inline-flex items-center justify-center h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
+                    {jobs.filter(j => j.status === filterStatus).length}
+                  </span>
+                )}
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All">All Statuses</SelectItem>
+                {STATUS_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.value}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={filterFunction} onValueChange={setFilterFunction}>
+              <SelectTrigger className="h-8 w-auto gap-1 px-3 text-xs border rounded-lg">
+                <SelectValue placeholder="Function" />
+                {filterFunction !== "All" && (
+                  <span className="ml-1 inline-flex items-center justify-center h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
+                    {jobs.filter(j => j.function === filterFunction).length}
+                  </span>
+                )}
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All">All Functions</SelectItem>
+                {FUNCTION_VALUES.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={filterPriority} onValueChange={setFilterPriority}>
+              <SelectTrigger className="h-8 w-auto gap-1 px-3 text-xs border rounded-lg">
+                <SelectValue placeholder="Priority" />
+                {filterPriority !== "All" && (
+                  <span className="ml-1 inline-flex items-center justify-center h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
+                    {jobs.filter(j => j.priority === filterPriority).length}
+                  </span>
+                )}
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All">All Priorities</SelectItem>
+                {PRIORITY_OPTIONS.map(p => <SelectItem key={p.value} value={p.value}>{p.value}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            {filtersActive && (
+              <button
+                onClick={() => { setFilterStatus("All"); setFilterFunction("All"); setFilterPriority("All"); }}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Clear filters
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       <Card className="overflow-hidden">
         <CardContent className="p-0">
           {!showTable ? (
