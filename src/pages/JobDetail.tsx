@@ -1083,6 +1083,40 @@ const JobDetail = () => {
                 </Card>
               )}
 
+              {/* Version History */}
+              {cvHistory.length > 0 && (
+                <Collapsible open={historyOpen} onOpenChange={setHistoryOpen}>
+                  <CollapsibleTrigger asChild>
+                    <button className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                      <History className="h-4 w-4" />
+                      Previous versions ({cvHistory.length})
+                      {historyOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-3">
+                    <Card>
+                      <CardContent className="p-4 space-y-2">
+                        {cvHistory.map((h) => (
+                          <button
+                            key={h.id}
+                            onClick={() => setPreviewVersion(h)}
+                            className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors text-left"
+                          >
+                            <div className="flex items-center gap-2">
+                              <FileText className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-sm text-foreground">
+                                {format(new Date(h.created_at), "MMM d, yyyy 'at' h:mm a")}
+                              </span>
+                            </div>
+                            <span className="text-xs text-muted-foreground">View →</span>
+                          </button>
+                        ))}
+                      </CardContent>
+                    </Card>
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
+
               {/* Action Buttons */}
               <div className="flex gap-3 justify-end">
                 <Button variant="outline" size="sm" className="gap-1.5" onClick={handleCopyCv}>
@@ -1095,6 +1129,72 @@ const JobDetail = () => {
               </div>
             </>
           )}
+
+          {/* Regeneration Confirmation */}
+          <AlertDialog open={regenConfirmOpen} onOpenChange={setRegenConfirmOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Regenerate CV?</AlertDialogTitle>
+                <AlertDialogDescription>The current version will be saved to history.</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => handleGenerateCv(true)} className="bg-[#950606] hover:bg-[#7a0505]">Regenerate</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          {/* History Preview Modal */}
+          <Dialog open={!!previewVersion} onOpenChange={(open) => !open && setPreviewVersion(null)}>
+            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>CV Version — {previewVersion && format(new Date(previewVersion.created_at), "MMM d, yyyy 'at' h:mm a")}</DialogTitle>
+                <DialogDescription>Preview of a previous CV version.</DialogDescription>
+              </DialogHeader>
+              {previewVersion?.snapshot && (
+                <div className="space-y-4 text-sm">
+                  {previewVersion.snapshot.profile_headline && (
+                    <p className="italic text-muted-foreground">{previewVersion.snapshot.profile_headline}</p>
+                  )}
+                  {previewVersion.snapshot.selected_experiences?.length > 0 && (
+                    <div>
+                      <h4 className="font-bold text-xs uppercase tracking-widest border-b pb-1 mb-2">Experience</h4>
+                      {previewVersion.snapshot.selected_experiences.map((exp: any, i: number) => (
+                        <div key={i} className="mb-3">
+                          <p className="font-semibold">{exp.company} — {exp.job_title}</p>
+                          <p className="text-xs text-muted-foreground">{exp.start_date} – {exp.end_date}{exp.location ? ` | ${exp.location}` : ""}</p>
+                          <ul className="list-disc list-outside ml-4 mt-1 space-y-0.5">
+                            {(exp.selected_bullets || []).map((b: string, j: number) => <li key={j}>{b}</li>)}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {(previewVersion.snapshot.selected_hard_skills?.length > 0 || previewVersion.snapshot.selected_soft_skills?.length > 0) && (
+                    <div>
+                      <h4 className="font-bold text-xs uppercase tracking-widest border-b pb-1 mb-2">Skills</h4>
+                      {previewVersion.snapshot.selected_hard_skills?.length > 0 && <p>Hard: {previewVersion.snapshot.selected_hard_skills.join(", ")}</p>}
+                      {previewVersion.snapshot.selected_soft_skills?.length > 0 && <p>Soft: {previewVersion.snapshot.selected_soft_skills.join(", ")}</p>}
+                    </div>
+                  )}
+                  {previewVersion.snapshot.selected_education?.length > 0 && (
+                    <div>
+                      <h4 className="font-bold text-xs uppercase tracking-widest border-b pb-1 mb-2">Education</h4>
+                      {previewVersion.snapshot.selected_education.map((edu: any, i: number) => (
+                        <p key={i}><strong>{edu.institution}</strong> — {edu.degree}, {edu.field}</p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setPreviewVersion(null)}>Close</Button>
+                <Button onClick={() => handleRestoreVersion(previewVersion)} className="gap-1.5 bg-[#950606] hover:bg-[#7a0505] text-white">
+                  <RotateCcw className="h-3.5 w-3.5" /> Restore this version
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
 
         {/* Notes Tab */}
