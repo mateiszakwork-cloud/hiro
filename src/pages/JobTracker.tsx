@@ -184,8 +184,16 @@ const JobTracker = () => {
       if (!session) return;
       setUserId(session.user.id);
       fetchJobs(session.user.id);
-    };
-    init();
+      // Fetch CV statuses
+      const { data: cvData } = await supabase
+        .from("cv_outputs")
+        .select("job_id, updated_at")
+        .eq("user_id", session.user.id);
+      if (cvData) {
+        const map: Record<string, string> = {};
+        for (const row of cvData) map[row.job_id] = row.updated_at;
+        setCvMap(map);
+      }
   }, []);
 
   const fetchJobs = async (uid: string) => {
