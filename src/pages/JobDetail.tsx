@@ -373,10 +373,52 @@ const JobDetail = () => {
     setContacts(prev => prev.filter(c => c.id !== id));
   };
 
-  const handleGenerateCv = async () => {
+  const handleGenerateCv = async (skipConfirm = false) => {
     if (!jobId || !userId) return;
+
+    // If CV exists and not confirmed, show confirmation
+    if (cvOutput && !skipConfirm) {
+      setRegenConfirmOpen(true);
+      return;
+    }
+
+    setRegenConfirmOpen(false);
     setCvLoading(true);
     try {
+      // Save current version to history before regenerating
+      if (cvOutput) {
+        const snapshot = {
+          profile_headline: cvOutput.profile_headline,
+          selected_experiences: cvOutput.selected_experiences,
+          selected_hard_skills: cvOutput.selected_hard_skills,
+          selected_soft_skills: cvOutput.selected_soft_skills,
+          selected_education: cvOutput.selected_education,
+          selected_languages: cvOutput.selected_languages,
+          selected_awards: cvOutput.selected_awards,
+          selected_volunteering: cvOutput.selected_volunteering,
+          tailoring_notes: cvOutput.tailoring_notes,
+          updated_at: cvOutput.updated_at,
+        };
+        await supabase.from("cv_output_history").insert({
+          cv_output_id: cvOutput.id,
+          job_id: jobId,
+          user_id: userId,
+          snapshot,
+        });
+
+        // Enforce max 5 history entries — delete oldest if over limit
+        const { data: allHist } = await supabase
+          .from("cv_output_history")
+          .select("id, created_at")
+          .eq("job_id", jobId)
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false });
+        if (allHist && allHist.length > 5) {
+          const toDelete = allHist.slice(5).map(h => h.id);
+          await supabase.from("cv_output_history").delete().in("id", toDelete);
+        }
+      }
+
       const { data, error } = await supabase.functions.invoke("tailor-cv", {
         body: { job_id: jobId },
       });
@@ -386,11 +428,50 @@ const JobDetail = () => {
       }
       setCvOutput(data.data as CvOutput);
       toast.success("CV generated successfully!");
+
+      // Refresh history
+      const { data: histData } = await supabase
+        .from("cv_output_history")
+        .select("*")
+        .eq("job_id", jobId)
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+      if (histData) setCvHistory(histData);
     } catch {
       toast.error("CV generation failed. Please try again.");
     } finally {
       setCvLoading(false);
     }
+  };
+
+  const handleRestoreVersion = async (historyEntry: any) => {
+    if (!cvOutput || !jobId || !userId) return;
+    const snapshot = historyEntry.snapshot;
+    const { error } = await supabase
+      .from("cv_outputs")
+      .update({
+        profile_headline: snapshot.profile_headline,
+        selected_experiences: snapshot.selected_experiences,
+        selected_hard_skills: snapshot.selected_hard_skills,
+        selected_soft_skills: snapshot.selected_soft_skills,
+        selected_education: snapshot.selected_education,
+        selected_languages: snapshot.selected_languages,
+        selected_awards: snapshot.selected_awards,
+        selected_volunteering: snapshot.selected_volunteering,
+        tailoring_notes: snapshot.tailoring_notes,
+      })
+      .eq("id", cvOutput.id);
+    if (error) {
+      toast.error("Failed to restore version.");
+      return;
+    }
+    setCvOutput(prev => prev ? {
+      ...prev,
+      ...snapshot,
+      updated_at: new Date().toISOString(),
+    } : prev);
+    setPreviewVersion(null);
+    toast.success("Version restored successfully!");
   };
 
   const buildCvPlainText = () => {
