@@ -46,7 +46,7 @@ const Login = () => {
       .single();
 
     if (profile && !profile.onboarding_complete) {
-      navigate("/onboarding");
+      navigate("/welcome");
     } else {
       navigate("/dashboard");
     }
