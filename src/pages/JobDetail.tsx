@@ -1,0 +1,458 @@
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { ArrowLeft, ExternalLink, MapPin, Copy, Check, Trash2, ChevronDown, ChevronUp, FileText, Download } from "lucide-react";
+import { toast } from "sonner";
+
+type Job = {
+  id: string; url: string | null; company_name: string | null; job_title: string | null;
+  function: string | null; location: string | null; work_mode: string | null;
+  duration: string | null; hard_skills: string[] | null; soft_skills: string[] | null;
+  languages_required: string[] | null; application_deadline: string | null;
+  status: string; match_score: number | null; notes: string | null; created_at: string;
+};
+
+type Contact = {
+  id: string; linkedin_url: string | null; name: string | null; headline: string | null;
+  current_title: string | null; is_alumni: boolean; connection_note_draft: string | null;
+  inmail_draft: string | null; outreach_status: string;
+};
+
+const STATUS_OPTIONS = [
+  { value: "Saved", color: "bg-gray-200 text-gray-700" },
+  { value: "Applied", color: "bg-blue-100 text-blue-700" },
+  { value: "Screening", color: "bg-amber-100 text-amber-700" },
+  { value: "Interview", color: "bg-orange-100 text-orange-700" },
+  { value: "Offer", color: "bg-green-100 text-green-700" },
+  { value: "Rejected", color: "bg-red-100 text-red-700" },
+];
+
+const OUTREACH_STATUSES = ["Not sent", "Request sent", "Connected", "Replied", "Meeting booked"];
+
+const getStatusColor = (status: string) =>
+  STATUS_OPTIONS.find((s) => s.value === status)?.color || "bg-muted text-muted-foreground";
+
+const getScoreColor = (score: number | null) => {
+  if (score === null) return "border-muted text-muted-foreground bg-muted/30";
+  if (score >= 70) return "text-green-600 border-green-300 bg-green-50";
+  if (score >= 40) return "text-amber-600 border-amber-300 bg-amber-50";
+  return "text-red-600 border-red-300 bg-red-50";
+};
+
+/* ── Tag list renderer ── */
+const TagList = ({ tags, className = "" }: { tags: string[] | null; className?: string }) => {
+  if (!tags?.length) return <span className="text-muted-foreground">–</span>;
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {tags.map((t, i) => (
+        <span key={i} className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground ${className}`}>{t}</span>
+      ))}
+    </div>
+  );
+};
+
+/* ── Contact Card ── */
+const ContactCard = ({ contact, onUpdate, onDelete }: {
+  contact: Contact;
+  onUpdate: (id: string, patch: Partial<Contact>) => void;
+  onDelete: (id: string) => void;
+}) => {
+  const [connOpen, setConnOpen] = useState(false);
+  const [inmailOpen, setInmailOpen] = useState(false);
+  const [editingConn, setEditingConn] = useState(false);
+  const [editingInmail, setEditingInmail] = useState(false);
+  const [connDraft, setConnDraft] = useState(contact.connection_note_draft || "");
+  const [inmailDraft, setInmailDraft] = useState(contact.inmail_draft || "");
+  const [copiedConn, setCopiedConn] = useState(false);
+  const [copiedInmail, setCopiedInmail] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  const copyText = async (text: string, setCopied: (v: boolean) => void) => {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <Card className="overflow-hidden">
+      <CardContent className="p-4 space-y-3">
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="font-semibold text-foreground">{contact.name || "Unknown"}</p>
+            {contact.headline && <p className="text-sm text-muted-foreground">{contact.headline}</p>}
+            {contact.current_title && <p className="text-xs text-muted-foreground">{contact.current_title}</p>}
+            {contact.is_alumni && (
+              <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary/10 text-primary">Alumni</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Select value={contact.outreach_status} onValueChange={(v) => onUpdate(contact.id, { outreach_status: v })}>
+              <SelectTrigger className="h-7 w-auto border-0 gap-1 px-2.5 rounded-full text-xs font-medium bg-muted">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {OUTREACH_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <button onClick={() => setDeleteOpen(true)} className="text-muted-foreground hover:text-destructive transition-colors">
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Connection Note */}
+        <div className="border rounded-lg">
+          <button onClick={() => setConnOpen(!connOpen)} className="flex items-center justify-between w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground">
+            300-char connection note {connOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+          </button>
+          {connOpen && (
+            <div className="px-3 pb-3 space-y-2">
+              {editingConn ? (
+                <>
+                  <Textarea value={connDraft} onChange={(e) => setConnDraft(e.target.value)} rows={3} maxLength={300} className="text-sm" />
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" onClick={() => setEditingConn(false)}>Cancel</Button>
+                    <Button size="sm" onClick={() => { onUpdate(contact.id, { connection_note_draft: connDraft }); setEditingConn(false); }}>Save</Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-foreground whitespace-pre-wrap">{contact.connection_note_draft || <span className="text-muted-foreground italic">No draft yet</span>}</p>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" className="gap-1" onClick={() => copyText(contact.connection_note_draft || "", setCopiedConn)}>
+                      {copiedConn ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />} {copiedConn ? "Copied" : "Copy"}
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => { setConnDraft(contact.connection_note_draft || ""); setEditingConn(true); }}>Edit</Button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* InMail Draft */}
+        <div className="border rounded-lg">
+          <button onClick={() => setInmailOpen(!inmailOpen)} className="flex items-center justify-between w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground">
+            InMail draft {inmailOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+          </button>
+          {inmailOpen && (
+            <div className="px-3 pb-3 space-y-2">
+              {editingInmail ? (
+                <>
+                  <Textarea value={inmailDraft} onChange={(e) => setInmailDraft(e.target.value)} rows={5} className="text-sm" />
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" onClick={() => setEditingInmail(false)}>Cancel</Button>
+                    <Button size="sm" onClick={() => { onUpdate(contact.id, { inmail_draft: inmailDraft }); setEditingInmail(false); }}>Save</Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-foreground whitespace-pre-wrap">{contact.inmail_draft || <span className="text-muted-foreground italic">No draft yet</span>}</p>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" className="gap-1" onClick={() => copyText(contact.inmail_draft || "", setCopiedInmail)}>
+                      {copiedInmail ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />} {copiedInmail ? "Copied" : "Copy"}
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => { setInmailDraft(contact.inmail_draft || ""); setEditingInmail(true); }}>Edit</Button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
+        <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Remove this contact?</AlertDialogTitle>
+              <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={() => { onDelete(contact.id); setDeleteOpen(false); }} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Remove</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </CardContent>
+    </Card>
+  );
+};
+
+/* ── Main Page ── */
+const JobDetail = () => {
+  const { jobId } = useParams<{ jobId: string }>();
+  const navigate = useNavigate();
+  const [job, setJob] = useState<Job | null>(null);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [linkedinUrl, setLinkedinUrl] = useState("");
+  const [notes, setNotes] = useState("");
+  const [notesSaved, setNotesSaved] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
+  const saveTimer = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => {
+    const init = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { navigate("/login"); return; }
+      setUserId(session.user.id);
+
+      const { data: jobData } = await supabase
+        .from("jobs")
+        .select("*")
+        .eq("id", jobId!)
+        .eq("user_id", session.user.id)
+        .single();
+      if (!jobData) { navigate("/dashboard"); return; }
+      setJob(jobData as any);
+      setNotes(jobData.notes || "");
+
+      const { data: contactData } = await supabase
+        .from("contacts")
+        .select("*")
+        .eq("job_id", jobId!)
+        .eq("user_id", session.user.id)
+        .order("created_at", { ascending: true });
+      if (contactData) setContacts(contactData as any);
+    };
+    init();
+  }, [jobId, navigate]);
+
+  const handleStatusChange = async (newStatus: string) => {
+    if (!job) return;
+    await supabase.from("jobs").update({ status: newStatus }).eq("id", job.id);
+    setJob(prev => prev ? { ...prev, status: newStatus } : prev);
+  };
+
+  const handleNotesChange = useCallback((value: string) => {
+    setNotes(value);
+    setNotesSaved(false);
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      if (jobId) {
+        await supabase.from("jobs").update({ notes: value }).eq("id", jobId);
+        setNotesSaved(true);
+      }
+    }, 1000);
+  }, [jobId]);
+
+  const addContact = async () => {
+    if (!userId || !jobId) return;
+    const url = linkedinUrl.trim();
+    const { data, error } = await supabase
+      .from("contacts")
+      .insert({ job_id: jobId, user_id: userId, linkedin_url: url || null, name: url ? "Loading..." : "New Contact" })
+      .select("*")
+      .single();
+    if (!error && data) {
+      setContacts(prev => [...prev, data as any]);
+      setLinkedinUrl("");
+    }
+  };
+
+  const updateContact = async (id: string, patch: Partial<Contact>) => {
+    await supabase.from("contacts").update(patch).eq("id", id);
+    setContacts(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c));
+  };
+
+  const deleteContact = async (id: string) => {
+    await supabase.from("contacts").delete().eq("id", id);
+    setContacts(prev => prev.filter(c => c.id !== id));
+  };
+
+  const handleCopyAll = async () => {
+    if (!job) return;
+    const sections = [
+      `Company: ${job.company_name || "–"}`,
+      `Title: ${job.job_title || "–"}`,
+      `Location: ${job.location || "–"}`,
+      `Skills: ${[...(job.hard_skills || []), ...(job.soft_skills || [])].join(", ") || "–"}`,
+    ].join("\n");
+    await navigator.clipboard.writeText(sections);
+    toast.success("Copied to clipboard");
+  };
+
+  if (!job) return null;
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <button onClick={() => navigate("/dashboard")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors">
+          <ArrowLeft className="h-4 w-4" /> Back to Job Tracker
+        </button>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-[28px] font-bold text-primary">{job.job_title || "Untitled Position"}</h1>
+            <p className="text-lg text-muted-foreground">{job.company_name || "Unknown Company"}</p>
+          </div>
+          <Select value={job.status} onValueChange={handleStatusChange}>
+            <SelectTrigger className={`h-9 w-auto border-0 gap-1.5 px-4 rounded-full text-sm font-medium ${getStatusColor(job.status)}`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.value}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <Tabs defaultValue="overview">
+        <TabsList className="w-full justify-start border-b rounded-none bg-transparent p-0 h-auto">
+          {["overview", "outreach", "cv", "notes"].map(tab => (
+            <TabsTrigger
+              key={tab}
+              value={tab}
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 capitalize"
+            >
+              {tab}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+
+        {/* Overview Tab */}
+        <TabsContent value="overview" className="mt-6">
+          <Card>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Location</p>
+                  <p className="text-sm text-foreground flex items-center gap-1.5">
+                    {job.location ? <><MapPin className="h-3.5 w-3.5 text-muted-foreground" />{job.location}</> : "–"}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Work Mode</p>
+                  <p className="text-sm text-foreground">{job.work_mode || "–"}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Duration</p>
+                  <p className="text-sm text-foreground">{job.duration || "–"}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Function</p>
+                  <p className="text-sm text-foreground">{job.function || "–"}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Application Deadline</p>
+                  <p className="text-sm text-foreground">{job.application_deadline || "–"}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Match Score</p>
+                  <span className={`inline-flex items-center justify-center h-12 w-12 rounded-full border-2 text-lg font-bold ${getScoreColor(job.match_score)}`}>
+                    {job.match_score ?? "–"}
+                  </span>
+                </div>
+                <div className="space-y-1 col-span-full">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Hard Skills</p>
+                  <TagList tags={job.hard_skills} />
+                </div>
+                <div className="space-y-1 col-span-full">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Soft Skills</p>
+                  <TagList tags={job.soft_skills} />
+                </div>
+                <div className="space-y-1 col-span-full">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Languages Required</p>
+                  <TagList tags={job.languages_required} />
+                </div>
+                {job.url && (
+                  <div className="space-y-1 col-span-full">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Job URL</p>
+                    <a href={job.url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1">
+                      {job.url} <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Outreach Tab */}
+        <TabsContent value="outreach" className="mt-6 space-y-4">
+          <div className="flex gap-3">
+            <Input
+              value={linkedinUrl}
+              onChange={(e) => setLinkedinUrl(e.target.value)}
+              placeholder="Paste a LinkedIn profile URL"
+              className="flex-1"
+              onKeyDown={(e) => e.key === "Enter" && addContact()}
+            />
+            <Button onClick={addContact}>Add Contact</Button>
+          </div>
+          {contacts.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <p className="text-muted-foreground">No contacts added yet. Paste a LinkedIn URL above to add one.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {contacts.map(c => (
+                <ContactCard key={c.id} contact={c} onUpdate={updateContact} onDelete={deleteContact} />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* CV Tab */}
+        <TabsContent value="cv" className="mt-6">
+          <Card>
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold text-foreground">AI-Tailored CV</h3>
+                  <p className="text-sm text-muted-foreground">Generate a CV tailored to this specific job posting.</p>
+                </div>
+                <Button className="gap-1.5">
+                  <FileText className="h-4 w-4" /> Generate CV
+                </Button>
+              </div>
+              <div className="rounded-lg border border-dashed border-border p-8 text-center">
+                <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                <p className="text-muted-foreground">Click "Generate CV" to create a tailored CV for this position.</p>
+              </div>
+              <div className="flex gap-3 justify-end">
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={handleCopyAll}>
+                  <Copy className="h-3.5 w-3.5" /> Copy all
+                </Button>
+                <Button variant="outline" size="sm" className="gap-1.5">
+                  <Download className="h-3.5 w-3.5" /> Download PDF
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Notes Tab */}
+        <TabsContent value="notes" className="mt-6">
+          <Card>
+            <CardContent className="p-6 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-foreground">Notes</h3>
+                <span className={`text-xs transition-opacity ${notesSaved ? "text-muted-foreground opacity-100" : "opacity-0"}`}>
+                  {notesSaved && notes ? "✓ Saved" : ""}
+                </span>
+              </div>
+              <Textarea
+                value={notes}
+                onChange={(e) => handleNotesChange(e.target.value)}
+                placeholder="Write any notes about this application..."
+                rows={12}
+                className="resize-none"
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+};
+
+export default JobDetail;
