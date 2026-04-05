@@ -300,6 +300,15 @@ const JobDetail = () => {
       if (cvData) setCvOutput(cvData as any);
       setCvFetched(true);
 
+      // Fetch CV history
+      const { data: histData } = await supabase
+        .from("cv_output_history")
+        .select("*")
+        .eq("job_id", jobId!)
+        .eq("user_id", session.user.id)
+        .order("created_at", { ascending: false });
+      if (histData) setCvHistory(histData);
+
       // Fetch user profile for CV header
       const { data: profileData } = await supabase
         .from("profiles")
