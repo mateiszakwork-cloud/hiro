@@ -419,6 +419,14 @@ const JobTracker = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Manual entry modal */}
+      <ManualJobModal
+        open={manualOpen}
+        onOpenChange={setManualOpen}
+        prefillUrl={manualPrefillUrl}
+        onSave={handleManualSave}
+      />
     </div>
   );
 };
