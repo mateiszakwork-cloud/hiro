@@ -183,6 +183,7 @@ export type Database = {
           job_title: string | null
           languages_required: string[] | null
           location: string | null
+          match_details: Json | null
           match_score: number | null
           notes: string | null
           soft_skills: string[] | null
@@ -202,6 +203,7 @@ export type Database = {
           job_title?: string | null
           languages_required?: string[] | null
           location?: string | null
+          match_details?: Json | null
           match_score?: number | null
           notes?: string | null
           soft_skills?: string[] | null
@@ -221,6 +223,7 @@ export type Database = {
           job_title?: string | null
           languages_required?: string[] | null
           location?: string | null
+          match_details?: Json | null
           match_score?: number | null
           notes?: string | null
           soft_skills?: string[] | null

@@ -1,0 +1,1 @@
+ALTER TABLE public.jobs ADD COLUMN match_details jsonb;
