@@ -11,7 +11,6 @@ import { Briefcase, MapPin, Trash2, ExternalLink, Loader2, CalendarIcon } from "
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -94,7 +93,6 @@ const JobTracker = () => {
   const [urlError, setUrlError] = useState("");
   const [loading, setLoading] = useState(false);
   const [parsing, setParsing] = useState(false);
-  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [deleteJobId, setDeleteJobId] = useState<string | null>(null);
   const [parseFailedUrl, setParseFailedUrl] = useState<string | null>(null);
@@ -259,7 +257,6 @@ const JobTracker = () => {
     if (!deleteJobId) return;
     await supabase.from("jobs").delete().eq("id", deleteJobId);
     setJobs((prev) => prev.filter((j) => j.id !== deleteJobId));
-    if (selectedJob?.id === deleteJobId) setSelectedJob(null);
     setDeleteJobId(null);
   };
 
@@ -341,7 +338,7 @@ const JobTracker = () => {
                     </tr>
                   )}
                   {jobs.map((job) => (
-                    <tr key={job.id} onClick={() => setSelectedJob(job)} className="group border-b last:border-0 hover:bg-muted/30 cursor-pointer transition-colors">
+                    <tr key={job.id} onClick={() => navigate(`/jobs/${job.id}`)} className="group border-b last:border-0 hover:bg-[#fff5f5] cursor-pointer transition-colors">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2.5">
                           <div className="h-8 w-8 rounded bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground shrink-0">
@@ -417,13 +414,22 @@ const JobTracker = () => {
                         )}
                       </td>
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          onClick={() => setDeleteJobId(job.id)}
-                          className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all"
-                          title="Delete job"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setDeleteJobId(job.id)}
+                            className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all"
+                            title="Delete job"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => navigate(`/jobs/${job.id}`)}
+                            className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-primary transition-all"
+                            title="Open full page"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -433,31 +439,6 @@ const JobTracker = () => {
           )}
         </CardContent>
       </Card>
-
-      {/* Side panel */}
-      <Sheet open={!!selectedJob} onOpenChange={(open) => !open && setSelectedJob(null)}>
-        <SheetContent className="w-[45vw] sm:max-w-none p-0" side="right">
-          {selectedJob && (
-            <div className="p-6 flex flex-col h-full">
-              <SheetHeader className="mb-6">
-                <SheetTitle className="text-xl text-primary">{selectedJob.job_title || "Untitled Position"}</SheetTitle>
-                <p className="text-muted-foreground text-sm">{selectedJob.company_name || "Unknown Company"}</p>
-              </SheetHeader>
-              <div className="mb-4">
-                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { setSelectedJob(null); navigate(`/jobs/${selectedJob.id}`); }}>
-                  <ExternalLink className="h-3.5 w-3.5" /> Open full page
-                </Button>
-              </div>
-              <p className="text-muted-foreground flex-1">Click "Open full page" to see all details, outreach, CV, and notes.</p>
-              <div className="pt-4 border-t mt-auto">
-                <Button variant="destructive" size="sm" className="gap-1.5" onClick={() => setDeleteJobId(selectedJob.id)}>
-                  <Trash2 className="h-3.5 w-3.5" /> Delete Job
-                </Button>
-              </div>
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
 
       {/* Delete confirmation */}
       <AlertDialog open={!!deleteJobId} onOpenChange={(open) => !open && setDeleteJobId(null)}>
