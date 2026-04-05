@@ -93,14 +93,15 @@ const JobTracker = () => {
   const handleAddJob = async () => {
     if (!userId) return;
     setLoading(true);
-    const { error } = await supabase.from("jobs").insert({
-      user_id: userId,
-      url: url || null,
-      status: "Saved",
-    });
-    if (!error) {
+    const jobUrl = url.trim() || null;
+    const { data, error } = await supabase
+      .from("jobs")
+      .insert({ user_id: userId, url: jobUrl, status: "Saved" })
+      .select("id, url, company_name, job_title, function, location, work_mode, duration, status, match_score, created_at")
+      .single();
+    if (!error && data) {
       setUrl("");
-      fetchJobs(userId);
+      setJobs((prev) => [data, ...prev]);
     }
     setLoading(false);
   };
@@ -193,7 +194,7 @@ const JobTracker = () => {
                       </td>
                       {/* Job Title */}
                       <td className="px-4 py-3 font-medium whitespace-nowrap">
-                        {job.job_title || "–"}
+                        {job.job_title || (job.url ? <span className="text-muted-foreground italic">Parsing...</span> : "–")}
                       </td>
                       {/* Function */}
                       <td className="px-4 py-3">
