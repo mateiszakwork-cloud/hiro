@@ -92,6 +92,12 @@ const Profile = () => {
   const [saving, setSaving] = useState(false);
   const [removeWorkIdx, setRemoveWorkIdx] = useState<number | null>(null);
 
+  // CV re-import state
+  const cvInputRef = useRef<HTMLInputElement>(null);
+  const [cvUploading, setCvUploading] = useState(false);
+  const [cvError, setCvError] = useState(false);
+  const [cvSuccess, setCvSuccess] = useState("");
+
   useEffect(() => {
     const init = async () => {
       const { data: { session } } = await supabase.auth.getSession();
