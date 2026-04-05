@@ -11,11 +11,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, ExternalLink, MapPin, Copy, Check, Trash2, ChevronDown, ChevronUp, FileText, Download, CheckCircle2, XCircle, CalendarIcon } from "lucide-react";
+import { ArrowLeft, ExternalLink, MapPin, Copy, Check, Trash2, ChevronDown, ChevronUp, FileText, Download, CheckCircle2, XCircle, CalendarIcon, RefreshCw, Lightbulb } from "lucide-react";
 import { toast } from "sonner";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+
+type CvOutput = {
+  id: string;
+  profile_headline: string | null;
+  selected_experiences: any[];
+  selected_hard_skills: string[];
+  selected_soft_skills: string[];
+  selected_education: any[];
+  selected_languages: any[];
+  selected_awards: any[];
+  selected_volunteering: any[];
+  tailoring_notes: string[];
+  created_at: string;
+  updated_at: string;
+};
 
 type MatchDetails = {
   hard_skills_match: number | null;
@@ -218,6 +233,11 @@ const JobDetail = () => {
   const saveTimer = useRef<ReturnType<typeof setTimeout>>();
 
   const [matchLoading, setMatchLoading] = useState(false);
+  const [cvOutput, setCvOutput] = useState<CvOutput | null>(null);
+  const [cvLoading, setCvLoading] = useState(false);
+  const [cvFetched, setCvFetched] = useState(false);
+  const [userProfile, setUserProfile] = useState<{ full_name: string | null; email: string | null }>({ full_name: null, email: null });
+  const [copiedCv, setCopiedCv] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -261,6 +281,24 @@ const JobDetail = () => {
         .eq("user_id", session.user.id)
         .order("created_at", { ascending: true });
       if (contactData) setContacts(contactData as any);
+
+      // Fetch existing CV output
+      const { data: cvData } = await supabase
+        .from("cv_outputs")
+        .select("*")
+        .eq("job_id", jobId!)
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+      if (cvData) setCvOutput(cvData as any);
+      setCvFetched(true);
+
+      // Fetch user profile for CV header
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("full_name, email")
+        .eq("id", session.user.id)
+        .single();
+      if (profileData) setUserProfile(profileData);
     };
     init();
   }, [jobId, navigate]);
@@ -316,6 +354,174 @@ const JobDetail = () => {
   const deleteContact = async (id: string) => {
     await supabase.from("contacts").delete().eq("id", id);
     setContacts(prev => prev.filter(c => c.id !== id));
+  };
+
+  const handleGenerateCv = async () => {
+    if (!jobId || !userId) return;
+    setCvLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("tailor-cv", {
+        body: { job_id: jobId },
+      });
+      if (error || !data?.success) {
+        toast.error(data?.message || "CV generation failed. Please try again.");
+        return;
+      }
+      setCvOutput(data.data as CvOutput);
+      toast.success("CV generated successfully!");
+    } catch {
+      toast.error("CV generation failed. Please try again.");
+    } finally {
+      setCvLoading(false);
+    }
+  };
+
+  const buildCvPlainText = () => {
+    if (!cvOutput) return "";
+    const lines: string[] = [];
+    if (userProfile.full_name) lines.push(userProfile.full_name);
+    if (userProfile.email) lines.push(userProfile.email);
+    if (cvOutput.profile_headline) lines.push(cvOutput.profile_headline);
+    lines.push("");
+
+    if (cvOutput.selected_experiences?.length) {
+      lines.push("EXPERIENCE");
+      lines.push("─".repeat(40));
+      for (const exp of cvOutput.selected_experiences) {
+        lines.push(`${exp.company} — ${exp.job_title}`);
+        lines.push(`${exp.start_date} – ${exp.end_date}${exp.location ? ` | ${exp.location}` : ""}`);
+        for (const b of exp.selected_bullets || []) lines.push(`  • ${b}`);
+        lines.push("");
+      }
+    }
+
+    if (cvOutput.selected_education?.length) {
+      lines.push("EDUCATION");
+      lines.push("─".repeat(40));
+      for (const edu of cvOutput.selected_education) {
+        lines.push(`${edu.institution} — ${edu.degree}, ${edu.field}`);
+        if (edu.grade) lines.push(`  Grade: ${edu.grade}`);
+        if (edu.activities) lines.push(`  Activities: ${edu.activities}`);
+        lines.push("");
+      }
+    }
+
+    if (cvOutput.selected_hard_skills?.length || cvOutput.selected_soft_skills?.length) {
+      lines.push("SKILLS");
+      lines.push("─".repeat(40));
+      if (cvOutput.selected_hard_skills?.length) lines.push(`Hard Skills: ${cvOutput.selected_hard_skills.join(", ")}`);
+      if (cvOutput.selected_soft_skills?.length) lines.push(`Soft Skills: ${cvOutput.selected_soft_skills.join(", ")}`);
+      lines.push("");
+    }
+
+    if (cvOutput.selected_languages?.length) {
+      lines.push("LANGUAGES");
+      lines.push("─".repeat(40));
+      for (const l of cvOutput.selected_languages) lines.push(`${l.language} — ${l.proficiency}`);
+      lines.push("");
+    }
+
+    if (cvOutput.selected_awards?.length) {
+      lines.push("AWARDS");
+      lines.push("─".repeat(40));
+      for (const a of cvOutput.selected_awards) lines.push(`${a.award_name || a.name}${a.organization ? ` — ${a.organization}` : ""}${a.year ? ` (${a.year})` : ""}`);
+      lines.push("");
+    }
+
+    if (cvOutput.selected_volunteering?.length) {
+      lines.push("VOLUNTEERING");
+      lines.push("─".repeat(40));
+      for (const v of cvOutput.selected_volunteering) lines.push(`${v.organization}${v.role ? ` — ${v.role}` : ""}${v.start_year ? ` (${v.start_year}–${v.end_year || "Present"})` : ""}`);
+      lines.push("");
+    }
+
+    return lines.join("\n");
+  };
+
+  const handleCopyCv = async () => {
+    const text = buildCvPlainText();
+    await navigator.clipboard.writeText(text);
+    setCopiedCv(true);
+    setTimeout(() => setCopiedCv(false), 2000);
+    toast.success("CV copied to clipboard");
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!cvOutput) return;
+    // Build a printable HTML document
+    const name = userProfile.full_name || "";
+    const email = userProfile.email || "";
+    const headline = cvOutput.profile_headline || "";
+
+    const sectionStyle = `style="margin-top:18px;font-size:12px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #950606;padding-bottom:3px;margin-bottom:8px;"`;
+    const bodyStyle = `style="font-size:10px;line-height:1.5;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;max-width:700px;margin:0 auto;padding:40px;"`;
+
+    let html = `<html><head><style>@page{margin:50px 60px;}body{font-size:10px;line-height:1.5;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;max-width:700px;margin:0 auto;padding:40px;}ul{margin:3px 0;padding-left:18px;}li{margin-bottom:2px;}</style></head><body ${bodyStyle}>`;
+
+    // Header
+    html += `<div style="text-align:center;margin-bottom:16px;">`;
+    html += `<div style="font-size:18px;font-weight:bold;">${name}</div>`;
+    if (email) html += `<div style="font-size:10px;color:#666;">${email}</div>`;
+    if (headline) html += `<div style="font-size:10px;font-style:italic;color:#444;margin-top:4px;">${headline}</div>`;
+    html += `</div>`;
+
+    // Experience
+    if (cvOutput.selected_experiences?.length) {
+      html += `<div ${sectionStyle}>Experience</div>`;
+      for (const exp of cvOutput.selected_experiences) {
+        html += `<div style="display:flex;justify-content:space-between;margin-top:8px;"><div><strong>${exp.company}</strong> — ${exp.job_title}</div><div style="color:#666;font-size:9px;">${exp.start_date} – ${exp.end_date}</div></div>`;
+        if (exp.location) html += `<div style="color:#888;font-size:9px;">${exp.location}</div>`;
+        if (exp.selected_bullets?.length) {
+          html += `<ul>`;
+          for (const b of exp.selected_bullets) html += `<li>${b}</li>`;
+          html += `</ul>`;
+        }
+      }
+    }
+
+    // Education
+    if (cvOutput.selected_education?.length) {
+      html += `<div ${sectionStyle}>Education</div>`;
+      for (const edu of cvOutput.selected_education) {
+        html += `<div style="margin-top:6px;"><strong>${edu.institution}</strong> — ${edu.degree}, ${edu.field}</div>`;
+        if (edu.grade) html += `<div style="font-size:9px;color:#666;">Grade: ${edu.grade}</div>`;
+        if (edu.activities) html += `<div style="font-size:9px;color:#666;">Activities: ${edu.activities}</div>`;
+      }
+    }
+
+    // Skills
+    if (cvOutput.selected_hard_skills?.length || cvOutput.selected_soft_skills?.length) {
+      html += `<div ${sectionStyle}>Skills</div>`;
+      if (cvOutput.selected_hard_skills?.length) html += `<div><strong>Hard Skills:</strong> ${cvOutput.selected_hard_skills.join(", ")}</div>`;
+      if (cvOutput.selected_soft_skills?.length) html += `<div><strong>Soft Skills:</strong> ${cvOutput.selected_soft_skills.join(", ")}</div>`;
+    }
+
+    // Languages
+    if (cvOutput.selected_languages?.length) {
+      html += `<div ${sectionStyle}>Languages</div>`;
+      for (const l of cvOutput.selected_languages) html += `<div>${l.language} — ${l.proficiency}</div>`;
+    }
+
+    // Awards
+    if (cvOutput.selected_awards?.length) {
+      html += `<div ${sectionStyle}>Awards</div>`;
+      for (const a of cvOutput.selected_awards) html += `<div>${a.award_name || a.name}${a.organization ? ` — ${a.organization}` : ""}${a.year ? ` (${a.year})` : ""}</div>`;
+    }
+
+    // Volunteering
+    if (cvOutput.selected_volunteering?.length) {
+      html += `<div ${sectionStyle}>Volunteering</div>`;
+      for (const v of cvOutput.selected_volunteering) html += `<div>${v.organization}${v.role ? ` — ${v.role}` : ""}${v.start_year ? ` (${v.start_year}–${v.end_year || "Present"})` : ""}</div>`;
+    }
+
+    html += `</body></html>`;
+
+    const printWindow = window.open("", "_blank");
+    if (printWindow) {
+      printWindow.document.write(html);
+      printWindow.document.close();
+      setTimeout(() => { printWindow.print(); }, 500);
+    }
   };
 
   const handleCopyAll = async () => {
@@ -570,32 +776,227 @@ const JobDetail = () => {
         </TabsContent>
 
         {/* CV Tab */}
-        <TabsContent value="cv" className="mt-6">
-          <Card>
-            <CardContent className="p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-semibold text-foreground">AI-Tailored CV</h3>
-                  <p className="text-sm text-muted-foreground">Generate a CV tailored to this specific job posting.</p>
+        <TabsContent value="cv" className="mt-6 space-y-6">
+          {/* Generate / Regenerate button */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-foreground">AI-Tailored CV</h3>
+              <p className="text-sm text-muted-foreground">Generate a CV tailored to this specific job posting.</p>
+              {cvOutput && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Last generated {format(new Date(cvOutput.updated_at), "MMM d, yyyy 'at' h:mm a")}
+                </p>
+              )}
+            </div>
+            <Button
+              onClick={handleGenerateCv}
+              disabled={cvLoading}
+              className="gap-1.5 bg-[#950606] hover:bg-[#7a0505] text-white"
+            >
+              {cvLoading ? (
+                <><RefreshCw className="h-4 w-4 animate-spin" /> Generating...</>
+              ) : cvOutput ? (
+                <><RefreshCw className="h-4 w-4" /> Regenerate</>
+              ) : (
+                <><FileText className="h-4 w-4" /> Generate Tailored CV</>
+              )}
+            </Button>
+          </div>
+
+          {/* Loading state */}
+          {cvLoading && (
+            <Card>
+              <CardContent className="p-8 space-y-6">
+                <div className="text-center space-y-3">
+                  <RefreshCw className="h-8 w-8 text-[#950606] animate-spin mx-auto" />
+                  <p className="text-sm font-medium text-foreground">Hiro is tailoring your CV for this role...</p>
+                  <p className="text-xs text-muted-foreground">This usually takes 10–15 seconds. We're selecting the best experiences, rewriting bullets, and optimising your profile.</p>
                 </div>
-                <Button className="gap-1.5">
-                  <FileText className="h-4 w-4" /> Generate CV
-                </Button>
-              </div>
-              <div className="rounded-lg border border-dashed border-border p-8 text-center">
+                <div className="space-y-4">
+                  <Skeleton className="h-8 w-3/4 mx-auto" />
+                  <Skeleton className="h-4 w-1/2 mx-auto" />
+                  <Skeleton className="h-4 w-2/3 mx-auto" />
+                  <div className="space-y-3 pt-4">
+                    {[1,2,3].map(i => (
+                      <div key={i} className="space-y-2">
+                        <Skeleton className="h-5 w-48" />
+                        <Skeleton className="h-3 w-full" />
+                        <Skeleton className="h-3 w-5/6" />
+                        <Skeleton className="h-3 w-4/6" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Empty state */}
+          {!cvLoading && !cvOutput && cvFetched && (
+            <Card>
+              <CardContent className="p-8 text-center">
                 <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground">Click "Generate CV" to create a tailored CV for this position.</p>
-              </div>
+                <p className="text-muted-foreground">Click "Generate Tailored CV" to create a CV optimised for this position.</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* CV Preview */}
+          {!cvLoading && cvOutput && (
+            <>
+              <Card>
+                <CardContent className="p-8">
+                  {/* Header */}
+                  <div className="text-center mb-6 pb-4 border-b">
+                    <h2 className="text-xl font-bold text-foreground">{userProfile.full_name || "Your Name"}</h2>
+                    {userProfile.email && <p className="text-sm text-muted-foreground">{userProfile.email}</p>}
+                    {cvOutput.profile_headline && <p className="text-sm italic text-muted-foreground mt-1">{cvOutput.profile_headline}</p>}
+                  </div>
+
+                  {/* Experience */}
+                  {cvOutput.selected_experiences?.length > 0 && (
+                    <div className="mb-6">
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-foreground border-b-2 border-[#950606] pb-1 mb-3">Experience</h3>
+                      <div className="space-y-4">
+                        {cvOutput.selected_experiences.map((exp: any, i: number) => (
+                          <div key={i}>
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <span className="font-semibold text-sm text-foreground">{exp.company}</span>
+                                <span className="text-sm text-foreground"> — {exp.job_title}</span>
+                              </div>
+                              <span className="text-xs text-muted-foreground whitespace-nowrap ml-4">{exp.start_date} – {exp.end_date}</span>
+                            </div>
+                            {exp.location && <p className="text-xs text-muted-foreground">{exp.location}</p>}
+                            {exp.selected_bullets?.length > 0 && (
+                              <ul className="mt-1.5 space-y-1 list-disc list-outside ml-4">
+                                {exp.selected_bullets.map((b: string, j: number) => (
+                                  <li key={j} className="text-sm text-foreground">{b}</li>
+                                ))}
+                              </ul>
+                            )}
+                            <span className="inline-block mt-1.5 text-[10px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                              {exp.relevance_score}% match
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Education */}
+                  {cvOutput.selected_education?.length > 0 && (
+                    <div className="mb-6">
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-foreground border-b-2 border-[#950606] pb-1 mb-3">Education</h3>
+                      <div className="space-y-3">
+                        {cvOutput.selected_education.map((edu: any, i: number) => (
+                          <div key={i}>
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <span className="font-semibold text-sm text-foreground">{edu.institution}</span>
+                                <span className="text-sm text-foreground"> — {edu.degree}, {edu.field}</span>
+                              </div>
+                            </div>
+                            {edu.grade && <p className="text-xs text-muted-foreground">Grade: {edu.grade}</p>}
+                            {edu.activities && <p className="text-xs text-muted-foreground">Activities: {edu.activities}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Skills */}
+                  {(cvOutput.selected_hard_skills?.length > 0 || cvOutput.selected_soft_skills?.length > 0) && (
+                    <div className="mb-6">
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-foreground border-b-2 border-[#950606] pb-1 mb-3">Skills</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {cvOutput.selected_hard_skills?.length > 0 && (
+                          <div>
+                            <p className="text-xs font-medium text-muted-foreground mb-1">Hard Skills</p>
+                            <p className="text-sm text-foreground">{cvOutput.selected_hard_skills.join(", ")}</p>
+                          </div>
+                        )}
+                        {cvOutput.selected_soft_skills?.length > 0 && (
+                          <div>
+                            <p className="text-xs font-medium text-muted-foreground mb-1">Soft Skills</p>
+                            <p className="text-sm text-foreground">{cvOutput.selected_soft_skills.join(", ")}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Languages */}
+                  {cvOutput.selected_languages?.length > 0 && (
+                    <div className="mb-6">
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-foreground border-b-2 border-[#950606] pb-1 mb-3">Languages</h3>
+                      <div className="space-y-1">
+                        {cvOutput.selected_languages.map((l: any, i: number) => (
+                          <p key={i} className="text-sm text-foreground">{l.language} — <span className="text-muted-foreground">{l.proficiency}</span></p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Awards */}
+                  {cvOutput.selected_awards?.length > 0 && (
+                    <div className="mb-6">
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-foreground border-b-2 border-[#950606] pb-1 mb-3">Awards</h3>
+                      <div className="space-y-1">
+                        {cvOutput.selected_awards.map((a: any, i: number) => (
+                          <p key={i} className="text-sm text-foreground">
+                            {a.award_name || a.name}{a.organization ? ` — ${a.organization}` : ""}{a.year ? ` (${a.year})` : ""}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Volunteering */}
+                  {cvOutput.selected_volunteering?.length > 0 && (
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-foreground border-b-2 border-[#950606] pb-1 mb-3">Volunteering</h3>
+                      <div className="space-y-1">
+                        {cvOutput.selected_volunteering.map((v: any, i: number) => (
+                          <p key={i} className="text-sm text-foreground">
+                            {v.organization}{v.role ? ` — ${v.role}` : ""}{v.start_year ? ` (${v.start_year}–${v.end_year || "Present"})` : ""}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Tailoring Notes */}
+              {cvOutput.tailoring_notes?.length > 0 && (
+                <Card className="bg-amber-50 border-amber-200">
+                  <CardContent className="p-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Lightbulb className="h-4 w-4 text-amber-600" />
+                      <h4 className="font-semibold text-sm text-amber-900">Why Hiro tailored it this way</h4>
+                    </div>
+                    <ul className="space-y-1.5 list-disc list-outside ml-5">
+                      {cvOutput.tailoring_notes.map((note, i) => (
+                        <li key={i} className="text-sm text-amber-800">{note}</li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Action Buttons */}
               <div className="flex gap-3 justify-end">
-                <Button variant="outline" size="sm" className="gap-1.5" onClick={handleCopyAll}>
-                  <Copy className="h-3.5 w-3.5" /> Copy all
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={handleCopyCv}>
+                  {copiedCv ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                  {copiedCv ? "Copied!" : "Copy all text"}
                 </Button>
-                <Button variant="outline" size="sm" className="gap-1.5">
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={handleDownloadPdf}>
                   <Download className="h-3.5 w-3.5" /> Download PDF
                 </Button>
               </div>
-            </CardContent>
-          </Card>
+            </>
+          )}
         </TabsContent>
 
         {/* Notes Tab */}
