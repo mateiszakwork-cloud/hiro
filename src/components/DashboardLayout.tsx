@@ -15,6 +15,7 @@ const DashboardLayout = () => {
   const location = useLocation();
   const isMobile = useIsMobile();
   const [email, setEmail] = useState("");
+  const [fullName, setFullName] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
@@ -25,12 +26,13 @@ const DashboardLayout = () => {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("onboarding_complete")
+        .select("onboarding_complete, full_name")
         .eq("id", session.user.id)
         .single();
 
-      if (profile && !profile.onboarding_complete) {
-        navigate("/onboarding");
+      if (profile) {
+        setFullName(profile.full_name || "");
+        if (!profile.onboarding_complete) navigate("/onboarding");
       }
     };
     check();
@@ -68,6 +70,7 @@ const DashboardLayout = () => {
       </nav>
 
       <div className="px-4 pb-5 space-y-3">
+        {fullName && <p className="text-sm text-white font-medium truncate">{fullName}</p>}
         <p className="text-xs text-white/50 truncate">{email}</p>
         <button
           onClick={handleLogout}

@@ -71,6 +71,7 @@ const InterestTagInput = ({ tags, onAdd, onRemove, suggestions }: { tags: string
 const Profile = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [email, setEmail] = useState("");
+  const [fullName, setFullName] = useState("");
   const [memberSince, setMemberSince] = useState("");
 
   const [workExps, setWorkExps] = useState<WorkExp[]>([]);
@@ -105,8 +106,11 @@ const Profile = () => {
       const uid = session.user.id;
       setUserId(uid);
       setEmail(session.user.email || "");
-      const { data: profile } = await supabase.from("profiles").select("created_at").eq("id", uid).single();
-      if (profile) setMemberSince(format(new Date(profile.created_at), "MMMM yyyy"));
+      const { data: profile } = await supabase.from("profiles").select("created_at, full_name").eq("id", uid).single();
+      if (profile) {
+        setMemberSince(format(new Date(profile.created_at), "MMMM yyyy"));
+        setFullName(profile.full_name || "");
+      }
       fetchAll(uid);
     };
     init();
@@ -272,7 +276,7 @@ const Profile = () => {
       <div>
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-[28px] font-bold text-primary">Profile</h1>
+            <h1 className="text-[28px] font-bold text-primary">{fullName || "Profile"}</h1>
             <p className="text-muted-foreground mt-0.5">{email}</p>
             {memberSince && <p className="text-sm text-muted-foreground">Member since {memberSince}</p>}
           </div>
