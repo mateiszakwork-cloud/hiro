@@ -242,6 +242,10 @@ const JobDetail = () => {
   const [cvFetched, setCvFetched] = useState(false);
   const [userProfile, setUserProfile] = useState<{ full_name: string | null; email: string | null }>({ full_name: null, email: null });
   const [copiedCv, setCopiedCv] = useState(false);
+  const [cvHistory, setCvHistory] = useState<any[]>([]);
+  const [regenConfirmOpen, setRegenConfirmOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [previewVersion, setPreviewVersion] = useState<any | null>(null);
 
   useEffect(() => {
     const init = async () => {
