@@ -86,6 +86,32 @@ const isValidUrl = (str: string): boolean => {
   }
 };
 
+type SortKey = "company_name" | "job_title" | "function" | "location" | "work_mode" | "duration" | "status" | "match_score" | "priority" | "created_at" | "applied_date";
+type SortDir = "asc" | "desc";
+
+const COLUMNS: { label: string; key: SortKey | null }[] = [
+  { label: "Company", key: "company_name" },
+  { label: "Job Title", key: "job_title" },
+  { label: "Function", key: "function" },
+  { label: "Location", key: "location" },
+  { label: "Work Mode", key: "work_mode" },
+  { label: "Duration", key: "duration" },
+  { label: "Status", key: "status" },
+  { label: "Match", key: "match_score" },
+  { label: "Priority", key: "priority" },
+  { label: "Added", key: "created_at" },
+  { label: "Applied", key: "applied_date" },
+  { label: "", key: null },
+];
+
+const FUNCTION_VALUES = ["Strategy", "Finance", "Marketing", "Product", "Operations", "HR", "Consulting", "Other"];
+
+const compareStr = (a: string | null, b: string | null, dir: SortDir) => {
+  const av = (a || "").toLowerCase();
+  const bv = (b || "").toLowerCase();
+  return dir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
+};
+
 const JobTracker = () => {
   const navigate = useNavigate();
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -98,6 +124,56 @@ const JobTracker = () => {
   const [parseFailedUrl, setParseFailedUrl] = useState<string | null>(null);
   const [manualOpen, setManualOpen] = useState(false);
   const [manualPrefillUrl, setManualPrefillUrl] = useState("");
+
+  // Sort & filter state
+  const [sortKey, setSortKey] = useState<SortKey>("created_at");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [filterStatus, setFilterStatus] = useState("All");
+  const [filterFunction, setFilterFunction] = useState("All");
+  const [filterPriority, setFilterPriority] = useState("All");
+
+  const handleSort = (key: SortKey | null) => {
+    if (!key) return;
+    if (sortKey === key) {
+      setSortDir(prev => prev === "asc" ? "desc" : "asc");
+    } else {
+      setSortKey(key);
+      setSortDir(key === "match_score" || key === "created_at" || key === "applied_date" ? "desc" : "asc");
+    }
+  };
+
+  const filtersActive = filterStatus !== "All" || filterFunction !== "All" || filterPriority !== "All";
+
+  const filteredAndSorted = useMemo(() => {
+    let result = [...jobs];
+    if (filterStatus !== "All") result = result.filter(j => j.status === filterStatus);
+    if (filterFunction !== "All") result = result.filter(j => j.function === filterFunction);
+    if (filterPriority !== "All") result = result.filter(j => j.priority === filterPriority);
+
+    result.sort((a, b) => {
+      if (sortKey === "match_score") {
+        const av = a.match_score ?? -1;
+        const bv = b.match_score ?? -1;
+        return sortDir === "desc" ? bv - av : av - bv;
+      }
+      if (sortKey === "created_at") {
+        return sortDir === "desc"
+          ? new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          : new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      }
+      if (sortKey === "applied_date") {
+        // nulls always last
+        if (!a.applied_date && !b.applied_date) return 0;
+        if (!a.applied_date) return 1;
+        if (!b.applied_date) return -1;
+        return sortDir === "desc"
+          ? new Date(b.applied_date).getTime() - new Date(a.applied_date).getTime()
+          : new Date(a.applied_date).getTime() - new Date(b.applied_date).getTime();
+      }
+      return compareStr(a[sortKey] as string | null, b[sortKey] as string | null, sortDir);
+    });
+    return result;
+  }, [jobs, sortKey, sortDir, filterStatus, filterFunction, filterPriority]);
 
   useEffect(() => {
     const init = async () => {
