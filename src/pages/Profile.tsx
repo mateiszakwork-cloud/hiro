@@ -276,7 +276,7 @@ const Profile = () => {
       <div>
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-[28px] font-bold text-primary">Profile</h1>
+            <h1 className="text-[28px] font-bold text-primary">{fullName || "Profile"}</h1>
             <p className="text-muted-foreground mt-0.5">{email}</p>
             {memberSince && <p className="text-sm text-muted-foreground">Member since {memberSince}</p>}
           </div>
