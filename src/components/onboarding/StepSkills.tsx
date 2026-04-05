@@ -6,7 +6,7 @@ import { toast } from "sonner";
 const HARD_SUGGESTIONS = ["Excel", "PowerPoint", "SQL", "Python", "Salesforce", "Tableau", "Google Analytics", "Jira", "Figma", "SAP"];
 const SOFT_SUGGESTIONS = ["Stakeholder management", "Analytical thinking", "Cross-functional collaboration", "Project management", "Communication", "Problem solving", "Leadership", "Attention to detail"];
 
-interface Props { userId: string; onNext: () => void; onBack: () => void; }
+interface Props { userId: string; onNext: () => void; onBack: () => void; initialHardSkills?: string[]; initialSoftSkills?: string[]; }
 
 const SkillTagInput = ({
   tags, onAdd, onRemove, placeholder, pillClass, suggestions,
@@ -74,9 +74,9 @@ const SkillTagInput = ({
   );
 };
 
-const StepSkills = ({ userId, onNext, onBack }: Props) => {
-  const [hardSkills, setHardSkills] = useState<string[]>([]);
-  const [softSkills, setSoftSkills] = useState<string[]>([]);
+const StepSkills = ({ userId, onNext, onBack, initialHardSkills, initialSoftSkills }: Props) => {
+  const [hardSkills, setHardSkills] = useState<string[]>(initialHardSkills || []);
+  const [softSkills, setSoftSkills] = useState<string[]>(initialSoftSkills || []);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
