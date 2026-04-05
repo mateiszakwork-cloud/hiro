@@ -99,6 +99,7 @@ const COLUMNS: { label: string; key: SortKey | null }[] = [
   { label: "Duration", key: "duration" },
   { label: "Status", key: "status" },
   { label: "Match", key: "match_score" },
+  { label: "CV", key: null },
   { label: "Priority", key: "priority" },
   { label: "Added", key: "created_at" },
   { label: "Applied", key: "applied_date" },
