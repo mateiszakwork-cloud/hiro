@@ -126,6 +126,7 @@ const JobTracker = () => {
   const [parseFailedUrl, setParseFailedUrl] = useState<string | null>(null);
   const [manualOpen, setManualOpen] = useState(false);
   const [manualPrefillUrl, setManualPrefillUrl] = useState("");
+  const [cvMap, setCvMap] = useState<Record<string, string>>({}); // job_id -> updated_at
 
   // Sort & filter state
   const [sortKey, setSortKey] = useState<SortKey>("created_at");
