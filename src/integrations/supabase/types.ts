@@ -181,11 +181,13 @@ export type Database = {
           hard_skills: string[] | null
           id: string
           job_title: string | null
+          languages_nice_to_have: string[] | null
           languages_required: string[] | null
           location: string | null
           match_details: Json | null
           match_score: number | null
           notes: string | null
+          skills_nice_to_have: string[] | null
           soft_skills: string[] | null
           status: string
           url: string | null
@@ -201,11 +203,13 @@ export type Database = {
           hard_skills?: string[] | null
           id?: string
           job_title?: string | null
+          languages_nice_to_have?: string[] | null
           languages_required?: string[] | null
           location?: string | null
           match_details?: Json | null
           match_score?: number | null
           notes?: string | null
+          skills_nice_to_have?: string[] | null
           soft_skills?: string[] | null
           status?: string
           url?: string | null
@@ -221,11 +225,13 @@ export type Database = {
           hard_skills?: string[] | null
           id?: string
           job_title?: string | null
+          languages_nice_to_have?: string[] | null
           languages_required?: string[] | null
           location?: string | null
           match_details?: Json | null
           match_score?: number | null
           notes?: string | null
+          skills_nice_to_have?: string[] | null
           soft_skills?: string[] | null
           status?: string
           url?: string | null
