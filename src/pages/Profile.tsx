@@ -417,6 +417,72 @@ const Profile = () => {
         </div>
       </div>
 
+      {/* ─── Import from CV ─── */}
+      <Card className="border-2 border-dashed" style={{ borderColor: '#950606', backgroundColor: '#FFF5F5' }}>
+        <CardContent className="p-6">
+          <input ref={importCvInputRef} type="file" accept="application/pdf" onChange={handleImportCvUpload} className="hidden" />
+
+          {/* Loading state */}
+          {cvUploading && (
+            <div className="flex flex-col items-center justify-center py-8 gap-3">
+              <Loader2 className="h-8 w-8 animate-spin" style={{ color: '#950606' }} />
+              <p className="text-sm font-medium text-muted-foreground animate-pulse">Reading your CV...</p>
+            </div>
+          )}
+
+          {/* Success state with apply/review options */}
+          {!cvUploading && parsedCvData && cvSuccess && (
+            <div className="flex flex-col items-center justify-center py-6 gap-4 text-center">
+              <CheckCircle className="h-8 w-8" style={{ color: '#950606' }} />
+              <p className="text-sm font-medium text-foreground">{cvSuccess} Apply to profile?</p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button onClick={applyParsedCvToProfile} disabled={applyingCv} className="gap-1.5" style={{ backgroundColor: '#950606' }}>
+                  {applyingCv ? <><Loader2 className="h-4 w-4 animate-spin" /> Applying...</> : "Apply to profile"}
+                </Button>
+                <Button variant="outline" onClick={reviewParsedCv} className="gap-1.5">
+                  Review first
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Error state */}
+          {!cvUploading && cvError && !parsedCvData && (
+            <div className="flex flex-col items-center justify-center py-6 gap-4 text-center">
+              <AlertTriangle className="h-8 w-8 text-destructive" />
+              <div>
+                {cvErrorStep && <p className="text-xs text-muted-foreground mb-1">Failed at: {cvErrorStep}</p>}
+                <p className="text-sm text-destructive font-medium">{cvError}</p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button variant="outline" onClick={() => { setCvError(null); setCvErrorStep(null); importCvInputRef.current?.click(); }} className="gap-1.5">
+                  <RotateCcw className="h-4 w-4" /> Retry
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Default upload state */}
+          {!cvUploading && !parsedCvData && !cvError && (
+            <div className="flex flex-col items-center justify-center py-8 text-center gap-4">
+              <div className="h-14 w-14 rounded-2xl flex items-center justify-center" style={{ backgroundColor: 'rgba(149, 6, 6, 0.1)' }}>
+                <FileText className="h-7 w-7" style={{ color: '#950606' }} />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">Import from CV</p>
+                <p className="text-xs text-muted-foreground mt-1">Upload your CV to auto-fill your profile</p>
+              </div>
+              <Button onClick={() => importCvInputRef.current?.click()} className="gap-1.5" style={{ backgroundColor: '#950606' }}>
+                <Upload className="h-4 w-4" /> Upload CV (PDF)
+              </Button>
+              {baseCvUploadedAt && (
+                <p className="text-xs text-muted-foreground">Last uploaded: {format(new Date(baseCvUploadedAt), "d MMM yyyy")}</p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* ─── Base CV ─── */}
       <Card>
         <CardHeader>
