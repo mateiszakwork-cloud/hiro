@@ -7,6 +7,12 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const jsonResponse = (body: Record<string, unknown>, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -15,58 +21,77 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: "Unauthorized", step: "auth" }, 401);
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
-    );
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // Create user-scoped client for storage (respects RLS)
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    // Validate the user session
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      console.error("Auth error:", userError);
+      return jsonResponse({ error: "Invalid or expired session. Please log in again.", step: "auth" }, 401);
     }
 
-    const { filePath } = await req.json();
+    let body: { filePath?: string };
+    try {
+      body = await req.json();
+    } catch {
+      return jsonResponse({ error: "Invalid request body", step: "request" }, 400);
+    }
+
+    const { filePath } = body;
     if (!filePath) {
-      return new Response(JSON.stringify({ error: "filePath is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: "filePath is required", step: "request" }, 400);
     }
 
-    // Download the PDF from storage
+    // Step 1: Download the PDF from storage
+    console.log("Step 1: Downloading file:", filePath);
     const { data: fileData, error: downloadError } = await supabase.storage
       .from("cv-uploads")
       .download(filePath);
 
     if (downloadError || !fileData) {
-      console.error("Download error:", downloadError);
-      return new Response(JSON.stringify({ error: "Failed to download CV file" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      console.error("Storage download error:", downloadError);
+      return jsonResponse({
+        error: `Failed to download CV file: ${downloadError?.message || "File not found"}`,
+        step: "storage_download",
+      }, 400);
     }
 
-    // Convert PDF to base64 for the AI model
-    const arrayBuffer = await fileData.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    // Step 2: Convert PDF to base64
+    console.log("Step 2: Converting PDF to base64");
+    let base64: string;
+    try {
+      const arrayBuffer = await fileData.arrayBuffer();
+      const bytes = new Uint8Array(arrayBuffer);
+      // Process in chunks to avoid stack overflow on large files
+      let binary = "";
+      const chunkSize = 8192;
+      for (let i = 0; i < bytes.length; i += chunkSize) {
+        const chunk = bytes.subarray(i, i + chunkSize);
+        binary += String.fromCharCode(...chunk);
+      }
+      base64 = btoa(binary);
+    } catch (convErr) {
+      console.error("PDF conversion error:", convErr);
+      return jsonResponse({
+        error: `Failed to process PDF file: ${convErr instanceof Error ? convErr.message : "Unknown conversion error"}`,
+        step: "text_extraction",
+      }, 500);
+    }
 
+    // Step 3: Call AI to parse
+    console.log("Step 3: Calling AI for parsing");
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: "AI not configured" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: "AI not configured on the server", step: "ai_config" }, 500);
     }
 
     const systemPrompt = `You are a CV/resume parser. Extract structured information from the provided PDF document. Return a JSON object with the following structure. Be thorough and extract ALL information present.
@@ -146,23 +171,17 @@ Rules:
 
     if (!aiResponse.ok) {
       const errText = await aiResponse.text();
-      console.error("AI error:", aiResponse.status, errText);
+      console.error("AI API error:", aiResponse.status, errText);
       if (aiResponse.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limited. Please try again in a moment." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonResponse({ error: "Rate limited. Please try again in a moment.", step: "ai_parsing" }, 429);
       }
       if (aiResponse.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted. Please add funds." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonResponse({ error: "AI credits exhausted. Please contact support.", step: "ai_parsing" }, 402);
       }
-      return new Response(JSON.stringify({ error: "Failed to parse CV with AI" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({
+        error: `AI parsing failed (status ${aiResponse.status}): ${errText.substring(0, 200)}`,
+        step: "ai_parsing",
+      }, 500);
     }
 
     const aiData = await aiResponse.json();
@@ -178,21 +197,20 @@ Rules:
     try {
       parsed = JSON.parse(jsonStr);
     } catch {
-      console.error("Failed to parse AI JSON:", jsonStr);
-      return new Response(JSON.stringify({ error: "Failed to parse AI response" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      console.error("Failed to parse AI JSON response:", jsonStr.substring(0, 500));
+      return jsonResponse({
+        error: "Failed to parse the AI response. The CV may have an unusual format. Please try building your profile manually.",
+        step: "ai_parsing",
+      }, 500);
     }
 
-    return new Response(JSON.stringify(parsed), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    console.log("Parse-cv completed successfully");
+    return jsonResponse(parsed);
   } catch (e) {
-    console.error("parse-cv error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    console.error("parse-cv unexpected error:", e);
+    return jsonResponse({
+      error: e instanceof Error ? e.message : "Unknown error",
+      step: "unknown",
+    }, 500);
   }
 });
