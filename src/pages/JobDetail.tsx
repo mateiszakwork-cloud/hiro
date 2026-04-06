@@ -554,6 +554,41 @@ const JobDetail = () => {
     toast.success("Version restored!");
   };
 
+  const startEdit = () => {
+    if (!job) return;
+    setEditData({
+      job_title: job.job_title, company_name: job.company_name, location: job.location,
+      work_mode: job.work_mode, duration: job.duration, function: job.function,
+      application_deadline: job.application_deadline, status: job.status, priority: job.priority,
+      url: job.url, hard_skills: [...(job.hard_skills || [])], soft_skills: [...(job.soft_skills || [])],
+      skills_nice_to_have: [...(job.skills_nice_to_have || [])],
+      languages_required: [...(job.languages_required || [])],
+      languages_nice_to_have: [...(job.languages_nice_to_have || [])],
+    });
+    setIsEditing(true);
+  };
+
+  const cancelEdit = () => { setIsEditing(false); setEditData({}); };
+
+  const saveEdit = async () => {
+    if (!job) return;
+    const updates: any = { ...editData };
+    const { error } = await supabase.from("jobs").update(updates).eq("id", job.id);
+    if (error) { toast.error("Failed to save changes."); return; }
+    setJob(prev => prev ? { ...prev, ...updates } : prev);
+    setIsEditing(false);
+    setEditData({});
+    toast.success("Job updated successfully");
+  };
+
+  const handleDeadlineInline = async (date: Date | undefined) => {
+    if (!job) return;
+    const deadline = date ? format(date, "yyyy-MM-dd") : null;
+    await supabase.from("jobs").update({ application_deadline: deadline }).eq("id", job.id);
+    setJob(prev => prev ? { ...prev, application_deadline: deadline } : prev);
+    toast.success("Deadline updated");
+  };
+
   const copyToClipboard = async (text: string, label: string) => {
     await navigator.clipboard.writeText(text);
     toast.success(`${label} copied to clipboard`);
