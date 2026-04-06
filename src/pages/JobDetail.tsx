@@ -476,15 +476,37 @@ const JobDetail = () => {
     toast.success("Version restored successfully!");
   };
 
+  const isBaseCvMode = (cv: CvOutput) => !!cv.tailored_summary || (cv.selected_bullets && typeof cv.selected_bullets === "object" && !Array.isArray(cv.selected_bullets) && Object.keys(cv.selected_bullets).length > 0);
+
+  const getHardSkillsFlat = (cv: CvOutput): string[] => {
+    const hs = cv.selected_hard_skills;
+    if (!hs) return [];
+    if (Array.isArray(hs)) return hs;
+    return Object.values(hs).flat();
+  };
+
   const buildCvPlainText = () => {
     if (!cvOutput) return "";
     const lines: string[] = [];
     if (userProfile.full_name) lines.push(userProfile.full_name);
     if (userProfile.email) lines.push(userProfile.email);
-    if (cvOutput.profile_headline) lines.push(cvOutput.profile_headline);
+    if (cvOutput.tailored_summary) {
+      lines.push(cvOutput.tailored_summary);
+    } else if (cvOutput.profile_headline) {
+      lines.push(cvOutput.profile_headline);
+    }
     lines.push("");
 
-    if (cvOutput.selected_experiences?.length) {
+    // Base CV mode: experience with selected_bullets map
+    if (isBaseCvMode(cvOutput) && cvOutput.selected_bullets) {
+      lines.push("EXPERIENCE");
+      lines.push("─".repeat(40));
+      for (const [company, bullets] of Object.entries(cvOutput.selected_bullets)) {
+        lines.push(company);
+        for (const b of bullets as string[]) lines.push(`  • ${b}`);
+        lines.push("");
+      }
+    } else if (cvOutput.selected_experiences?.length) {
       lines.push("EXPERIENCE");
       lines.push("─".repeat(40));
       for (const exp of cvOutput.selected_experiences) {
@@ -506,10 +528,17 @@ const JobDetail = () => {
       }
     }
 
-    if (cvOutput.selected_hard_skills?.length || cvOutput.selected_soft_skills?.length) {
+    const hardFlat = getHardSkillsFlat(cvOutput);
+    if (hardFlat.length || cvOutput.selected_soft_skills?.length) {
       lines.push("SKILLS");
       lines.push("─".repeat(40));
-      if (cvOutput.selected_hard_skills?.length) lines.push(`Hard Skills: ${cvOutput.selected_hard_skills.join(", ")}`);
+      if (isBaseCvMode(cvOutput) && cvOutput.selected_hard_skills && !Array.isArray(cvOutput.selected_hard_skills)) {
+        for (const [cat, skills] of Object.entries(cvOutput.selected_hard_skills)) {
+          lines.push(`${cat}: ${(skills as string[]).join(", ")}`);
+        }
+      } else if (hardFlat.length) {
+        lines.push(`Hard Skills: ${hardFlat.join(", ")}`);
+      }
       if (cvOutput.selected_soft_skills?.length) lines.push(`Soft Skills: ${cvOutput.selected_soft_skills.join(", ")}`);
       lines.push("");
     }
