@@ -619,9 +619,16 @@ const JobDetail = () => {
     }
 
     // Skills
-    if (cvOutput.selected_hard_skills?.length || cvOutput.selected_soft_skills?.length) {
+    const pdfHardFlat = getHardSkillsFlat(cvOutput);
+    if (pdfHardFlat.length || cvOutput.selected_soft_skills?.length) {
       html += `<div ${sectionStyle}>Skills</div>`;
-      if (cvOutput.selected_hard_skills?.length) html += `<div><strong>Hard Skills:</strong> ${cvOutput.selected_hard_skills.join(", ")}</div>`;
+      if (isBaseCvMode(cvOutput) && cvOutput.selected_hard_skills && !Array.isArray(cvOutput.selected_hard_skills)) {
+        for (const [cat, skills] of Object.entries(cvOutput.selected_hard_skills)) {
+          html += `<div><strong>${cat}:</strong> ${(skills as string[]).join(", ")}</div>`;
+        }
+      } else if (pdfHardFlat.length) {
+        html += `<div><strong>Hard Skills:</strong> ${pdfHardFlat.join(", ")}</div>`;
+      }
       if (cvOutput.selected_soft_skills?.length) html += `<div><strong>Soft Skills:</strong> ${cvOutput.selected_soft_skills.join(", ")}</div>`;
     }
 
