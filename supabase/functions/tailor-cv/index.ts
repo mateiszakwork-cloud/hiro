@@ -117,6 +117,7 @@ serve(async (req) => {
 - tailoring_notes: array of 3-5 short strings explaining the key tailoring decisions
 
 Rules:
+- You MUST return a minimum of 2 bullet points and a maximum of 4 for every single work experience in the candidate's profile without exception. Never return fewer than 2 bullets for any experience regardless of relevance. If only 1 bullet seems relevant, include the next most relevant one as well.
 - Never invent experience or skills not present in the profile.
 - Keep bullet points truthful. Only lightly rephrase for relevance.
 - The summary must always be rewritten specifically for this role following the strict rules above.
@@ -164,6 +165,30 @@ Rules:
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Validation: ensure every work experience has at least 2 bullets
+    const selectedBullets = parsed.selected_bullets || [];
+    for (const block of selectedBullets) {
+      if (!block.bullets || block.bullets.length < 2) {
+        // Find matching work experience from the fetched data
+        const match = workExperiences.find((w: any) =>
+          w.company_name === block.company && w.job_title === block.job_title
+        );
+        if (match && Array.isArray(match.bullet_points)) {
+          const existingTexts = new Set((block.bullets || []).map((b: any) =>
+            typeof b === "string" ? b : (b.original || b.tailored || "")
+          ));
+          for (const bp of match.bullet_points) {
+            if (block.bullets.length >= 2) break;
+            if (!existingTexts.has(bp)) {
+              block.bullets.push({ original: bp, tailored: bp, use_tailored: true });
+              existingTexts.add(bp);
+            }
+          }
+        }
+      }
+    }
+    parsed.selected_bullets = selectedBullets;
 
     const row = {
       job_id,
