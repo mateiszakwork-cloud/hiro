@@ -872,15 +872,6 @@ const JobTracker = () => {
                     </Card>
                   )}
 
-                  {/* Footer link */}
-                  <div className="flex justify-end pt-2">
-                    <button
-                      onClick={() => { setKitModalJobId(null); navigate(`/jobs/${kitModalJobId}`); }}
-                      className="text-xs text-muted-foreground hover:text-primary transition-colors"
-                    >
-                      Open full page →
-                    </button>
-                  </div>
                 </div>
               )}
             </>
