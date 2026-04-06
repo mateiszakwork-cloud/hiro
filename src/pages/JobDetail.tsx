@@ -273,17 +273,23 @@ const JobDetail = () => {
 
   useEffect(() => {
     const init = async () => {
+      setJobLoading(true);
+      setFetchError(null);
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { navigate("/login"); return; }
       setUserId(session.user.id);
 
-      const { data: jobData } = await supabase
+      const { data: jobData, error: jobError } = await supabase
         .from("jobs")
         .select("*")
         .eq("id", jobId!)
         .eq("user_id", session.user.id)
         .single();
-      if (!jobData) { navigate("/dashboard"); return; }
+      if (jobError || !jobData) {
+        setFetchError(jobError?.message || "Job not found or access denied.");
+        setJobLoading(false);
+        return;
+      }
       setJob(jobData as any);
       setNotes(jobData.notes || "");
 
