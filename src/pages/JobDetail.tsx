@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, ExternalLink, MapPin, Copy, Check, Trash2, ChevronDown, ChevronUp, FileText, CheckCircle2, XCircle, CalendarIcon, RefreshCw, Lightbulb, History, RotateCcw, Pencil, X as XIcon, AlertTriangle, Loader2 } from "lucide-react";
+import { ArrowLeft, ExternalLink, MapPin, Copy, Check, Trash2, ChevronDown, ChevronUp, FileText, CheckCircle2, XCircle, CalendarIcon, RefreshCw, Lightbulb, History, RotateCcw, Pencil, X as XIcon, AlertTriangle, Loader2, Minus, Plus } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -1275,9 +1275,9 @@ const JobDetail = () => {
                                 disabled={normalizedBullets.length <= 1}
                                 onClick={() => {
                                   if (!cvOutput || !Array.isArray(cvOutput.selected_bullets)) return;
-                                  const updated = [...(cvOutput.selected_bullets as BulletBlock[])];
-                                  const updatedBlock = { ...updated[blockIdx], bullets: [...(updated[blockIdx].bullets || [])].slice(0, -1) };
-                                  updated[blockIdx] = updatedBlock;
+                                  const updated = (cvOutput.selected_bullets as BulletBlock[]).map((b, i) =>
+                                    i === blockIdx ? { ...b, bullets: b.bullets.slice(0, -1) } : b
+                                  );
                                   setCvOutput({ ...cvOutput, selected_bullets: updated });
                                 }}
                                 className="h-6 w-6 rounded border border-border bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
@@ -1291,16 +1291,16 @@ const JobDetail = () => {
                                   if (!cvOutput || !Array.isArray(cvOutput.selected_bullets)) return;
                                   // Find unused bullets from original work experiences
                                   const currentTexts = new Set(normalizedBullets.map(b => b.original));
-                                  const matchExp = masterWorkExperiences.find((w: any) =>
+                                  const matchExp = (userProfile?.work_experiences || []).find((w: any) =>
                                     w.company_name === block.company && w.job_title === block.job_title
                                   );
                                   if (!matchExp || !Array.isArray(matchExp.bullet_points)) return;
                                   const unused = matchExp.bullet_points.filter((bp: string) => !currentTexts.has(bp));
                                   if (unused.length === 0) return;
-                                  const newBullet = { original: unused[0], tailored: unused[0], use_tailored: true };
-                                  const updated = [...(cvOutput.selected_bullets as BulletBlock[])];
-                                  const updatedBlock = { ...updated[blockIdx], bullets: [...(updated[blockIdx].bullets || []), newBullet] };
-                                  updated[blockIdx] = updatedBlock;
+                                  const newBullet: BulletItem = { original: unused[0], tailored: unused[0], use_tailored: true };
+                                  const updated = (cvOutput.selected_bullets as BulletBlock[]).map((b, i) =>
+                                    i === blockIdx ? { ...b, bullets: [...b.bullets, newBullet] as BulletItem[] } : b
+                                  );
                                   setCvOutput({ ...cvOutput, selected_bullets: updated });
                                 }}
                                 className="h-6 w-6 rounded border border-border bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
