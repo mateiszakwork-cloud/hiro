@@ -105,10 +105,8 @@ const Profile = () => {
   const [applyingCv, setApplyingCv] = useState(false);
 
   // Base CV state
-  const baseCvInputRef = useRef<HTMLInputElement>(null);
   const [baseCvText, setBaseCvText] = useState<string | null>(null);
   const [baseCvUploadedAt, setBaseCvUploadedAt] = useState<string | null>(null);
-  const [baseCvUploading, setBaseCvUploading] = useState(false);
   const [showExtractedText, setShowExtractedText] = useState(false);
 
   useEffect(() => {
@@ -254,41 +252,6 @@ const Profile = () => {
     toast.success("CV data loaded into edit forms. Review and save each section.");
   };
 
-  const handleBaseCvUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !userId) return;
-    if (file.type !== "application/pdf" || file.size > 10 * 1024 * 1024) {
-      toast.error("Please upload a PDF file under 10MB.");
-      return;
-    }
-    setBaseCvUploading(true);
-    try {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
-      const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      let fullText = "";
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const content = await page.getTextContent();
-        const pageText = content.items.map((item: any) => item.str).join(" ");
-        fullText += pageText + "\n";
-      }
-      const now = new Date().toISOString();
-      const { error } = await supabase.from("profiles").update({
-        base_cv_text: fullText.trim(),
-        base_cv_uploaded_at: now,
-      } as any).eq("id", userId);
-      if (error) { toast.error("Failed to save CV text."); return; }
-      setBaseCvText(fullText.trim());
-      setBaseCvUploadedAt(now);
-      toast.success("Base CV saved. Hiro will use this as the starting point for all your tailored CVs.");
-    } catch (err) {
-      toast.error("Failed to extract text from PDF.");
-    } finally {
-      setBaseCvUploading(false);
-      if (baseCvInputRef.current) baseCvInputRef.current.value = "";
-    }
-  };
 
   const startEdit = (section: string) => {
     setEditSection(section);
@@ -399,28 +362,20 @@ const Profile = () => {
           <div>
             <h1 className="text-[28px] font-bold text-primary">{fullName || "Profile"}</h1>
             <p className="text-muted-foreground mt-0.5">{email}</p>
-            
-          </div>
-          <div className="flex flex-col items-end gap-2">
-            <input ref={cvInputRef} type="file" accept="application/pdf" onChange={handleCvReimport} className="hidden" />
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => cvInputRef.current?.click()} disabled={cvUploading}>
-              {cvUploading ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Parsing CV...</> : <><Upload className="h-3.5 w-3.5" /> Re-import from CV</>}
-            </Button>
-            {cvError && (
-              <div className="flex items-center gap-2 text-xs text-destructive">
-                <AlertTriangle className="h-3 w-3" /> {cvError}
-                <button onClick={() => { setCvError(null); cvInputRef.current?.click(); }} className="underline">Retry</button>
-              </div>
-            )}
-            {cvSuccess && !parsedCvData && <p className="text-xs text-primary flex items-center gap-1"><CheckCircle className="h-3 w-3" /> {cvSuccess}</p>}
           </div>
         </div>
       </div>
 
-      {/* ─── Import from CV ─── */}
+      {/* ─── Unified CV Card ─── */}
       <Card className="border-2 border-dashed" style={{ borderColor: '#950606', backgroundColor: '#FFF5F5' }}>
         <CardContent className="p-6">
           <input ref={importCvInputRef} type="file" accept="application/pdf" onChange={handleImportCvUpload} className="hidden" />
+          <input ref={cvInputRef} type="file" accept="application/pdf" onChange={handleCvReimport} className="hidden" />
+
+          <div className="mb-4">
+            <h3 className="text-base font-semibold text-foreground">Your CV</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">Used to auto-fill your profile and as the reference for all tailored application kits</p>
+          </div>
 
           {/* Loading state */}
           {cvUploading && (
@@ -462,64 +417,55 @@ const Profile = () => {
             </div>
           )}
 
-          {/* Default upload state */}
+          {/* Default states */}
           {!cvUploading && !parsedCvData && !cvError && (
-            <div className="flex flex-col items-center justify-center py-8 text-center gap-4">
-              <div className="h-14 w-14 rounded-2xl flex items-center justify-center" style={{ backgroundColor: 'rgba(149, 6, 6, 0.1)' }}>
-                <FileText className="h-7 w-7" style={{ color: '#950606' }} />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-foreground">Import from CV</p>
-                <p className="text-xs text-muted-foreground mt-1">Upload your CV to auto-fill your profile</p>
-              </div>
-              <Button onClick={() => importCvInputRef.current?.click()} className="gap-1.5" style={{ backgroundColor: '#950606' }}>
-                <Upload className="h-4 w-4" /> Upload CV (PDF)
-              </Button>
-              {baseCvUploadedAt && (
-                <p className="text-xs text-muted-foreground">Last uploaded: {format(new Date(baseCvUploadedAt), "d MMM yyyy")}</p>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* ─── Base CV ─── */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg text-primary flex items-center gap-2"><FileText className="h-5 w-5" /> Your Base CV</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <input ref={baseCvInputRef} type="file" accept="application/pdf" onChange={handleBaseCvUpload} className="hidden" />
-          {baseCvText ? (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-foreground">CV uploaded</p>
-                  {baseCvUploadedAt && <p className="text-xs text-muted-foreground">Uploaded on {format(new Date(baseCvUploadedAt), "d MMMM yyyy, HH:mm")}</p>}
+            <>
+              {baseCvText ? (
+                /* State 2: CV uploaded */
+                <div className="space-y-3">
+                  <div className="flex flex-col sm:flex-row items-start gap-4">
+                    {/* Left: file info */}
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      <div className="h-10 w-10 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(149, 6, 6, 0.1)' }}>
+                        <FileText className="h-5 w-5" style={{ color: '#950606' }} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground">CV uploaded</p>
+                        {baseCvUploadedAt && <p className="text-xs text-muted-foreground">{format(new Date(baseCvUploadedAt), "d MMM yyyy")}</p>}
+                        <button onClick={() => setShowExtractedText(!showExtractedText)} className="text-xs mt-1 flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
+                          {showExtractedText ? <><EyeOff className="h-3 w-3" /> Hide extracted text</> : <><Eye className="h-3 w-3" /> View extracted text</>}
+                        </button>
+                      </div>
+                    </div>
+                    {/* Right: action buttons */}
+                    <div className="flex flex-col gap-2 shrink-0 w-full sm:w-auto">
+                      <Button variant="outline" size="sm" className="gap-1.5 w-full" onClick={() => importCvInputRef.current?.click()}>
+                        <RotateCcw className="h-3.5 w-3.5" /> Replace CV
+                      </Button>
+                      <Button size="sm" className="gap-1.5 w-full" style={{ backgroundColor: '#950606' }} onClick={() => cvInputRef.current?.click()} disabled={cvUploading}>
+                        {cvUploading ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Parsing...</> : <><Upload className="h-3.5 w-3.5" /> Re-import to profile</>}
+                      </Button>
+                    </div>
+                  </div>
+                  {showExtractedText && (
+                    <div className="rounded-lg border border-border bg-muted/30 p-4 max-h-[400px] overflow-y-auto">
+                      <pre className="text-xs text-foreground whitespace-pre-wrap font-mono">{baseCvText}</pre>
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setShowExtractedText(!showExtractedText)}>
-                    {showExtractedText ? <><EyeOff className="h-3.5 w-3.5" /> Hide text</> : <><Eye className="h-3.5 w-3.5" /> View extracted text</>}
+              ) : (
+                /* State 1: No CV uploaded */
+                <div className="flex flex-col items-center justify-center py-6 text-center gap-4">
+                  <div className="h-14 w-14 rounded-2xl flex items-center justify-center" style={{ backgroundColor: 'rgba(149, 6, 6, 0.1)' }}>
+                    <FileText className="h-7 w-7" style={{ color: '#950606' }} />
+                  </div>
+                  <p className="text-sm text-muted-foreground max-w-md">Upload your CV (PDF) to auto-fill your profile and save it as your base template for tailored applications.</p>
+                  <Button onClick={() => importCvInputRef.current?.click()} className="gap-1.5" style={{ backgroundColor: '#950606' }}>
+                    <Upload className="h-4 w-4" /> Upload CV
                   </Button>
-                  <Button variant="outline" size="sm" className="gap-1.5" onClick={() => baseCvInputRef.current?.click()} disabled={baseCvUploading}>
-                    {baseCvUploading ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Extracting...</> : <><RotateCcw className="h-3.5 w-3.5" /> Replace CV</>}
-                  </Button>
-                </div>
-              </div>
-              {showExtractedText && (
-                <div className="rounded-lg border border-border bg-muted/30 p-4 max-h-[400px] overflow-y-auto">
-                  <pre className="text-xs text-foreground whitespace-pre-wrap font-mono">{baseCvText}</pre>
                 </div>
               )}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <FileText className="h-10 w-10 text-muted-foreground/50 mb-3" />
-              <p className="text-sm text-muted-foreground mb-4 max-w-md">Upload your CV once. Hiro will use it as the base template for every tailored application.</p>
-              <Button variant="default" className="gap-1.5 bg-primary hover:bg-primary/90" onClick={() => baseCvInputRef.current?.click()} disabled={baseCvUploading}>
-                {baseCvUploading ? <><Loader2 className="h-4 w-4 animate-spin" /> Extracting text...</> : <><Upload className="h-4 w-4" /> Upload Base CV (PDF)</>}
-              </Button>
-            </div>
+            </>
           )}
         </CardContent>
       </Card>
