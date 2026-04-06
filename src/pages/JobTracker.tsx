@@ -99,20 +99,19 @@ const isValidUrl = (str: string): boolean => {
 type SortKey = "company_name" | "job_title" | "function" | "location" | "work_mode" | "duration" | "status" | "match_score" | "priority" | "created_at" | "applied_date";
 type SortDir = "asc" | "desc";
 
-const COLUMNS: { label: string; key: SortKey | null }[] = [
-  { label: "Company", key: "company_name" },
-  { label: "Job Title", key: "job_title" },
-  { label: "Function", key: "function" },
-  { label: "Location", key: "location" },
-  { label: "Work Mode", key: "work_mode" },
-  { label: "Duration", key: "duration" },
-  { label: "Status", key: "status" },
-  { label: "Match", key: "match_score" },
-  { label: "Kit", key: null },
-  { label: "Priority", key: "priority" },
-  { label: "Added", key: "created_at" },
-  { label: "Applied", key: "applied_date" },
-  { label: "", key: null },
+const COLUMNS: { label: string; key: SortKey | null; width: string }[] = [
+  { label: "", key: null, width: "40px" },
+  { label: "Company", key: "company_name", width: "140px" },
+  { label: "Job Title", key: "job_title", width: "160px" },
+  { label: "Function", key: "function", width: "100px" },
+  { label: "Location", key: "location", width: "120px" },
+  { label: "Work Mode", key: "work_mode", width: "80px" },
+  { label: "Duration", key: "duration", width: "80px" },
+  { label: "Status", key: "status", width: "100px" },
+  { label: "Match", key: "match_score", width: "70px" },
+  { label: "Kit", key: null, width: "50px" },
+  { label: "Priority", key: "priority", width: "80px" },
+  { label: "Applied", key: "applied_date", width: "90px" },
 ];
 
 const FUNCTION_VALUES = ["Strategy", "Finance", "Marketing", "Product", "Operations", "HR", "Consulting", "Other"];
