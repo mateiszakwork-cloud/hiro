@@ -607,108 +607,27 @@ const JobDetail = () => {
     toast.success("CV copied to clipboard");
   };
 
-  const handleDownloadPdf = () => {
+  const handleDownloadDocx = async () => {
     if (!cvOutput) return;
-    const MONTHS_S = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-    const fmtD = (m: number, y: number) => `${MONTHS_S[m - 1] || ""} ${y}`;
-    const name = userProfile.full_name || "";
-    const contactLine = [userProfile.email, job?.location].filter(Boolean).join("  •  ");
-    const summary = cvOutput.tailored_summary || cvOutput.profile_headline || "";
-
-    const secH = `style="margin-top:16px;font-size:10px;font-weight:bold;text-transform:uppercase;letter-spacing:2px;border-bottom:1px solid #333;padding-bottom:3px;margin-bottom:8px;"`;
-
-    let html = `<html><head><style>@page{margin:40px 50px;}body{font-size:9.5px;line-height:1.45;font-family:Georgia,'Times New Roman',serif;max-width:700px;margin:0 auto;padding:40px 50px;}ul{margin:2px 0;padding-left:16px;}li{margin-bottom:1px;}</style></head><body>`;
-
-    // Header
-    html += `<div style="text-align:center;margin-bottom:4px;">`;
-    html += `<div style="font-size:20px;font-weight:bold;text-transform:uppercase;letter-spacing:3px;">${name}</div>`;
-    if (contactLine) html += `<div style="font-size:9px;color:#555;margin-top:4px;letter-spacing:0.5px;">${contactLine}</div>`;
-    html += `</div>`;
-
-    // Summary
-    if (summary) {
-      html += `<div ${secH}>Summary</div>`;
-      html += `<div style="font-size:9.5px;">${summary}</div>`;
-    }
-
-    // Professional Experience
-    if (userProfile.work_experiences?.length) {
-      html += `<div ${secH}>Professional Experience</div>`;
-      for (const exp of userProfile.work_experiences) {
-        const bullets = isBaseCvMode(cvOutput) && cvOutput.selected_bullets
-          ? (cvOutput.selected_bullets[exp.company_name] || exp.bullet_points || [])
-          : (cvOutput.selected_experiences?.find((se: any) => se.company === exp.company_name)?.selected_bullets || exp.bullet_points || []);
-        html += `<div style="display:flex;justify-content:space-between;margin-top:8px;"><div><strong style="text-transform:uppercase;letter-spacing:0.5px;">${exp.job_title}</strong><br/><em>${exp.company_name}</em></div><div style="text-align:right;color:#555;font-size:9px;white-space:nowrap;">${fmtD(exp.start_month, exp.start_year)} – ${exp.is_current ? "Present" : exp.end_month && exp.end_year ? fmtD(exp.end_month, exp.end_year) : ""}<br/>${exp.location || ""}</div></div>`;
-        if (bullets.length) {
-          html += `<ul>`;
-          for (const b of bullets) html += `<li>${b}</li>`;
-          html += `</ul>`;
-        }
-      }
-    }
-
-    // Volunteering
-    if (userProfile.volunteering?.length) {
-      html += `<div ${secH}>Entrepreneurial & Volunteer Experience</div>`;
-      for (const v of userProfile.volunteering) {
-        html += `<div style="display:flex;justify-content:space-between;margin-top:6px;"><div><strong style="text-transform:uppercase;">${v.role || v.organization}</strong>${v.role ? `<br/><em>${v.organization}</em>` : ""}</div><div style="text-align:right;color:#555;font-size:9px;">${v.start_year ? `${v.start_year} – ${v.is_ongoing ? "Present" : v.end_year || ""}` : ""}</div></div>`;
-        if (v.description) html += `<div style="margin-top:2px;">${v.description}</div>`;
-      }
-    }
-
-    // Education
-    if (userProfile.education?.length) {
-      html += `<div ${secH}>Education</div>`;
-      for (const edu of userProfile.education) {
-        html += `<div style="display:flex;justify-content:space-between;margin-top:6px;"><div><strong>${edu.institution}</strong><br/>${edu.degree} in ${edu.field_of_study}</div><div style="text-align:right;color:#555;font-size:9px;">${edu.start_year} – ${edu.is_expected ? "Expected" : edu.end_year || ""}</div></div>`;
-        if (edu.grade) html += `<div style="font-size:9px;color:#555;">GPA: ${edu.grade}</div>`;
-        if (edu.activities) html += `<div style="font-size:9px;margin-top:1px;">${edu.activities}</div>`;
-        if (edu.description) html += `<div style="font-size:9px;margin-top:1px;">${edu.description}</div>`;
-      }
-    }
-
-    // Footer: Languages | Skills | Interests
-    const hasFooter = userProfile.languages?.length || getHardSkillsFlat(cvOutput).length || userProfile.interests?.length;
-    if (hasFooter) {
-      html += `<div style="margin-top:16px;border-top:1px solid #333;padding-top:8px;display:flex;gap:24px;">`;
-      if (userProfile.languages?.length) {
-        html += `<div style="flex:1;"><div style="font-size:9px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">Languages</div>`;
-        for (const l of userProfile.languages) html += `<div style="font-size:9px;">${l.language_name} (${l.proficiency})</div>`;
-        html += `</div>`;
-      }
-      if (cvOutput.selected_hard_skills) {
-        html += `<div style="flex:1;"><div style="font-size:9px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">Software & Skills</div>`;
-        if (!Array.isArray(cvOutput.selected_hard_skills)) {
-          for (const [cat, skills] of Object.entries(cvOutput.selected_hard_skills)) {
-            html += `<div style="font-size:8px;font-weight:bold;text-transform:uppercase;color:#666;">${cat}</div>`;
-            html += `<div style="font-size:9px;">${(skills as string[]).join(", ")}</div>`;
-          }
-        } else {
-          html += `<div style="font-size:9px;">${(cvOutput.selected_hard_skills as string[]).join(", ")}</div>`;
-        }
-        html += `</div>`;
-      }
-      if (userProfile.interests?.length) {
-        html += `<div style="flex:1;"><div style="font-size:9px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">Personal Interests</div>`;
-        html += `<div style="font-size:9px;">${userProfile.interests.join(", ")}</div></div>`;
-      }
-      html += `</div>`;
-    }
-
-    // Awards
-    if (userProfile.awards?.length) {
-      html += `<div ${secH}>Awards & Honours</div>`;
-      for (const a of userProfile.awards) html += `<div style="font-size:9px;">${a.award_name}${a.issuing_organization ? ` — ${a.issuing_organization}` : ""}${a.year ? ` (${a.year})` : ""}</div>`;
-    }
-
-    html += `</body></html>`;
-
-    const printWindow = window.open("", "_blank");
-    if (printWindow) {
-      printWindow.document.write(html);
-      printWindow.document.close();
-      setTimeout(() => { printWindow.print(); }, 500);
-    }
+    const { generateCvDocx } = await import("@/lib/generateCvDocx");
+    await generateCvDocx({
+      fullName: userProfile.full_name || "",
+      email: userProfile.email,
+      location: job?.location || null,
+      summary: cvOutput.tailored_summary || cvOutput.profile_headline || null,
+      workExperiences: userProfile.work_experiences,
+      volunteering: userProfile.volunteering,
+      education: userProfile.education,
+      languages: userProfile.languages,
+      interests: userProfile.interests,
+      awards: userProfile.awards,
+      selectedBullets: isBaseCvMode(cvOutput) ? cvOutput.selected_bullets : null,
+      selectedExperiences: !isBaseCvMode(cvOutput) ? cvOutput.selected_experiences : null,
+      selectedHardSkills: cvOutput.selected_hard_skills,
+      isBaseCvMode: isBaseCvMode(cvOutput),
+      companyName: job?.company_name || "",
+    });
+    toast.success("CV downloaded!");
   };
 
   const handleCopyAll = async () => {
@@ -1255,8 +1174,8 @@ const JobDetail = () => {
                   {copiedCv ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                   {copiedCv ? "Copied!" : "Copy all text"}
                 </Button>
-                <Button variant="outline" size="sm" className="gap-1.5" onClick={handleDownloadPdf}>
-                  <Download className="h-3.5 w-3.5" /> Download PDF
+                <Button size="sm" className="gap-1.5 bg-[#950606] hover:bg-[#7a0505] text-white" onClick={handleDownloadDocx}>
+                  <Download className="h-3.5 w-3.5" /> Download .docx
                 </Button>
               </div>
             </>
