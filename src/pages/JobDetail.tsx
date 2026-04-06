@@ -315,13 +315,27 @@ const JobDetail = () => {
         .order("created_at", { ascending: false });
       if (histData) setCvHistory(histData);
 
-      // Fetch user profile for CV header
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("full_name, email")
-        .eq("id", session.user.id)
-        .single();
-      if (profileData) setUserProfile(profileData);
+      // Fetch user profile + all profile data for CV rendering
+      const uid = session.user.id;
+      const [profileRes, workRes, eduRes, langRes, interestsRes, awardsRes, volRes] = await Promise.all([
+        supabase.from("profiles").select("full_name, email").eq("id", uid).single(),
+        supabase.from("work_experiences").select("*").eq("user_id", uid).order("start_year", { ascending: false }),
+        supabase.from("education").select("*").eq("user_id", uid).order("start_year", { ascending: false }),
+        supabase.from("languages").select("*").eq("user_id", uid),
+        supabase.from("interests").select("*").eq("user_id", uid).maybeSingle(),
+        supabase.from("awards").select("*").eq("user_id", uid),
+        supabase.from("volunteering").select("*").eq("user_id", uid).order("start_year", { ascending: false }),
+      ]);
+      setUserProfile({
+        full_name: profileRes.data?.full_name || null,
+        email: profileRes.data?.email || null,
+        work_experiences: workRes.data || [],
+        education: eduRes.data || [],
+        languages: langRes.data || [],
+        interests: (interestsRes.data as any)?.interests || [],
+        awards: awardsRes.data || [],
+        volunteering: volRes.data || [],
+      });
     };
     init();
   }, [jobId, navigate]);
