@@ -97,8 +97,12 @@ const Profile = () => {
   // CV re-import state
   const cvInputRef = useRef<HTMLInputElement>(null);
   const [cvUploading, setCvUploading] = useState(false);
-  const [cvError, setCvError] = useState(false);
+  const [cvError, setCvError] = useState<string | null>(null);
+  const [cvErrorStep, setCvErrorStep] = useState<string | null>(null);
   const [cvSuccess, setCvSuccess] = useState("");
+  const [parsedCvData, setParsedCvData] = useState<ParsedCVData | null>(null);
+  const importCvInputRef = useRef<HTMLInputElement>(null);
+  const [applyingCv, setApplyingCv] = useState(false);
 
   // Base CV state
   const baseCvInputRef = useRef<HTMLInputElement>(null);
