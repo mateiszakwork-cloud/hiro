@@ -998,161 +998,170 @@ const JobDetail = () => {
           {/* CV Preview */}
           {!cvLoading && cvOutput && (
             <>
-              <Card>
-                <CardContent className="p-8">
-                  {/* Header */}
-                  <div className="text-center mb-6 pb-4 border-b">
-                    <h2 className="text-xl font-bold text-foreground">{userProfile.full_name || "Your Name"}</h2>
-                    {userProfile.email && <p className="text-sm text-muted-foreground">{userProfile.email}</p>}
+              <Card className="shadow-md">
+                <CardContent className="p-0">
+                  <div className="max-w-[750px] mx-auto py-10 px-12" style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}>
+
+                    {/* 1. Header */}
+                    <div className="text-center mb-1">
+                      <h2 className="text-2xl font-bold tracking-wide text-foreground uppercase">{userProfile.full_name || "Your Name"}</h2>
+                      <p className="text-xs text-muted-foreground mt-1.5 tracking-wide">
+                        {[userProfile.email, job?.location].filter(Boolean).join("  •  ")}
+                      </p>
+                    </div>
+
+                    {/* 2. Summary */}
                     {(cvOutput.tailored_summary || cvOutput.profile_headline) && (
-                      <p className="text-sm italic text-muted-foreground mt-1">{cvOutput.tailored_summary || cvOutput.profile_headline}</p>
+                      <div className="mt-5">
+                        <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-foreground border-b border-foreground/30 pb-1 mb-2">Summary</h3>
+                        <p className="text-[11px] leading-relaxed text-foreground/90">{cvOutput.tailored_summary || cvOutput.profile_headline}</p>
+                      </div>
                     )}
-                  </div>
 
-                  {/* Experience - Base CV mode */}
-                  {isBaseCvMode(cvOutput) && cvOutput.selected_bullets && Object.keys(cvOutput.selected_bullets).length > 0 && (
-                    <div className="mb-6">
-                      <h3 className="text-xs font-bold uppercase tracking-widest text-foreground border-b-2 border-primary pb-1 mb-3">Experience</h3>
-                      <div className="space-y-4">
-                        {Object.entries(cvOutput.selected_bullets).map(([company, bullets], i) => (
-                          <div key={i}>
-                            <span className="font-semibold text-sm text-foreground">{company}</span>
-                            {(bullets as string[]).length > 0 && (
-                              <ul className="mt-1.5 space-y-1 list-disc list-outside ml-4">
-                                {(bullets as string[]).map((b, j) => (
-                                  <li key={j} className="text-sm text-foreground">{b}</li>
-                                ))}
-                              </ul>
-                            )}
+                    {/* 3. Professional Experience */}
+                    {(() => {
+                      const MONTHS_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+                      const fmtDate = (m: number, y: number) => `${MONTHS_SHORT[m - 1] || ""} ${y}`;
+                      const exps = userProfile.work_experiences;
+                      if (!exps?.length) return null;
+                      return (
+                        <div className="mt-5">
+                          <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-foreground border-b border-foreground/30 pb-1 mb-3">Professional Experience</h3>
+                          <div className="space-y-4">
+                            {exps.map((exp: any, i: number) => {
+                              const bullets = isBaseCvMode(cvOutput) && cvOutput.selected_bullets
+                                ? (cvOutput.selected_bullets[exp.company_name] || exp.bullet_points || [])
+                                : (cvOutput.selected_experiences?.find((se: any) => se.company === exp.company_name)?.selected_bullets || exp.bullet_points || []);
+                              return (
+                                <div key={i}>
+                                  <div className="flex items-start justify-between">
+                                    <div>
+                                      <p className="text-[11px] font-bold uppercase tracking-wide text-foreground">{exp.job_title}</p>
+                                      <p className="text-[11px] text-foreground/80 italic">{exp.company_name}</p>
+                                    </div>
+                                    <div className="text-right shrink-0 ml-4">
+                                      <p className="text-[10px] text-muted-foreground">{fmtDate(exp.start_month, exp.start_year)} – {exp.is_current ? "Present" : exp.end_month && exp.end_year ? fmtDate(exp.end_month, exp.end_year) : ""}</p>
+                                      {exp.location && <p className="text-[10px] text-muted-foreground">{exp.location}</p>}
+                                    </div>
+                                  </div>
+                                  {bullets.length > 0 && (
+                                    <ul className="mt-1 space-y-0.5 list-disc list-outside ml-4">
+                                      {bullets.map((b: string, j: number) => (
+                                        <li key={j} className="text-[10.5px] leading-snug text-foreground/90">{b}</li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                        </div>
+                      );
+                    })()}
 
-                  {/* Experience - Legacy mode */}
-                  {!isBaseCvMode(cvOutput) && cvOutput.selected_experiences?.length > 0 && (
-                    <div className="mb-6">
-                      <h3 className="text-xs font-bold uppercase tracking-widest text-foreground border-b-2 border-primary pb-1 mb-3">Experience</h3>
-                      <div className="space-y-4">
-                        {cvOutput.selected_experiences.map((exp: any, i: number) => (
-                          <div key={i}>
-                            <div className="flex items-start justify-between">
-                              <div>
-                                <span className="font-semibold text-sm text-foreground">{exp.company}</span>
-                                <span className="text-sm text-foreground"> — {exp.job_title}</span>
+                    {/* 4. Volunteering / Entrepreneurial */}
+                    {userProfile.volunteering?.length > 0 && (
+                      <div className="mt-5">
+                        <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-foreground border-b border-foreground/30 pb-1 mb-3">Entrepreneurial &amp; Volunteer Experience</h3>
+                        <div className="space-y-3">
+                          {userProfile.volunteering.map((v: any, i: number) => (
+                            <div key={i}>
+                              <div className="flex items-start justify-between">
+                                <div>
+                                  <p className="text-[11px] font-bold uppercase tracking-wide text-foreground">{v.role || v.organization}</p>
+                                  {v.role && <p className="text-[11px] text-foreground/80 italic">{v.organization}</p>}
+                                </div>
+                                <p className="text-[10px] text-muted-foreground shrink-0 ml-4">
+                                  {v.start_year ? `${v.start_year} – ${v.is_ongoing ? "Present" : v.end_year || ""}` : ""}
+                                </p>
                               </div>
-                              <span className="text-xs text-muted-foreground whitespace-nowrap ml-4">{exp.start_date} – {exp.end_date}</span>
-                            </div>
-                            {exp.location && <p className="text-xs text-muted-foreground">{exp.location}</p>}
-                            {exp.selected_bullets?.length > 0 && (
-                              <ul className="mt-1.5 space-y-1 list-disc list-outside ml-4">
-                                {exp.selected_bullets.map((b: string, j: number) => (
-                                  <li key={j} className="text-sm text-foreground">{b}</li>
-                                ))}
-                              </ul>
-                            )}
-                            <span className="inline-block mt-1.5 text-[10px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                              {exp.relevance_score}% match
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Education */}
-                  {cvOutput.selected_education?.length > 0 && (
-                    <div className="mb-6">
-                      <h3 className="text-xs font-bold uppercase tracking-widest text-foreground border-b-2 border-[#950606] pb-1 mb-3">Education</h3>
-                      <div className="space-y-3">
-                        {cvOutput.selected_education.map((edu: any, i: number) => (
-                          <div key={i}>
-                            <div className="flex items-start justify-between">
-                              <div>
-                                <span className="font-semibold text-sm text-foreground">{edu.institution}</span>
-                                <span className="text-sm text-foreground"> — {edu.degree}, {edu.field}</span>
-                              </div>
-                            </div>
-                            {edu.grade && <p className="text-xs text-muted-foreground">Grade: {edu.grade}</p>}
-                            {edu.activities && <p className="text-xs text-muted-foreground">Activities: {edu.activities}</p>}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Skills */}
-                  {(getHardSkillsFlat(cvOutput).length > 0 || cvOutput.selected_soft_skills?.length > 0) && (
-                    <div className="mb-6">
-                      <h3 className="text-xs font-bold uppercase tracking-widest text-foreground border-b-2 border-primary pb-1 mb-3">Skills</h3>
-                      {isBaseCvMode(cvOutput) && cvOutput.selected_hard_skills && !Array.isArray(cvOutput.selected_hard_skills) ? (
-                        <div className="space-y-2">
-                          {Object.entries(cvOutput.selected_hard_skills).map(([cat, skills]) => (
-                            <div key={cat}>
-                              <p className="text-xs font-medium text-muted-foreground mb-0.5">{cat}</p>
-                              <p className="text-sm text-foreground">{(skills as string[]).join(", ")}</p>
+                              {v.description && <p className="text-[10.5px] text-foreground/90 mt-0.5">{v.description}</p>}
                             </div>
                           ))}
                         </div>
-                      ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {getHardSkillsFlat(cvOutput).length > 0 && (
+                      </div>
+                    )}
+
+                    {/* 5. Education */}
+                    {userProfile.education?.length > 0 && (
+                      <div className="mt-5">
+                        <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-foreground border-b border-foreground/30 pb-1 mb-3">Education</h3>
+                        <div className="space-y-3">
+                          {userProfile.education.map((edu: any, i: number) => (
+                            <div key={i}>
+                              <div className="flex items-start justify-between">
+                                <div>
+                                  <p className="text-[11px] font-bold text-foreground">{edu.institution}</p>
+                                  <p className="text-[11px] text-foreground/80">{edu.degree} in {edu.field_of_study}</p>
+                                </div>
+                                <div className="text-right shrink-0 ml-4">
+                                  <p className="text-[10px] text-muted-foreground">{edu.start_year} – {edu.is_expected ? "Expected" : edu.end_year || ""}</p>
+                                </div>
+                              </div>
+                              {edu.grade && <p className="text-[10px] text-muted-foreground">GPA: {edu.grade}</p>}
+                              {edu.activities && <p className="text-[10px] text-foreground/80 mt-0.5">{edu.activities}</p>}
+                              {edu.description && <p className="text-[10px] text-foreground/80 mt-0.5">{edu.description}</p>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 6. Footer: Languages | Skills | Interests */}
+                    {(userProfile.languages?.length > 0 || getHardSkillsFlat(cvOutput).length > 0 || userProfile.interests?.length > 0) && (
+                      <div className="mt-5 border-t border-foreground/30 pt-3">
+                        <div className="grid grid-cols-3 gap-4">
+                          {userProfile.languages?.length > 0 && (
                             <div>
-                              <p className="text-xs font-medium text-muted-foreground mb-1">Hard Skills</p>
-                              <p className="text-sm text-foreground">{getHardSkillsFlat(cvOutput).join(", ")}</p>
+                              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-foreground mb-1">Languages</p>
+                              <div className="space-y-0.5">
+                                {userProfile.languages.map((l: any, i: number) => (
+                                  <p key={i} className="text-[10px] text-foreground/90">{l.language_name} <span className="text-muted-foreground">({l.proficiency})</span></p>
+                                ))}
+                              </div>
                             </div>
                           )}
-                          {cvOutput.selected_soft_skills?.length > 0 && (
+                          {cvOutput.selected_hard_skills && (
                             <div>
-                              <p className="text-xs font-medium text-muted-foreground mb-1">Soft Skills</p>
-                              <p className="text-sm text-foreground">{cvOutput.selected_soft_skills.join(", ")}</p>
+                              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-foreground mb-1">Software &amp; Skills</p>
+                              {!Array.isArray(cvOutput.selected_hard_skills) ? (
+                                <div className="space-y-1">
+                                  {Object.entries(cvOutput.selected_hard_skills).map(([cat, skills]) => (
+                                    <div key={cat}>
+                                      <p className="text-[9px] font-semibold text-muted-foreground uppercase">{cat}</p>
+                                      <p className="text-[10px] text-foreground/90">{(skills as string[]).join(", ")}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-[10px] text-foreground/90">{(cvOutput.selected_hard_skills as string[]).join(", ")}</p>
+                              )}
+                            </div>
+                          )}
+                          {userProfile.interests?.length > 0 && (
+                            <div>
+                              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-foreground mb-1">Personal Interests</p>
+                              <p className="text-[10px] text-foreground/90">{userProfile.interests.join(", ")}</p>
                             </div>
                           )}
                         </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Languages */}
-                  {cvOutput.selected_languages?.length > 0 && (
-                    <div className="mb-6">
-                      <h3 className="text-xs font-bold uppercase tracking-widest text-foreground border-b-2 border-[#950606] pb-1 mb-3">Languages</h3>
-                      <div className="space-y-1">
-                        {cvOutput.selected_languages.map((l: any, i: number) => (
-                          <p key={i} className="text-sm text-foreground">{l.language} — <span className="text-muted-foreground">{l.proficiency}</span></p>
-                        ))}
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  {/* Awards */}
-                  {cvOutput.selected_awards?.length > 0 && (
-                    <div className="mb-6">
-                      <h3 className="text-xs font-bold uppercase tracking-widest text-foreground border-b-2 border-[#950606] pb-1 mb-3">Awards</h3>
-                      <div className="space-y-1">
-                        {cvOutput.selected_awards.map((a: any, i: number) => (
-                          <p key={i} className="text-sm text-foreground">
-                            {a.award_name || a.name}{a.organization ? ` — ${a.organization}` : ""}{a.year ? ` (${a.year})` : ""}
-                          </p>
-                        ))}
+                    {/* Awards */}
+                    {userProfile.awards?.length > 0 && (
+                      <div className="mt-4">
+                        <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-foreground border-b border-foreground/30 pb-1 mb-2">Awards &amp; Honours</h3>
+                        <div className="space-y-0.5">
+                          {userProfile.awards.map((a: any, i: number) => (
+                            <p key={i} className="text-[10.5px] text-foreground/90">
+                              {a.award_name}{a.issuing_organization ? ` — ${a.issuing_organization}` : ""}{a.year ? ` (${a.year})` : ""}
+                            </p>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
-
-                  {/* Volunteering */}
-                  {cvOutput.selected_volunteering?.length > 0 && (
-                    <div>
-                      <h3 className="text-xs font-bold uppercase tracking-widest text-foreground border-b-2 border-[#950606] pb-1 mb-3">Volunteering</h3>
-                      <div className="space-y-1">
-                        {cvOutput.selected_volunteering.map((v: any, i: number) => (
-                          <p key={i} className="text-sm text-foreground">
-                            {v.organization}{v.role ? ` — ${v.role}` : ""}{v.start_year ? ` (${v.start_year}–${v.end_year || "Present"})` : ""}
-                          </p>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </CardContent>
               </Card>
 
