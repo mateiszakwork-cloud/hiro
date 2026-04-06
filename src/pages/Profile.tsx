@@ -408,11 +408,11 @@ const Profile = () => {
             </Button>
             {cvError && (
               <div className="flex items-center gap-2 text-xs text-destructive">
-                <AlertTriangle className="h-3 w-3" /> Failed to parse CV.
-                <button onClick={() => { setCvError(false); cvInputRef.current?.click(); }} className="underline">Retry</button>
+                <AlertTriangle className="h-3 w-3" /> {cvError}
+                <button onClick={() => { setCvError(null); cvInputRef.current?.click(); }} className="underline">Retry</button>
               </div>
             )}
-            {cvSuccess && <p className="text-xs text-primary flex items-center gap-1"><CheckCircle className="h-3 w-3" /> {cvSuccess}</p>}
+            {cvSuccess && !parsedCvData && <p className="text-xs text-primary flex items-center gap-1"><CheckCircle className="h-3 w-3" /> {cvSuccess}</p>}
           </div>
         </div>
       </div>
