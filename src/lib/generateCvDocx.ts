@@ -276,11 +276,6 @@ export async function generateCvDocx(data: CvData) {
     }));
   }
 
-  // Add top border to first footer section if it doesn't have one
-  if (footerSections.length > 0 && !footerSections[0].properties?.border) {
-    // Already handled above via the conditional border
-  }
-
   children.push(...footerSections);
 
   const doc = new Document({
