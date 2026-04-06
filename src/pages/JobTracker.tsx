@@ -718,6 +718,13 @@ const JobTracker = () => {
               <DialogHeader className="px-6 pt-6 pb-0">
                 <DialogTitle className="text-lg font-bold text-foreground" style={{ fontFamily: 'Sora, sans-serif' }}>{modalJob.job_title || "Job"}</DialogTitle>
                 <p className="text-sm" style={{ color: '#950606' }}>{modalJob.company_name}</p>
+                <button
+                  onClick={() => { setKitModalJobId(null); navigate(`/jobs/${kitModalJobId}`); }}
+                  className="mt-2 inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-lg border-2 transition-colors hover:bg-[#950606] hover:text-white"
+                  style={{ color: '#950606', borderColor: '#950606' }}
+                >
+                  Open full page <ArrowRight className="h-4 w-4" />
+                </button>
               </DialogHeader>
 
               {/* No kit generated yet */}
