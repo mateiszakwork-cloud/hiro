@@ -605,6 +605,26 @@ const JobDetail = () => {
     toast.success("Deadline updated");
   };
 
+  const handleGenerateInterviewPrep = async () => {
+    if (!jobId || !userId) return;
+    setInterviewLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-interview-prep", {
+        body: { job_id: jobId },
+      });
+      if (error || !data?.success) {
+        toast.error(data?.error || "Failed to generate interview prep.");
+        return;
+      }
+      setInterviewPrep(data.data);
+      toast.success("Interview prep kit ready!");
+    } catch {
+      toast.error("Failed to generate interview prep.");
+    } finally {
+      setInterviewLoading(false);
+    }
+  };
+
   const copyToClipboard = async (text: string, label: string) => {
     await navigator.clipboard.writeText(text);
     toast.success(`${label} copied to clipboard`);
