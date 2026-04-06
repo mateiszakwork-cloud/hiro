@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Briefcase, MapPin, Trash2, ExternalLink, Loader2, CalendarIcon, ArrowUp, ArrowDown, ArrowUpDown, Wand2, Check, Copy } from "lucide-react";
+import { Briefcase, MapPin, Trash2, ExternalLink, Loader2, CalendarIcon, ArrowUp, ArrowDown, ArrowUpDown, Wand2, Check, Copy, ArrowRight } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
@@ -99,20 +99,19 @@ const isValidUrl = (str: string): boolean => {
 type SortKey = "company_name" | "job_title" | "function" | "location" | "work_mode" | "duration" | "status" | "match_score" | "priority" | "created_at" | "applied_date";
 type SortDir = "asc" | "desc";
 
-const COLUMNS: { label: string; key: SortKey | null }[] = [
-  { label: "Company", key: "company_name" },
-  { label: "Job Title", key: "job_title" },
-  { label: "Function", key: "function" },
-  { label: "Location", key: "location" },
-  { label: "Work Mode", key: "work_mode" },
-  { label: "Duration", key: "duration" },
-  { label: "Status", key: "status" },
-  { label: "Match", key: "match_score" },
-  { label: "Kit", key: null },
-  { label: "Priority", key: "priority" },
-  { label: "Added", key: "created_at" },
-  { label: "Applied", key: "applied_date" },
-  { label: "", key: null },
+const COLUMNS: { label: string; key: SortKey | null; width: string }[] = [
+  { label: "", key: null, width: "40px" },
+  { label: "Company", key: "company_name", width: "140px" },
+  { label: "Job Title", key: "job_title", width: "160px" },
+  { label: "Function", key: "function", width: "100px" },
+  { label: "Location", key: "location", width: "120px" },
+  { label: "Work Mode", key: "work_mode", width: "80px" },
+  { label: "Duration", key: "duration", width: "80px" },
+  { label: "Status", key: "status", width: "100px" },
+  { label: "Match", key: "match_score", width: "70px" },
+  { label: "Kit", key: null, width: "50px" },
+  { label: "Priority", key: "priority", width: "80px" },
+  { label: "Applied", key: "applied_date", width: "90px" },
 ];
 
 const FUNCTION_VALUES = ["Strategy", "Finance", "Marketing", "Product", "Operations", "HR", "Consulting", "Other"];
@@ -502,15 +501,16 @@ const JobTracker = () => {
               <p className="text-sm text-muted-foreground mt-1">Paste a job URL above to get started.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+            <div className="overflow-hidden">
+              <table className="w-full text-sm" style={{ tableLayout: 'fixed' }}>
                 <thead>
                    <tr className="border-b bg-muted/40">
                      {COLUMNS.map((col) => (
                        <th
-                         key={col.label || "_actions"}
+                         key={col.label || "_open"}
+                         style={{ width: col.width }}
                          className={cn(
-                           "px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap",
+                           "px-3 py-3 text-left font-medium text-muted-foreground whitespace-nowrap",
                            col.key && "cursor-pointer select-none hover:text-foreground transition-colors group/th"
                          )}
                          onClick={() => handleSort(col.key)}
@@ -534,58 +534,102 @@ const JobTracker = () => {
                 <tbody>
                   {parsing && (
                     <tr className="border-b animate-pulse">
-                      <td className="px-4 py-3"><div className="flex items-center gap-2.5"><Skeleton className="h-8 w-8 rounded" /><Skeleton className="h-4 w-24" /></div></td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-3"></td>
+                      <td className="px-3 py-3"><div className="flex items-center gap-2.5"><Skeleton className="h-8 w-8 rounded" /><Skeleton className="h-4 w-24" /></div></td>
+                      <td className="px-3 py-3">
                         <div className="flex items-center gap-2">
                           <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-                          <span className="text-muted-foreground text-sm italic">Reading job posting...</span>
+                          <span className="text-muted-foreground text-sm italic">Reading...</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
-                      <td className="px-4 py-3"><Skeleton className="h-4 w-28" /></td>
-                      <td className="px-4 py-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
-                      <td className="px-4 py-3"><Skeleton className="h-4 w-20" /></td>
-                      <td className="px-4 py-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
-                      <td className="px-4 py-3"><Skeleton className="h-8 w-8 rounded-full" /></td>
-                      <td className="px-4 py-3"><Skeleton className="h-4 w-4" /></td>
-                      <td className="px-4 py-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
-                      <td className="px-4 py-3"><Skeleton className="h-4 w-12" /></td>
-                      <td className="px-4 py-3"><Skeleton className="h-4 w-16" /></td>
-                      <td className="px-4 py-3"></td>
+                      <td className="px-3 py-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
+                      <td className="px-3 py-3"><Skeleton className="h-4 w-20" /></td>
+                      <td className="px-3 py-3"><Skeleton className="h-5 w-14 rounded-full" /></td>
+                      <td className="px-3 py-3"><Skeleton className="h-4 w-14" /></td>
+                      <td className="px-3 py-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
+                      <td className="px-3 py-3"><Skeleton className="h-8 w-8 rounded-full" /></td>
+                      <td className="px-3 py-3"><Skeleton className="h-4 w-4" /></td>
+                      <td className="px-3 py-3"><Skeleton className="h-5 w-14 rounded-full" /></td>
+                      <td className="px-3 py-3"><Skeleton className="h-4 w-14" /></td>
                     </tr>
                   )}
                   {filteredAndSorted.map((job) => (
-                    <tr key={job.id} onClick={() => { if (cvMap[job.id]) { setKitModalJobId(job.id); } else { setKitModalJobId(job.id); } }} className="group border-b last:border-0 hover:bg-[#fff5f5] cursor-pointer transition-colors">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2.5">
-                          <div className="h-8 w-8 rounded bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground shrink-0">
-                            {(job.company_name || "–")[0].toUpperCase()}
-                          </div>
-                          <span className="font-semibold text-foreground whitespace-nowrap">{job.company_name || "–"}</span>
-                        </div>
+                    <tr key={job.id} onClick={() => setKitModalJobId(job.id)} className="group border-b last:border-0 hover:bg-[#fff5f5] cursor-pointer transition-colors">
+                      {/* Open Full Page arrow - first column */}
+                      <td className="px-3 py-3" onClick={(e) => { e.stopPropagation(); navigate(`/jobs/${job.id}`); }}>
+                        <TooltipProvider delayDuration={200}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button className="text-muted-foreground hover:text-primary transition-colors">
+                                <ArrowRight className="h-4 w-4 stroke-[2.5]" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>Open full page</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </td>
-                      <td className="px-4 py-3 font-medium whitespace-nowrap">
-                        {job.job_title || (job.url ? <span className="text-muted-foreground italic">Parsing...</span> : "–")}
+                      <td className="px-3 py-3">
+                        <TooltipProvider delayDuration={300}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center gap-2 min-w-0">
+                                <div className="h-7 w-7 rounded bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground shrink-0">
+                                  {(job.company_name || "–")[0].toUpperCase()}
+                                </div>
+                                <span className="font-semibold text-foreground truncate">{job.company_name || "–"}</span>
+                              </div>
+                            </TooltipTrigger>
+                            {job.company_name && job.company_name.length > 14 && <TooltipContent>{job.company_name}</TooltipContent>}
+                          </Tooltip>
+                        </TooltipProvider>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-3">
+                        <TooltipProvider delayDuration={300}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="font-medium truncate block">
+                                {job.job_title || (job.url ? <span className="text-muted-foreground italic">Parsing...</span> : "–")}
+                              </span>
+                            </TooltipTrigger>
+                            {job.job_title && job.job_title.length > 18 && <TooltipContent>{job.job_title}</TooltipContent>}
+                          </Tooltip>
+                        </TooltipProvider>
+                      </td>
+                      <td className="px-3 py-3">
                         {job.function ? (
-                          <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${FUNCTION_COLORS[job.function] || FUNCTION_COLORS.Other}`}>{job.function}</span>
+                          <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium truncate max-w-full ${FUNCTION_COLORS[job.function] || FUNCTION_COLORS.Other}`}>{job.function}</span>
                         ) : <span className="text-muted-foreground">–</span>}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        {job.location ? (
-                          <span className="flex items-center gap-1 text-foreground"><MapPin className="h-3.5 w-3.5 text-muted-foreground" />{job.location}</span>
-                        ) : <span className="text-muted-foreground">–</span>}
+                      <td className="px-3 py-3">
+                        <TooltipProvider delayDuration={300}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="flex items-center gap-1 text-foreground truncate">
+                                {job.location ? <><MapPin className="h-3 w-3 text-muted-foreground shrink-0" /><span className="truncate">{job.location}</span></> : <span className="text-muted-foreground">–</span>}
+                              </span>
+                            </TooltipTrigger>
+                            {job.location && job.location.length > 12 && <TooltipContent>{job.location}</TooltipContent>}
+                          </Tooltip>
+                        </TooltipProvider>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-3">
                         {job.work_mode ? (
-                          <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${WORK_MODE_COLORS[job.work_mode] || WORK_MODE_COLORS.Onsite}`}>{job.work_mode}</span>
+                          <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${WORK_MODE_COLORS[job.work_mode] || WORK_MODE_COLORS.Onsite}`}>{job.work_mode}</span>
                         ) : <span className="text-muted-foreground">–</span>}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-foreground">{job.duration || "–"}</td>
-                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      <td className="px-3 py-3">
+                        <TooltipProvider delayDuration={300}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="text-foreground truncate block">{job.duration || "–"}</span>
+                            </TooltipTrigger>
+                            {job.duration && job.duration.length > 8 && <TooltipContent>{job.duration}</TooltipContent>}
+                          </Tooltip>
+                        </TooltipProvider>
+                      </td>
+                      <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                         <Select value={job.status} onValueChange={(v) => handleStatusChange(job.id, v)}>
-                          <SelectTrigger className={`h-7 w-auto border-0 gap-1 px-2.5 rounded-full text-xs font-medium ${getStatusColor(job.status)}`}>
+                          <SelectTrigger className={`h-7 w-auto border-0 gap-1 px-2 rounded-full text-xs font-medium ${getStatusColor(job.status)}`}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -593,13 +637,13 @@ const JobTracker = () => {
                           </SelectContent>
                         </Select>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-3">
                         {job.match_score !== null ? (
-                          <span className={`inline-flex items-center justify-center h-8 w-8 rounded-full border text-xs font-bold ${getScoreColor(job.match_score)}`}>{job.match_score}</span>
+                          <span className={`inline-flex items-center justify-center h-7 w-7 rounded-full border text-xs font-bold ${getScoreColor(job.match_score)}`}>{job.match_score}</span>
                         ) : <span className="text-muted-foreground">–</span>}
                       </td>
                       {/* Kit column */}
-                      <td className="px-4 py-3" onClick={(e) => { e.stopPropagation(); handleKitClick(e, job); }}>
+                      <td className="px-3 py-3" onClick={(e) => { e.stopPropagation(); handleKitClick(e, job); }}>
                         <TooltipProvider delayDuration={200}>
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -626,9 +670,9 @@ const JobTracker = () => {
                           </Tooltip>
                         </TooltipProvider>
                       </td>
-                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                         <Select value={job.priority} onValueChange={(v) => handlePriorityChange(job.id, v)}>
-                          <SelectTrigger className={`h-7 w-auto border-0 gap-1 px-2.5 rounded-full text-xs font-medium ${getPriorityColor(job.priority)}`}>
+                          <SelectTrigger className={`h-7 w-auto border-0 gap-1 px-2 rounded-full text-xs font-medium ${getPriorityColor(job.priority)}`}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -636,8 +680,7 @@ const JobTracker = () => {
                           </SelectContent>
                         </Select>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">{format(new Date(job.created_at), "MMM d")}</td>
-                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                         {job.status === "Saved" && !job.applied_date ? (
                           <span className="text-muted-foreground">–</span>
                         ) : (
@@ -658,24 +701,6 @@ const JobTracker = () => {
                           </Popover>
                         )}
                       </td>
-                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => setDeleteJobId(job.id)}
-                            className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all"
-                            title="Delete job"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => navigate(`/jobs/${job.id}`)}
-                            className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-primary transition-all"
-                            title="Open full page"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -693,6 +718,13 @@ const JobTracker = () => {
               <DialogHeader className="px-6 pt-6 pb-0">
                 <DialogTitle className="text-lg font-bold text-foreground" style={{ fontFamily: 'Sora, sans-serif' }}>{modalJob.job_title || "Job"}</DialogTitle>
                 <p className="text-sm" style={{ color: '#950606' }}>{modalJob.company_name}</p>
+                <button
+                  onClick={() => { setKitModalJobId(null); navigate(`/jobs/${kitModalJobId}`); }}
+                  className="mt-2 inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-lg border-2 transition-colors hover:bg-[#950606] hover:text-white"
+                  style={{ color: '#950606', borderColor: '#950606' }}
+                >
+                  Open full page <ArrowRight className="h-4 w-4" />
+                </button>
               </DialogHeader>
 
               {/* No kit generated yet */}
@@ -840,15 +872,6 @@ const JobTracker = () => {
                     </Card>
                   )}
 
-                  {/* Footer link */}
-                  <div className="flex justify-end pt-2">
-                    <button
-                      onClick={() => { setKitModalJobId(null); navigate(`/jobs/${kitModalJobId}`); }}
-                      className="text-xs text-muted-foreground hover:text-primary transition-colors"
-                    >
-                      Open full page →
-                    </button>
-                  </div>
                 </div>
               )}
             </>
