@@ -986,7 +986,9 @@ const JobDetail = () => {
                   <div className="text-center mb-6 pb-4 border-b">
                     <h2 className="text-xl font-bold text-foreground">{userProfile.full_name || "Your Name"}</h2>
                     {userProfile.email && <p className="text-sm text-muted-foreground">{userProfile.email}</p>}
-                    {cvOutput.profile_headline && <p className="text-sm italic text-muted-foreground mt-1">{cvOutput.profile_headline}</p>}
+                    {(cvOutput.tailored_summary || cvOutput.profile_headline) && (
+                      <p className="text-sm italic text-muted-foreground mt-1">{cvOutput.tailored_summary || cvOutput.profile_headline}</p>
+                    )}
                   </div>
 
                   {/* Experience */}
