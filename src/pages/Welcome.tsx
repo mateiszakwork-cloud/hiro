@@ -2,16 +2,16 @@ import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { UserCircle, Link2, FileText, MessageSquare, Upload, Loader2, CheckCircle, AlertTriangle, RotateCcw, ClipboardPaste } from "lucide-react";
+import { UserCircle, Link2, FileText, Users, Upload, Loader2, CheckCircle, AlertTriangle, RotateCcw, ClipboardPaste, Lightbulb } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import type { ParsedCVData } from "@/types/cv";
 
 const steps = [
-  { icon: UserCircle, title: "Build your profile once", desc: "Your experience, skills, and education — all in one place." },
-  { icon: Link2, title: "Paste any job URL", desc: "We fill in all the details automatically." },
-  { icon: FileText, title: "Get a tailored CV", desc: "For every role, in seconds." },
-  { icon: MessageSquare, title: "Find contacts & draft messages", desc: "Ready to send, personalized outreach." },
+  { icon: UserCircle, title: "Build your profile once" },
+  { icon: Link2, title: "Paste any job URL" },
+  { icon: FileText, title: "Get a tailored CV kit instantly" },
+  { icon: Users, title: "Find contacts and craft your outreach" },
 ];
 
 const Welcome = () => {
@@ -141,7 +141,7 @@ const Welcome = () => {
     setParsed(null);
     setSummary("");
     if (fileInputRef.current) fileInputRef.current.value = "";
-    if (showPasteMode) return; // stay in paste mode
+    if (showPasteMode) return;
     fileInputRef.current?.click();
   };
 
@@ -153,21 +153,28 @@ const Welcome = () => {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="max-w-lg w-full text-center">
         <h1 className="text-3xl font-bold text-primary mb-2">Welcome to Hiro</h1>
-        <p className="text-muted-foreground mb-6">Paste a job URL. Get a tailored CV, contacts to reach out to, and your full application tracked.</p>
-        <p className="text-sm text-muted-foreground mb-10">Here's how it works:</p>
+        <p className="text-muted-foreground mb-8">Your complete application toolkit, built from one URL.</p>
 
-        <div className="space-y-6 text-left mb-10">
+        {/* 4-step visual flow */}
+        <div className="grid grid-cols-4 gap-3 mb-8">
           {steps.map((step, i) => (
-            <div key={i} className="flex items-start gap-4">
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+            <div key={i} className="flex flex-col items-center gap-2">
+              <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
                 <step.icon className="h-5 w-5 text-primary" />
               </div>
-              <div>
-                <p className="font-semibold text-foreground">Step {i + 1}: {step.title}</p>
-                <p className="text-sm text-muted-foreground">{step.desc}</p>
-              </div>
+              <p className="text-xs font-medium text-foreground leading-tight">{step.title}</p>
             </div>
           ))}
+        </div>
+
+        {/* Pro tip card */}
+        <div className="rounded-lg bg-amber-50 border border-amber-200 p-4 mb-8 text-left">
+          <div className="flex items-start gap-2.5">
+            <Lightbulb className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+            <p className="text-sm text-amber-900">
+              <span className="font-semibold">Pro tip:</span> The more bullet points you add per experience, the better Hiro can tailor your CV. Your current CV probably has 2–3 bullets per role — try adding 4–6 here. Hiro will always pick the most relevant ones for each job, so having more gives it more to work with.
+            </p>
+          </div>
         </div>
 
         {/* CV Upload Section */}
@@ -248,14 +255,39 @@ const Welcome = () => {
           )}
         </div>
 
-        <Button
-          onClick={handleProceed}
-          size="lg"
-          disabled={uploading}
-          className="w-full rounded-lg text-base font-semibold hover:bg-accent transition-colors"
-        >
-          {parsed ? "Review & edit my profile" : "Build my profile"}
-        </Button>
+        {/* Action buttons */}
+        <div className="flex flex-col gap-3">
+          <Button
+            onClick={() => fileInputRef.current?.click()}
+            size="lg"
+            disabled={uploading || !!parsed}
+            className="w-full rounded-lg text-base font-semibold"
+            style={{ backgroundColor: '#950606' }}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            Upload my CV to get started
+          </Button>
+          {parsed ? (
+            <Button
+              onClick={handleProceed}
+              size="lg"
+              className="w-full rounded-lg text-base font-semibold"
+              style={{ backgroundColor: '#950606' }}
+            >
+              Review & edit my profile
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={handleProceed}
+              disabled={uploading}
+              className="w-full rounded-lg text-base font-semibold"
+            >
+              Build my profile manually
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );
