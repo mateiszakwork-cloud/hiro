@@ -40,8 +40,9 @@ serve(async (req) => {
       });
     }
 
-    // Step 1 - Fetch all data in parallel
-    const [jobRes, workRes, eduRes, skillsRes, langRes, awardsRes, volRes] = await Promise.all([
+    // Fetch all data in parallel
+    const [profileRes, jobRes, workRes, eduRes, skillsRes, langRes, awardsRes, volRes] = await Promise.all([
+      supabase.from("profiles").select("base_cv_text, full_name, email").eq("id", userId).single(),
       supabase.from("jobs").select("*").eq("id", job_id).eq("user_id", userId).single(),
       supabase.from("work_experiences").select("*").eq("user_id", userId).order("start_year", { ascending: false }),
       supabase.from("education").select("*").eq("user_id", userId).order("start_year", { ascending: false }),
@@ -57,6 +58,7 @@ serve(async (req) => {
       });
     }
 
+    const profile = profileRes.data;
     const job = jobRes.data;
     const workExperiences = workRes.data || [];
     const education = eduRes.data || [];
@@ -65,55 +67,88 @@ serve(async (req) => {
     const awards = awardsRes.data || [];
     const volunteering = volRes.data || [];
 
-    // Step 2 - Build prompt
-    const userPrompt = JSON.stringify({
-      job: {
-        title: job.job_title,
-        company: job.company_name,
-        function: job.function,
-        location: job.location,
-        work_mode: job.work_mode,
-        hard_skills: job.hard_skills,
-        soft_skills: job.soft_skills,
-        skills_nice_to_have: job.skills_nice_to_have,
-        languages_required: job.languages_required,
-        languages_nice_to_have: job.languages_nice_to_have,
-      },
-      candidate: {
-        work_experiences: workExperiences.map((w: any) => ({
-          company: w.company_name,
-          job_title: w.job_title,
-          location: w.location,
-          start_month: w.start_month,
-          start_year: w.start_year,
-          end_month: w.end_month,
-          end_year: w.end_year,
-          is_current: w.is_current,
-          bullet_points: w.bullet_points,
-        })),
-        education: education.map((e: any) => ({
-          institution: e.institution,
-          degree: e.degree,
-          field_of_study: e.field_of_study,
-          start_year: e.start_year,
-          end_year: e.end_year,
-          grade: e.grade,
-          activities: e.activities,
-          description: e.description,
-        })),
-        hard_skills: skills?.hard_skills || [],
-        soft_skills: skills?.soft_skills || [],
-        languages: languages.map((l: any) => ({ language: l.language_name, proficiency: l.proficiency })),
-        awards: awards.map((a: any) => ({ award_name: a.award_name, organization: a.issuing_organization, year: a.year, description: a.description })),
-        volunteering: volunteering.map((v: any) => ({ organization: v.organization, role: v.role, start_year: v.start_year, end_year: v.end_year, is_ongoing: v.is_ongoing, description: v.description })),
-      },
-    });
+    const baseCvText = profile?.base_cv_text || null;
+    const hasBaseCv = !!baseCvText;
 
-    const systemPrompt = `You are an expert CV writer and career coach specialising in competitive graduate and internship applications at top companies. You will receive a candidate's complete professional profile and a specific job description. Your task is to build the optimal tailored CV for this exact role.
+    // Build candidate profile data
+    const candidateProfile = {
+      work_experiences: workExperiences.map((w: any) => ({
+        company: w.company_name,
+        job_title: w.job_title,
+        location: w.location,
+        start_month: w.start_month,
+        start_year: w.start_year,
+        end_month: w.end_month,
+        end_year: w.end_year,
+        is_current: w.is_current,
+        bullet_points: w.bullet_points,
+      })),
+      education: education.map((e: any) => ({
+        institution: e.institution,
+        degree: e.degree,
+        field_of_study: e.field_of_study,
+        start_year: e.start_year,
+        end_year: e.end_year,
+        grade: e.grade,
+        activities: e.activities,
+        description: e.description,
+      })),
+      hard_skills: skills?.hard_skills || [],
+      soft_skills: skills?.soft_skills || [],
+      languages: languages.map((l: any) => ({ language: l.language_name, proficiency: l.proficiency })),
+      awards: awards.map((a: any) => ({ award_name: a.award_name, organization: a.issuing_organization, year: a.year, description: a.description })),
+      volunteering: volunteering.map((v: any) => ({ organization: v.organization, role: v.role, start_year: v.start_year, end_year: v.end_year, is_ongoing: v.is_ongoing, description: v.description })),
+    };
+
+    const jobData = {
+      title: job.job_title,
+      company: job.company_name,
+      function: job.function,
+      location: job.location,
+      work_mode: job.work_mode,
+      job_description_summary: job.job_description_summary,
+      hard_skills: job.hard_skills,
+      soft_skills: job.soft_skills,
+      skills_nice_to_have: job.skills_nice_to_have,
+      languages_required: job.languages_required,
+    };
+
+    let systemPrompt: string;
+    let userPrompt: string;
+
+    if (hasBaseCv) {
+      // New base-CV-first approach
+      systemPrompt = `You are an expert CV editor for competitive graduate and internship applications. You will receive a candidate's existing CV text, their full profile data, and a specific job description. Your task is to make minimal, targeted edits to the CV to tailor it for this role.
+
+You must return ONLY a valid JSON object with these exact keys:
+
+- tailored_summary: string (rewrite the candidate's summary section specifically for this role and company. 3-4 sentences. Match the tone and language of the job description. Reference the company by name if appropriate. Keep it first-person and confident.)
+
+- selected_bullets: object where each key is the exact company name (e.g. "Aircall", "Hypotenuse AI") and each value is an array of 2-4 strings representing the best bullet points for this role from that experience. Choose from the bullet points in the candidate's profile data. Lightly rephrase to mirror the job description language only if it improves relevance. Never invent new bullets.
+
+- selected_hard_skills: object with keys matching the skill categories in the base CV (e.g. "Data and Analytics", "Revenue Ops and CRM", "AI and Automation", "Design and Visual") and values as arrays of strings. Only keep skills relevant to this role. Keep the same category structure as the original CV.
+
+- tailoring_notes: array of 3-5 strings briefly explaining key decisions made.
+
+Rules:
+- Never change company names, job titles, locations, dates, education, awards, languages, or contact information
+- Keep all experiences in chronological order, most recent first
+- Make the minimum changes necessary. If a section is already well-suited to the role, leave it unchanged.
+- The summary must always be rewritten as it is the most important tailored element.
+- Match the tone of the original CV: professional, concise, achievement-focused with numbers where they exist.`;
+
+      userPrompt = JSON.stringify({
+        base_cv_text: baseCvText,
+        profile_data: candidateProfile,
+        job: jobData,
+      });
+    } else {
+      // Fallback: existing profile-based generation
+      systemPrompt = `You are an expert CV writer and career coach specialising in competitive graduate and internship applications at top companies. You will receive a candidate's complete professional profile and a specific job description. Your task is to build the optimal tailored CV for this exact role.
 
 Return ONLY a valid JSON object with these exact keys:
 
-- profile_headline: string (a 1-sentence professional headline tailored to this role, e.g. "Strategy & Business Development graduate with experience in GTM execution and market analytics")
+- profile_headline: string (a 1-sentence professional headline tailored to this role)
 
 - selected_experiences: array of objects, each containing:
   - company: string
@@ -121,25 +156,24 @@ Return ONLY a valid JSON object with these exact keys:
   - location: string
   - start_date: string
   - end_date: string
-  - selected_bullets: array of strings (choose the 2-4 most relevant bullet points for THIS specific job. Lightly rewrite each bullet if needed to mirror the job description language without changing the facts. Prioritise impact, numbers, and relevance.)
-  - relevance_score: integer 0-100 (how relevant this experience is to the role)
-Order experiences by relevance_score descending, not chronologically.
+  - selected_bullets: array of strings (choose the 2-4 most relevant bullet points for THIS specific job)
+  - relevance_score: integer 0-100
 
-- selected_hard_skills: array of strings (only skills from the candidate profile that are relevant to this job, maximum 10)
+- selected_hard_skills: array of strings (only skills relevant to this job, maximum 10)
+- selected_soft_skills: array of strings (maximum 5)
+- selected_education: array of objects with institution, degree, field, grade, activities
+- selected_languages: array of objects with language and proficiency
+- selected_awards: array of objects (only if relevant, otherwise empty array)
+- selected_volunteering: array of objects (only if relevant, otherwise empty array)
+- tailoring_notes: array of strings (3-5 short notes explaining key tailoring decisions)
 
-- selected_soft_skills: array of strings (only the most relevant, maximum 5)
+Rules: Never invent experience or skills not present in the profile. Never remove entire experiences, only de-prioritise them. Keep bullet points truthful.`;
 
-- selected_education: array of objects with institution, degree, field, grade (if exists), activities (if exists)
-
-- selected_languages: array of objects with language and proficiency (prioritise languages required or preferred by the job)
-
-- selected_awards: array of objects (only include if genuinely relevant to the role, otherwise return empty array)
-
-- selected_volunteering: array of objects (only include if relevant, otherwise empty array)
-
-- tailoring_notes: array of strings (3-5 short notes explaining key tailoring decisions you made, e.g. "Moved internship X to top position due to direct strategy relevance" or "Rewrote bullet 3 to emphasise market analysis over operations")
-
-Rules: Never invent experience or skills not present in the profile. Never remove entire experiences, only de-prioritise them. Keep bullet points truthful and grounded in the original. The goal is selection and emphasis, not fabrication.`;
+      userPrompt = JSON.stringify({
+        job: jobData,
+        candidate: candidateProfile,
+      });
+    }
 
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     if (!OPENAI_API_KEY) {
@@ -181,23 +215,40 @@ Rules: Never invent experience or skills not present in the profile. Never remov
       });
     }
 
-    // Step 3 - Upsert into cv_outputs
-    const row = {
+    // Build the row based on which mode was used
+    const row: any = {
       job_id,
       user_id: userId,
-      profile_headline: parsed.profile_headline || null,
-      selected_experiences: parsed.selected_experiences || [],
-      selected_hard_skills: parsed.selected_hard_skills || [],
-      selected_soft_skills: parsed.selected_soft_skills || [],
-      selected_education: parsed.selected_education || [],
-      selected_languages: parsed.selected_languages || [],
-      selected_awards: parsed.selected_awards || [],
-      selected_volunteering: parsed.selected_volunteering || [],
       tailoring_notes: parsed.tailoring_notes || [],
       updated_at: new Date().toISOString(),
     };
 
-    // Use service role for upsert to avoid RLS issues with the insert+conflict
+    if (hasBaseCv) {
+      // New mode: store tailored_summary, selected_bullets (object), selected_hard_skills (object)
+      row.tailored_summary = parsed.tailored_summary || null;
+      row.selected_bullets = parsed.selected_bullets || {};
+      row.selected_hard_skills = parsed.selected_hard_skills || {};
+      row.profile_headline = null;
+      row.selected_experiences = [];
+      row.selected_soft_skills = [];
+      row.selected_education = [];
+      row.selected_languages = [];
+      row.selected_awards = [];
+      row.selected_volunteering = [];
+    } else {
+      // Legacy mode
+      row.profile_headline = parsed.profile_headline || null;
+      row.selected_experiences = parsed.selected_experiences || [];
+      row.selected_hard_skills = parsed.selected_hard_skills || [];
+      row.selected_soft_skills = parsed.selected_soft_skills || [];
+      row.selected_education = parsed.selected_education || [];
+      row.selected_languages = parsed.selected_languages || [];
+      row.selected_awards = parsed.selected_awards || [];
+      row.selected_volunteering = parsed.selected_volunteering || [];
+      row.tailored_summary = null;
+      row.selected_bullets = {};
+    }
+
     const serviceClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!

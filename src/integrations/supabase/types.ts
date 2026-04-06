@@ -146,12 +146,14 @@ export type Database = {
           job_id: string
           profile_headline: string | null
           selected_awards: Json | null
+          selected_bullets: Json | null
           selected_education: Json | null
           selected_experiences: Json | null
           selected_hard_skills: string[] | null
           selected_languages: Json | null
           selected_soft_skills: string[] | null
           selected_volunteering: Json | null
+          tailored_summary: string | null
           tailoring_notes: string[] | null
           updated_at: string
           user_id: string
@@ -162,12 +164,14 @@ export type Database = {
           job_id: string
           profile_headline?: string | null
           selected_awards?: Json | null
+          selected_bullets?: Json | null
           selected_education?: Json | null
           selected_experiences?: Json | null
           selected_hard_skills?: string[] | null
           selected_languages?: Json | null
           selected_soft_skills?: string[] | null
           selected_volunteering?: Json | null
+          tailored_summary?: string | null
           tailoring_notes?: string[] | null
           updated_at?: string
           user_id: string
@@ -178,12 +182,14 @@ export type Database = {
           job_id?: string
           profile_headline?: string | null
           selected_awards?: Json | null
+          selected_bullets?: Json | null
           selected_education?: Json | null
           selected_experiences?: Json | null
           selected_hard_skills?: string[] | null
           selected_languages?: Json | null
           selected_soft_skills?: string[] | null
           selected_volunteering?: Json | null
+          tailored_summary?: string | null
           tailoring_notes?: string[] | null
           updated_at?: string
           user_id?: string

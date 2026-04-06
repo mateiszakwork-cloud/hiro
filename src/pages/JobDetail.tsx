@@ -22,8 +22,10 @@ import { cn } from "@/lib/utils";
 type CvOutput = {
   id: string;
   profile_headline: string | null;
+  tailored_summary: string | null;
   selected_experiences: any[];
-  selected_hard_skills: string[];
+  selected_bullets: Record<string, string[]> | null;
+  selected_hard_skills: string[] | Record<string, string[]> | null;
   selected_soft_skills: string[];
   selected_education: any[];
   selected_languages: any[];
@@ -474,15 +476,37 @@ const JobDetail = () => {
     toast.success("Version restored successfully!");
   };
 
+  const isBaseCvMode = (cv: CvOutput) => !!cv.tailored_summary || (cv.selected_bullets && typeof cv.selected_bullets === "object" && !Array.isArray(cv.selected_bullets) && Object.keys(cv.selected_bullets).length > 0);
+
+  const getHardSkillsFlat = (cv: CvOutput): string[] => {
+    const hs = cv.selected_hard_skills;
+    if (!hs) return [];
+    if (Array.isArray(hs)) return hs;
+    return Object.values(hs).flat();
+  };
+
   const buildCvPlainText = () => {
     if (!cvOutput) return "";
     const lines: string[] = [];
     if (userProfile.full_name) lines.push(userProfile.full_name);
     if (userProfile.email) lines.push(userProfile.email);
-    if (cvOutput.profile_headline) lines.push(cvOutput.profile_headline);
+    if (cvOutput.tailored_summary) {
+      lines.push(cvOutput.tailored_summary);
+    } else if (cvOutput.profile_headline) {
+      lines.push(cvOutput.profile_headline);
+    }
     lines.push("");
 
-    if (cvOutput.selected_experiences?.length) {
+    // Base CV mode: experience with selected_bullets map
+    if (isBaseCvMode(cvOutput) && cvOutput.selected_bullets) {
+      lines.push("EXPERIENCE");
+      lines.push("─".repeat(40));
+      for (const [company, bullets] of Object.entries(cvOutput.selected_bullets)) {
+        lines.push(company);
+        for (const b of bullets as string[]) lines.push(`  • ${b}`);
+        lines.push("");
+      }
+    } else if (cvOutput.selected_experiences?.length) {
       lines.push("EXPERIENCE");
       lines.push("─".repeat(40));
       for (const exp of cvOutput.selected_experiences) {
@@ -504,10 +528,17 @@ const JobDetail = () => {
       }
     }
 
-    if (cvOutput.selected_hard_skills?.length || cvOutput.selected_soft_skills?.length) {
+    const hardFlat = getHardSkillsFlat(cvOutput);
+    if (hardFlat.length || cvOutput.selected_soft_skills?.length) {
       lines.push("SKILLS");
       lines.push("─".repeat(40));
-      if (cvOutput.selected_hard_skills?.length) lines.push(`Hard Skills: ${cvOutput.selected_hard_skills.join(", ")}`);
+      if (isBaseCvMode(cvOutput) && cvOutput.selected_hard_skills && !Array.isArray(cvOutput.selected_hard_skills)) {
+        for (const [cat, skills] of Object.entries(cvOutput.selected_hard_skills)) {
+          lines.push(`${cat}: ${(skills as string[]).join(", ")}`);
+        }
+      } else if (hardFlat.length) {
+        lines.push(`Hard Skills: ${hardFlat.join(", ")}`);
+      }
       if (cvOutput.selected_soft_skills?.length) lines.push(`Soft Skills: ${cvOutput.selected_soft_skills.join(", ")}`);
       lines.push("");
     }
@@ -549,7 +580,7 @@ const JobDetail = () => {
     // Build a printable HTML document
     const name = userProfile.full_name || "";
     const email = userProfile.email || "";
-    const headline = cvOutput.profile_headline || "";
+    const headline = cvOutput.tailored_summary || cvOutput.profile_headline || "";
 
     const sectionStyle = `style="margin-top:18px;font-size:12px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #950606;padding-bottom:3px;margin-bottom:8px;"`;
     const bodyStyle = `style="font-size:10px;line-height:1.5;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;max-width:700px;margin:0 auto;padding:40px;"`;
@@ -588,9 +619,16 @@ const JobDetail = () => {
     }
 
     // Skills
-    if (cvOutput.selected_hard_skills?.length || cvOutput.selected_soft_skills?.length) {
+    const pdfHardFlat = getHardSkillsFlat(cvOutput);
+    if (pdfHardFlat.length || cvOutput.selected_soft_skills?.length) {
       html += `<div ${sectionStyle}>Skills</div>`;
-      if (cvOutput.selected_hard_skills?.length) html += `<div><strong>Hard Skills:</strong> ${cvOutput.selected_hard_skills.join(", ")}</div>`;
+      if (isBaseCvMode(cvOutput) && cvOutput.selected_hard_skills && !Array.isArray(cvOutput.selected_hard_skills)) {
+        for (const [cat, skills] of Object.entries(cvOutput.selected_hard_skills)) {
+          html += `<div><strong>${cat}:</strong> ${(skills as string[]).join(", ")}</div>`;
+        }
+      } else if (pdfHardFlat.length) {
+        html += `<div><strong>Hard Skills:</strong> ${pdfHardFlat.join(", ")}</div>`;
+      }
       if (cvOutput.selected_soft_skills?.length) html += `<div><strong>Soft Skills:</strong> ${cvOutput.selected_soft_skills.join(", ")}</div>`;
     }
 
@@ -948,13 +986,36 @@ const JobDetail = () => {
                   <div className="text-center mb-6 pb-4 border-b">
                     <h2 className="text-xl font-bold text-foreground">{userProfile.full_name || "Your Name"}</h2>
                     {userProfile.email && <p className="text-sm text-muted-foreground">{userProfile.email}</p>}
-                    {cvOutput.profile_headline && <p className="text-sm italic text-muted-foreground mt-1">{cvOutput.profile_headline}</p>}
+                    {(cvOutput.tailored_summary || cvOutput.profile_headline) && (
+                      <p className="text-sm italic text-muted-foreground mt-1">{cvOutput.tailored_summary || cvOutput.profile_headline}</p>
+                    )}
                   </div>
 
-                  {/* Experience */}
-                  {cvOutput.selected_experiences?.length > 0 && (
+                  {/* Experience - Base CV mode */}
+                  {isBaseCvMode(cvOutput) && cvOutput.selected_bullets && Object.keys(cvOutput.selected_bullets).length > 0 && (
                     <div className="mb-6">
-                      <h3 className="text-xs font-bold uppercase tracking-widest text-foreground border-b-2 border-[#950606] pb-1 mb-3">Experience</h3>
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-foreground border-b-2 border-primary pb-1 mb-3">Experience</h3>
+                      <div className="space-y-4">
+                        {Object.entries(cvOutput.selected_bullets).map(([company, bullets], i) => (
+                          <div key={i}>
+                            <span className="font-semibold text-sm text-foreground">{company}</span>
+                            {(bullets as string[]).length > 0 && (
+                              <ul className="mt-1.5 space-y-1 list-disc list-outside ml-4">
+                                {(bullets as string[]).map((b, j) => (
+                                  <li key={j} className="text-sm text-foreground">{b}</li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Experience - Legacy mode */}
+                  {!isBaseCvMode(cvOutput) && cvOutput.selected_experiences?.length > 0 && (
+                    <div className="mb-6">
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-foreground border-b-2 border-primary pb-1 mb-3">Experience</h3>
                       <div className="space-y-4">
                         {cvOutput.selected_experiences.map((exp: any, i: number) => (
                           <div key={i}>
@@ -1004,23 +1065,34 @@ const JobDetail = () => {
                   )}
 
                   {/* Skills */}
-                  {(cvOutput.selected_hard_skills?.length > 0 || cvOutput.selected_soft_skills?.length > 0) && (
+                  {(getHardSkillsFlat(cvOutput).length > 0 || cvOutput.selected_soft_skills?.length > 0) && (
                     <div className="mb-6">
-                      <h3 className="text-xs font-bold uppercase tracking-widest text-foreground border-b-2 border-[#950606] pb-1 mb-3">Skills</h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {cvOutput.selected_hard_skills?.length > 0 && (
-                          <div>
-                            <p className="text-xs font-medium text-muted-foreground mb-1">Hard Skills</p>
-                            <p className="text-sm text-foreground">{cvOutput.selected_hard_skills.join(", ")}</p>
-                          </div>
-                        )}
-                        {cvOutput.selected_soft_skills?.length > 0 && (
-                          <div>
-                            <p className="text-xs font-medium text-muted-foreground mb-1">Soft Skills</p>
-                            <p className="text-sm text-foreground">{cvOutput.selected_soft_skills.join(", ")}</p>
-                          </div>
-                        )}
-                      </div>
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-foreground border-b-2 border-primary pb-1 mb-3">Skills</h3>
+                      {isBaseCvMode(cvOutput) && cvOutput.selected_hard_skills && !Array.isArray(cvOutput.selected_hard_skills) ? (
+                        <div className="space-y-2">
+                          {Object.entries(cvOutput.selected_hard_skills).map(([cat, skills]) => (
+                            <div key={cat}>
+                              <p className="text-xs font-medium text-muted-foreground mb-0.5">{cat}</p>
+                              <p className="text-sm text-foreground">{(skills as string[]).join(", ")}</p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {getHardSkillsFlat(cvOutput).length > 0 && (
+                            <div>
+                              <p className="text-xs font-medium text-muted-foreground mb-1">Hard Skills</p>
+                              <p className="text-sm text-foreground">{getHardSkillsFlat(cvOutput).join(", ")}</p>
+                            </div>
+                          )}
+                          {cvOutput.selected_soft_skills?.length > 0 && (
+                            <div>
+                              <p className="text-xs font-medium text-muted-foreground mb-1">Soft Skills</p>
+                              <p className="text-sm text-foreground">{cvOutput.selected_soft_skills.join(", ")}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
 
