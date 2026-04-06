@@ -772,11 +772,14 @@ const JobTracker = () => {
                                 </Button>
                               </div>
                               <ul id={`modal-bullets-${i}`} className="space-y-1 ml-4 list-disc list-outside">
-                                {block.bullets.map((b, j) => (
-                                  <li key={j} className="text-sm text-foreground">
-                                    <span contentEditable suppressContentEditableWarning className="outline-none focus:ring-1 focus:ring-ring rounded px-0.5">{b}</span>
-                                  </li>
-                                ))}
+                                {block.bullets.map((b: any, j: number) => {
+                                  const text = typeof b === "string" ? b : (b.use_tailored !== false ? (b.tailored || b.original || "") : (b.original || b.tailored || ""));
+                                  return (
+                                    <li key={j} className="text-sm text-foreground">
+                                      <span contentEditable suppressContentEditableWarning className="outline-none focus:ring-1 focus:ring-ring rounded px-0.5">{text}</span>
+                                    </li>
+                                  );
+                                })}
                               </ul>
                             </div>
                           ))}
