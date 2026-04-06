@@ -687,140 +687,167 @@ const JobTracker = () => {
 
       {/* Application Kit Modal */}
       <Dialog open={!!kitModalJobId} onOpenChange={(open) => !open && setKitModalJobId(null)}>
-        <DialogContent className="max-w-[600px] max-h-[85vh] overflow-y-auto p-0">
-          {modalJob && modalCv && (
+        <DialogContent className="max-w-[640px] max-h-[85vh] overflow-y-auto p-0 rounded-xl shadow-xl animate-in fade-in-0 duration-200 sm:mx-0 mx-4">
+          {modalJob && (
             <>
               <DialogHeader className="px-6 pt-6 pb-0">
-                <DialogTitle className="text-lg font-bold text-foreground">{modalJob.job_title || "Job"}</DialogTitle>
-                <p className="text-sm text-muted-foreground">{modalJob.company_name}</p>
+                <DialogTitle className="text-lg font-bold text-foreground" style={{ fontFamily: 'Sora, sans-serif' }}>{modalJob.job_title || "Job"}</DialogTitle>
+                <p className="text-sm" style={{ color: '#950606' }}>{modalJob.company_name}</p>
               </DialogHeader>
-              <div className="px-6 pb-6 pt-4 space-y-4">
-                {/* Summary */}
-                {modalCv.tailored_summary && (
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-semibold text-sm text-foreground">Professional Summary</h4>
-                          <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-[#950606]/10 text-[#950606]">
-                            Tailored for {modalJob.company_name}
-                          </span>
-                        </div>
-                        <Button variant="ghost" size="sm" className="gap-1 text-xs h-7" onClick={() => {
-                          const el = document.getElementById("modal-summary");
-                          if (el) copyToClipboard(el.innerText, "Summary");
-                        }}>
-                          <Copy className="h-3 w-3" /> Copy
-                        </Button>
-                      </div>
-                      <div
-                        id="modal-summary"
-                        contentEditable
-                        suppressContentEditableWarning
-                        className="text-sm text-foreground leading-relaxed outline-none focus:ring-1 focus:ring-ring rounded p-1.5 -m-1.5"
-                      >
-                        {modalCv.tailored_summary}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
 
-                {/* Bullets */}
-                {Array.isArray(modalCv.selected_bullets) && modalCv.selected_bullets.length > 0 && (
-                  <Card>
-                    <CardContent className="p-4">
-                      <h4 className="font-semibold text-sm text-foreground mb-3">Selected Bullet Points</h4>
-                      <div className="space-y-4">
-                        {modalCv.selected_bullets.map((block, i) => (
-                          <div key={i}>
-                            <div className="flex items-center justify-between mb-1.5">
-                              <div>
-                                <p className="font-semibold text-sm text-foreground">{block.company}</p>
-                                <p className="text-xs text-muted-foreground">{block.job_title}</p>
-                              </div>
-                              <Button variant="ghost" size="sm" className="gap-1 text-xs h-7" onClick={() => {
-                                const container = document.getElementById(`modal-bullets-${i}`);
-                                if (container) copyToClipboard(container.innerText, `${block.company} bullets`);
-                              }}>
-                                <Copy className="h-3 w-3" /> Copy
-                              </Button>
-                            </div>
-                            <ul id={`modal-bullets-${i}`} className="space-y-1 ml-4 list-disc list-outside">
-                              {block.bullets.map((b, j) => (
-                                <li key={j} className="text-sm text-foreground">
-                                  <span contentEditable suppressContentEditableWarning className="outline-none focus:ring-1 focus:ring-ring rounded px-0.5">{b}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Hard Skills */}
-                {modalCv.selected_hard_skills && Object.keys(modalCv.selected_hard_skills).length > 0 && (
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-semibold text-sm text-foreground">Hard Skills</h4>
-                        <Button variant="ghost" size="sm" className="gap-1 text-xs h-7" onClick={() => {
-                          const parts = Object.entries(modalCv.selected_hard_skills!).map(
-                            ([cat, skills]) => `${cat}: ${(skills as string[]).join(", ")}`
-                          );
-                          copyToClipboard("Software Skills: " + parts.join("; ") + ".", "Hard skills");
-                        }}>
-                          <Copy className="h-3 w-3" /> Copy all
-                        </Button>
-                      </div>
-                      <div className="space-y-2.5">
-                        {Object.entries(modalCv.selected_hard_skills).map(([category, skills]) => (
-                          <div key={category}>
-                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">{category}</p>
-                            <div className="flex flex-wrap gap-1.5">
-                              {(skills as string[]).map((skill, i) => (
-                                <span key={i} className="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground">{skill}</span>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Soft Skills */}
-                {modalCv.selected_soft_skills && modalCv.selected_soft_skills.length > 0 && (
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-semibold text-sm text-foreground">Soft Skills</h4>
-                        <Button variant="ghost" size="sm" className="gap-1 text-xs h-7" onClick={() => {
-                          copyToClipboard(modalCv.selected_soft_skills!.join(", "), "Soft skills");
-                        }}>
-                          <Copy className="h-3 w-3" /> Copy all
-                        </Button>
-                      </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {modalCv.selected_soft_skills.map((skill, i) => (
-                          <span key={i} className="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground">{skill}</span>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Footer link */}
-                <div className="text-center pt-2">
-                  <button
-                    onClick={() => { setKitModalJobId(null); navigate(`/jobs/${kitModalJobId}?tab=cv`); }}
-                    className="text-xs text-muted-foreground hover:text-primary transition-colors"
+              {/* No kit generated yet */}
+              {!modalCv && generatingKit !== modalJob.id && (
+                <div className="px-6 pb-6 pt-8 flex flex-col items-center justify-center text-center gap-4">
+                  <Wand2 className="h-10 w-10 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">No Application Kit generated yet for this role.</p>
+                  <Button
+                    onClick={() => handleGenerateKit(modalJob.id, modalJob.company_name)}
+                    className="gap-2"
+                    style={{ backgroundColor: '#950606' }}
                   >
-                    View full details →
-                  </button>
+                    <Wand2 className="h-4 w-4" /> Generate Application Kit
+                  </Button>
                 </div>
-              </div>
+              )}
+
+              {/* Generating state */}
+              {generatingKit === modalJob.id && (
+                <div className="px-6 pb-6 pt-8 flex flex-col items-center justify-center text-center gap-4">
+                  <Loader2 className="h-8 w-8 animate-spin text-[#950606]" />
+                  <p className="text-sm text-muted-foreground">Building your application kit...</p>
+                </div>
+              )}
+
+              {/* Kit content */}
+              {modalCv && generatingKit !== modalJob.id && (
+                <div className="px-6 pb-6 pt-4 space-y-4">
+                  {/* Summary */}
+                  {modalCv.tailored_summary && (
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold text-sm text-foreground">Professional Summary</h4>
+                            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-[#950606]/10 text-[#950606]">
+                              Tailored for {modalJob.company_name}
+                            </span>
+                          </div>
+                          <Button variant="ghost" size="sm" className="gap-1 text-xs h-7" onClick={() => {
+                            const el = document.getElementById("modal-summary");
+                            if (el) copyToClipboard(el.innerText, "Summary");
+                          }}>
+                            <Copy className="h-3 w-3" /> Copy
+                          </Button>
+                        </div>
+                        <div
+                          id="modal-summary"
+                          contentEditable
+                          suppressContentEditableWarning
+                          className="text-sm text-foreground leading-relaxed outline-none focus:ring-1 focus:ring-ring rounded p-1.5 -m-1.5"
+                        >
+                          {modalCv.tailored_summary}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Bullets */}
+                  {Array.isArray(modalCv.selected_bullets) && modalCv.selected_bullets.length > 0 && (
+                    <Card>
+                      <CardContent className="p-4">
+                        <h4 className="font-semibold text-sm text-foreground mb-3">Selected Bullet Points</h4>
+                        <div className="space-y-4">
+                          {modalCv.selected_bullets.map((block, i) => (
+                            <div key={i}>
+                              <div className="flex items-center justify-between mb-1.5">
+                                <div>
+                                  <p className="font-semibold text-sm text-foreground">{block.company}</p>
+                                  <p className="text-xs text-muted-foreground">{block.job_title}</p>
+                                </div>
+                                <Button variant="ghost" size="sm" className="gap-1 text-xs h-7" onClick={() => {
+                                  const container = document.getElementById(`modal-bullets-${i}`);
+                                  if (container) copyToClipboard(container.innerText, `${block.company} bullets`);
+                                }}>
+                                  <Copy className="h-3 w-3" /> Copy
+                                </Button>
+                              </div>
+                              <ul id={`modal-bullets-${i}`} className="space-y-1 ml-4 list-disc list-outside">
+                                {block.bullets.map((b, j) => (
+                                  <li key={j} className="text-sm text-foreground">
+                                    <span contentEditable suppressContentEditableWarning className="outline-none focus:ring-1 focus:ring-ring rounded px-0.5">{b}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Hard Skills */}
+                  {modalCv.selected_hard_skills && Object.keys(modalCv.selected_hard_skills).length > 0 && (
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-semibold text-sm text-foreground">Hard Skills</h4>
+                          <Button variant="ghost" size="sm" className="gap-1 text-xs h-7" onClick={() => {
+                            const parts = Object.entries(modalCv.selected_hard_skills!).map(
+                              ([cat, skills]) => `${cat}: ${(skills as string[]).join(", ")}`
+                            );
+                            copyToClipboard("Software Skills: " + parts.join("; ") + ".", "Hard skills");
+                          }}>
+                            <Copy className="h-3 w-3" /> Copy all
+                          </Button>
+                        </div>
+                        <div className="space-y-2.5">
+                          {Object.entries(modalCv.selected_hard_skills).map(([category, skills]) => (
+                            <div key={category}>
+                              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">{category}</p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {(skills as string[]).map((skill, i) => (
+                                  <span key={i} className="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground">{skill}</span>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Soft Skills */}
+                  {modalCv.selected_soft_skills && modalCv.selected_soft_skills.length > 0 && (
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-semibold text-sm text-foreground">Soft Skills</h4>
+                          <Button variant="ghost" size="sm" className="gap-1 text-xs h-7" onClick={() => {
+                            copyToClipboard(modalCv.selected_soft_skills!.join(", "), "Soft skills");
+                          }}>
+                            <Copy className="h-3 w-3" /> Copy all
+                          </Button>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {modalCv.selected_soft_skills.map((skill, i) => (
+                            <span key={i} className="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground">{skill}</span>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Footer link */}
+                  <div className="flex justify-end pt-2">
+                    <button
+                      onClick={() => { setKitModalJobId(null); navigate(`/jobs/${kitModalJobId}`); }}
+                      className="text-xs text-muted-foreground hover:text-primary transition-colors"
+                    >
+                      Open full page →
+                    </button>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </DialogContent>
