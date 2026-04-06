@@ -278,6 +278,53 @@ export type Database = {
         }
         Relationships: []
       }
+      interview_prep: {
+        Row: {
+          company_overview: string | null
+          created_at: string
+          id: string
+          interview_questions: Json | null
+          job_id: string
+          preparation_gaps: Json | null
+          role_intelligence: string | null
+          updated_at: string
+          user_id: string
+          your_pitch: Json | null
+        }
+        Insert: {
+          company_overview?: string | null
+          created_at?: string
+          id?: string
+          interview_questions?: Json | null
+          job_id: string
+          preparation_gaps?: Json | null
+          role_intelligence?: string | null
+          updated_at?: string
+          user_id: string
+          your_pitch?: Json | null
+        }
+        Update: {
+          company_overview?: string | null
+          created_at?: string
+          id?: string
+          interview_questions?: Json | null
+          job_id?: string
+          preparation_gaps?: Json | null
+          role_intelligence?: string | null
+          updated_at?: string
+          user_id?: string
+          your_pitch?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interview_prep_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jobs: {
         Row: {
           application_deadline: string | null

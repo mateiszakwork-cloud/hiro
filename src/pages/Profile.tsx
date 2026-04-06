@@ -73,7 +73,7 @@ const Profile = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
-  const [memberSince, setMemberSince] = useState("");
+  
 
   const [workExps, setWorkExps] = useState<WorkExp[]>([]);
   const [edus, setEdus] = useState<Edu[]>([]);
@@ -116,7 +116,7 @@ const Profile = () => {
       setEmail(session.user.email || "");
       const { data: profile } = await supabase.from("profiles").select("created_at, full_name, base_cv_text, base_cv_uploaded_at").eq("id", uid).single();
       if (profile) {
-        setMemberSince(format(new Date(profile.created_at), "MMMM yyyy"));
+        
         setFullName(profile.full_name || "");
         setBaseCvText((profile as any).base_cv_text || null);
         setBaseCvUploadedAt((profile as any).base_cv_uploaded_at || null);
@@ -323,7 +323,7 @@ const Profile = () => {
           <div>
             <h1 className="text-[28px] font-bold text-primary">{fullName || "Profile"}</h1>
             <p className="text-muted-foreground mt-0.5">{email}</p>
-            {memberSince && <p className="text-sm text-muted-foreground">Member since {memberSince}</p>}
+            
           </div>
           <div className="flex flex-col items-end gap-2">
             <input ref={cvInputRef} type="file" accept="application/pdf" onChange={handleCvReimport} className="hidden" />
