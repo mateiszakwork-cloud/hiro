@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Mail } from "lucide-react";
 
 const InlineError = ({ message }: { message: string }) => (
   <p className="flex items-center gap-1.5 text-xs text-destructive mt-1">
@@ -22,6 +22,20 @@ const Register = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showVerification, setShowVerification] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(60);
+  const [canResend, setCanResend] = useState(false);
+
+  // Countdown timer for resend
+  useEffect(() => {
+    if (!showVerification) return;
+    if (resendCooldown <= 0) {
+      setCanResend(true);
+      return;
+    }
+    const timer = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [showVerification, resendCooldown]);
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -39,7 +53,14 @@ const Register = () => {
     e.preventDefault();
     if (!validate()) return;
     setLoading(true);
-    const { data, error } = await supabase.auth.signUp({ email, password });
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        data: { full_name: fullName.trim() },
+      },
+    });
     setLoading(false);
     if (error) {
       toast.error(error.message);
@@ -49,9 +70,63 @@ const Register = () => {
     if (data.user) {
       await supabase.from("profiles").update({ full_name: fullName.trim() }).eq("id", data.user.id);
     }
-    toast.success("Account created!");
-    navigate("/welcome");
+    // Show verification screen instead of redirecting
+    setShowVerification(true);
+    setResendCooldown(60);
+    setCanResend(false);
   };
+
+  const handleResend = useCallback(async () => {
+    if (!canResend) return;
+    setCanResend(false);
+    setResendCooldown(60);
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email,
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+    });
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Verification email resent!");
+    }
+  }, [canResend, email]);
+
+  if (showVerification) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <div className="w-full max-w-md bg-card rounded-lg shadow-lg p-8 text-center">
+          <Mail className="h-12 w-12 text-primary mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-foreground mb-2">Check your email</h1>
+          <p className="text-muted-foreground mb-1">
+            We sent a verification link to
+          </p>
+          <p className="font-medium text-foreground mb-6">{email}</p>
+          <p className="text-sm text-muted-foreground mb-6">
+            Click the link in your email to activate your account.
+          </p>
+          <div className="text-sm text-muted-foreground">
+            {canResend ? (
+              <button
+                onClick={handleResend}
+                className="text-primary font-medium hover:underline"
+              >
+                Resend email
+              </button>
+            ) : (
+              <span>Resend available in {resendCooldown}s</span>
+            )}
+          </div>
+          <p className="text-center text-sm text-muted-foreground mt-6">
+            Already verified?{" "}
+            <Link to="/login" className="text-primary font-medium hover:underline">
+              Log in
+            </Link>
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
