@@ -555,7 +555,7 @@ const JobTracker = () => {
                     </tr>
                   )}
                   {filteredAndSorted.map((job) => (
-                    <tr key={job.id} onClick={() => navigate(`/jobs/${job.id}`)} className="group border-b last:border-0 hover:bg-[#fff5f5] cursor-pointer transition-colors">
+                    <tr key={job.id} onClick={() => { if (cvMap[job.id]) { setKitModalJobId(job.id); } else { setKitModalJobId(job.id); } }} className="group border-b last:border-0 hover:bg-[#fff5f5] cursor-pointer transition-colors">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2.5">
                           <div className="h-8 w-8 rounded bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground shrink-0">
