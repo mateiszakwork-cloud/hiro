@@ -390,7 +390,6 @@ const JobDetail = () => {
   const handleGenerateCv = async (skipConfirm = false) => {
     if (!jobId || !userId) return;
 
-    // If CV exists and not confirmed, show confirmation
     if (cvOutput && !skipConfirm) {
       setRegenConfirmOpen(true);
       return;
@@ -398,18 +397,15 @@ const JobDetail = () => {
 
     setRegenConfirmOpen(false);
     setCvLoading(true);
+    setCvError(null);
     try {
       // Save current version to history before regenerating
       if (cvOutput) {
         const snapshot = {
-          profile_headline: cvOutput.profile_headline,
-          selected_experiences: cvOutput.selected_experiences,
+          tailored_summary: cvOutput.tailored_summary,
+          selected_bullets: cvOutput.selected_bullets,
           selected_hard_skills: cvOutput.selected_hard_skills,
           selected_soft_skills: cvOutput.selected_soft_skills,
-          selected_education: cvOutput.selected_education,
-          selected_languages: cvOutput.selected_languages,
-          selected_awards: cvOutput.selected_awards,
-          selected_volunteering: cvOutput.selected_volunteering,
           tailoring_notes: cvOutput.tailoring_notes,
           updated_at: cvOutput.updated_at,
         };
@@ -420,7 +416,6 @@ const JobDetail = () => {
           snapshot,
         });
 
-        // Enforce max 5 history entries — delete oldest if over limit
         const { data: allHist } = await supabase
           .from("cv_output_history")
           .select("id, created_at")
@@ -437,13 +432,14 @@ const JobDetail = () => {
         body: { job_id: jobId },
       });
       if (error || !data?.success) {
-        toast.error(data?.message || "CV generation failed. Please try again.");
+        const msg = data?.error || error?.message || "CV generation failed. Please try again.";
+        setCvError(msg);
+        toast.error(msg);
         return;
       }
       setCvOutput(data.data as CvOutput);
-      toast.success("CV generated successfully!");
+      toast.success("Application kit generated!");
 
-      // Refresh history
       const { data: histData } = await supabase
         .from("cv_output_history")
         .select("*")
@@ -451,8 +447,10 @@ const JobDetail = () => {
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
       if (histData) setCvHistory(histData);
-    } catch {
-      toast.error("CV generation failed. Please try again.");
+    } catch (e: any) {
+      const msg = e?.message || "CV generation failed. Please try again.";
+      setCvError(msg);
+      toast.error(msg);
     } finally {
       setCvLoading(false);
     }
@@ -464,14 +462,10 @@ const JobDetail = () => {
     const { error } = await supabase
       .from("cv_outputs")
       .update({
-        profile_headline: snapshot.profile_headline,
-        selected_experiences: snapshot.selected_experiences,
+        tailored_summary: snapshot.tailored_summary,
+        selected_bullets: snapshot.selected_bullets,
         selected_hard_skills: snapshot.selected_hard_skills,
         selected_soft_skills: snapshot.selected_soft_skills,
-        selected_education: snapshot.selected_education,
-        selected_languages: snapshot.selected_languages,
-        selected_awards: snapshot.selected_awards,
-        selected_volunteering: snapshot.selected_volunteering,
         tailoring_notes: snapshot.tailoring_notes,
       })
       .eq("id", cvOutput.id);
@@ -479,16 +473,15 @@ const JobDetail = () => {
       toast.error("Failed to restore version.");
       return;
     }
-    setCvOutput(prev => prev ? {
-      ...prev,
-      ...snapshot,
-      updated_at: new Date().toISOString(),
-    } : prev);
+    setCvOutput(prev => prev ? { ...prev, ...snapshot, updated_at: new Date().toISOString() } : prev);
     setPreviewVersion(null);
-    toast.success("Version restored successfully!");
+    toast.success("Version restored!");
   };
 
-  const isBaseCvMode = (cv: CvOutput) => !!cv.tailored_summary || (cv.selected_bullets && typeof cv.selected_bullets === "object" && !Array.isArray(cv.selected_bullets) && Object.keys(cv.selected_bullets).length > 0);
+  const copyToClipboard = async (text: string, label: string) => {
+    await navigator.clipboard.writeText(text);
+    toast.success(`${label} copied to clipboard`);
+  };
 
   const getHardSkillsFlat = (cv: CvOutput): string[] => {
     const hs = cv.selected_hard_skills;
