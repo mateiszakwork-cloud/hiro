@@ -1041,7 +1041,7 @@ const JobDetail = () => {
                         ))}
                       </div>
                     </div>
-                  )
+                  )}
 
                   {/* Education */}
                   {cvOutput.selected_education?.length > 0 && (
