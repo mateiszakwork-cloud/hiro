@@ -1,7 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import { Loader2, AlertTriangle } from "lucide-react";
 import StepWorkExperience from "@/components/onboarding/StepWorkExperience";
 import StepEducation from "@/components/onboarding/StepEducation";
 import StepSkills from "@/components/onboarding/StepSkills";
@@ -16,28 +19,37 @@ const TOTAL_STEPS = 7;
 const Onboarding = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, isReady } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
-  const [userId, setUserId] = useState<string | null>(null);
 
   const cvData = (location.state as { cvData?: ParsedCVData } | null)?.cvData || null;
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { navigate("/login"); return; }
-      const uid = session.user.id;
-      const { data: profile } = await supabase.from("profiles").select("onboarding_complete").eq("id", uid).single();
-      if (profile?.onboarding_complete) { navigate("/dashboard"); return; }
-      setUserId(uid);
-    };
-    checkAuth();
-  }, [navigate]);
 
   const progressValue = (currentStep / TOTAL_STEPS) * 100;
   const handleNext = () => { if (currentStep < TOTAL_STEPS) setCurrentStep(s => s + 1); };
   const handleBack = () => { if (currentStep > 1) setCurrentStep(s => s - 1); };
 
-  if (!userId) return null;
+  if (!isReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+        <div className="text-center max-w-md">
+          <AlertTriangle className="h-10 w-10 text-destructive mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-foreground mb-2">Your session expired</h2>
+          <p className="text-muted-foreground mb-6">Please log in again to continue.</p>
+          <Button onClick={() => navigate("/login")} className="rounded-lg">Log In</Button>
+        </div>
+      </div>
+    );
+  }
+
+  const userId = user.id;
 
   return (
     <div className="min-h-screen bg-background px-4 py-10">

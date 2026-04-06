@@ -1,8 +1,9 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { UserCircle, Link2, FileText, MessageSquare, Upload, Loader2, CheckCircle, AlertTriangle, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import type { ParsedCVData } from "@/types/cv";
 
 const steps = [
@@ -14,23 +15,33 @@ const steps = [
 
 const Welcome = () => {
   const navigate = useNavigate();
+  const { user, isReady } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [parsed, setParsed] = useState<ParsedCVData | null>(null);
   const [summary, setSummary] = useState("");
   const [parseError, setParseError] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
 
-  // Wait for auth session to be ready (handles post-registration timing)
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUserId(session?.user?.id ?? null);
-    });
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUserId(session?.user?.id ?? null);
-    });
-    return () => subscription.unsubscribe();
-  }, []);
+  if (!isReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+        <div className="text-center max-w-md">
+          <AlertTriangle className="h-10 w-10 text-destructive mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-foreground mb-2">Your session expired</h2>
+          <p className="text-muted-foreground mb-6">Please log in again to continue.</p>
+          <Button onClick={() => navigate("/login")} className="rounded-lg">Log In</Button>
+        </div>
+      </div>
+    );
+  }
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
