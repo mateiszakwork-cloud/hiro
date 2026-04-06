@@ -507,7 +507,7 @@ const JobTracker = () => {
                      {COLUMNS.map((col) => (
                        <th
                          key={col.label || "_open"}
-                         style={{ width: col.width }}
+                         style={{ minWidth: col.minWidth }}
                          className={cn(
                            "px-3 py-3 text-left font-medium text-muted-foreground whitespace-nowrap",
                            col.key && "cursor-pointer select-none hover:text-foreground transition-colors group/th"
