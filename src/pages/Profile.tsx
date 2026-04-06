@@ -15,11 +15,11 @@ import { format } from "date-fns";
 import type { ParsedCVData } from "@/types/cv";
 
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-const WORK_YEARS = Array.from({ length: 37 }, (_, i) => 1990 + i);
-const EDU_START_YEARS = Array.from({ length: 37 }, (_, i) => 1990 + i);
-const EDU_END_YEARS = Array.from({ length: 37 }, (_, i) => 1990 + i);
+const WORK_YEARS = Array.from({ length: 37 }, (_, i) => 2026 - i);
+const EDU_START_YEARS = Array.from({ length: 37 }, (_, i) => 2026 - i);
+const EDU_END_YEARS = Array.from({ length: 37 }, (_, i) => 2026 - i);
 const PROFICIENCIES = ["Basic","Conversational","Professional Working","Fluent","Native"];
-const AWARD_YEARS = Array.from({ length: 37 }, (_, i) => 1990 + i);
+const AWARD_YEARS = Array.from({ length: 37 }, (_, i) => 2026 - i);
 
 const HARD_SUGGESTIONS = ["Excel","PowerPoint","SQL","Python","Salesforce","Tableau","Google Analytics","Jira","Figma","SAP"];
 const SOFT_SUGGESTIONS = ["Stakeholder management","Analytical thinking","Cross-functional collaboration","Project management","Communication","Problem solving","Leadership","Attention to detail"];
