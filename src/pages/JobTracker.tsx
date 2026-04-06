@@ -96,22 +96,21 @@ const isValidUrl = (str: string): boolean => {
   }
 };
 
-type SortKey = "company_name" | "job_title" | "function" | "location" | "work_mode" | "duration" | "status" | "match_score" | "priority" | "created_at" | "applied_date";
+type SortKey = "company_name" | "job_title" | "function" | "location" | "duration" | "status" | "match_score" | "priority" | "created_at" | "applied_date";
 type SortDir = "asc" | "desc";
 
-const COLUMNS: { label: string; key: SortKey | null; width: string }[] = [
-  { label: "", key: null, width: "40px" },
-  { label: "Company", key: "company_name", width: "140px" },
-  { label: "Job Title", key: "job_title", width: "160px" },
-  { label: "Function", key: "function", width: "100px" },
-  { label: "Location", key: "location", width: "120px" },
-  { label: "Work Mode", key: "work_mode", width: "80px" },
-  { label: "Duration", key: "duration", width: "80px" },
-  { label: "Status", key: "status", width: "100px" },
-  { label: "Match", key: "match_score", width: "70px" },
-  { label: "Kit", key: null, width: "50px" },
-  { label: "Priority", key: "priority", width: "80px" },
-  { label: "Applied", key: "applied_date", width: "90px" },
+const COLUMNS: { label: string; key: SortKey | null; minWidth: string }[] = [
+  { label: "", key: null, minWidth: "40px" },
+  { label: "Company", key: "company_name", minWidth: "130px" },
+  { label: "Job Title", key: "job_title", minWidth: "150px" },
+  { label: "Function", key: "function", minWidth: "90px" },
+  { label: "Location", key: "location", minWidth: "110px" },
+  { label: "Duration", key: "duration", minWidth: "80px" },
+  { label: "Status", key: "status", minWidth: "95px" },
+  { label: "Match", key: "match_score", minWidth: "65px" },
+  { label: "Kit", key: null, minWidth: "45px" },
+  { label: "Priority", key: "priority", minWidth: "75px" },
+  { label: "Applied", key: "applied_date", minWidth: "85px" },
 ];
 
 const FUNCTION_VALUES = ["Strategy", "Finance", "Marketing", "Product", "Operations", "HR", "Consulting", "Other"];
@@ -501,8 +500,8 @@ const JobTracker = () => {
               <p className="text-sm text-muted-foreground mt-1">Paste a job URL above to get started.</p>
             </div>
           ) : (
-            <div className="overflow-hidden">
-              <table className="w-full text-sm" style={{ tableLayout: 'fixed' }}>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm" style={{ tableLayout: 'auto' }}>
                 <thead>
                    <tr className="border-b bg-muted/40">
                      {COLUMNS.map((col) => (
@@ -611,11 +610,6 @@ const JobTracker = () => {
                             {job.location && job.location.length > 12 && <TooltipContent>{job.location}</TooltipContent>}
                           </Tooltip>
                         </TooltipProvider>
-                      </td>
-                      <td className="px-3 py-3">
-                        {job.work_mode ? (
-                          <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${WORK_MODE_COLORS[job.work_mode] || WORK_MODE_COLORS.Onsite}`}>{job.work_mode}</span>
-                        ) : <span className="text-muted-foreground">–</span>}
                       </td>
                       <td className="px-3 py-3">
                         <TooltipProvider delayDuration={300}>
