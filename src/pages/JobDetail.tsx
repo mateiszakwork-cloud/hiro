@@ -609,8 +609,16 @@ const JobDetail = () => {
     if (!jobId || !userId) return;
     setInterviewLoading(true);
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (!token) {
+        toast.error("Session expired. Please refresh and try again.");
+        setInterviewLoading(false);
+        return;
+      }
       const { data, error } = await supabase.functions.invoke("generate-interview-prep", {
         body: { job_id: jobId },
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (error || !data?.success) {
         toast.error(data?.error || "Failed to generate interview prep.");
