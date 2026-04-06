@@ -151,11 +151,10 @@ const Profile = () => {
     if (file.type !== "application/pdf" || file.size > 10 * 1024 * 1024) { setCvError(true); return; }
     setCvUploading(true); setCvError(false); setCvSuccess("");
     try {
-      const filePath = `${userId}/cv-${Date.now()}.pdf`;
-      const { error: upErr } = await supabase.storage.from("cv-uploads").upload(filePath, file);
-      if (upErr) { setCvError(true); setCvUploading(false); return; }
-      const { data, error: fnErr } = await supabase.functions.invoke("parse-cv", { body: { filePath } });
-      if (fnErr || !data) { setCvError(true); setCvUploading(false); return; }
+      const formData = new FormData();
+      formData.append("file", file);
+      const { data, error: fnErr } = await supabase.functions.invoke("parse-cv", { body: formData });
+      if (fnErr || !data || data.success === false) { setCvError(true); setCvUploading(false); return; }
       const cv = data as ParsedCVData;
       // Pre-fill edit states and open all sections for review
       if (cv.work_experiences?.length) {
