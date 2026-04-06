@@ -1,7 +1,8 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { UserCircle, Link2, FileText, MessageSquare, Upload, Loader2, CheckCircle, AlertTriangle, RotateCcw } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { UserCircle, Link2, FileText, MessageSquare, Upload, Loader2, CheckCircle, AlertTriangle, RotateCcw, ClipboardPaste } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import type { ParsedCVData } from "@/types/cv";
@@ -22,6 +23,8 @@ const Welcome = () => {
   const [summary, setSummary] = useState("");
   const [parseError, setParseError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [showPasteMode, setShowPasteMode] = useState(false);
+  const [pastedText, setPastedText] = useState("");
 
   if (!isReady) {
     return (
@@ -44,21 +47,28 @@ const Welcome = () => {
     );
   }
 
+  const handleParseSuccess = (data: ParsedCVData) => {
+    setParsed(data);
+    const expCount = data.work_experiences?.length || 0;
+    const skillCount = (data.hard_skills?.length || 0) + (data.soft_skills?.length || 0);
+    setSummary(`We found ${expCount} experience${expCount !== 1 ? "s" : ""} and ${skillCount} skill${skillCount !== 1 ? "s" : ""}. Review and edit below.`);
+  };
+
+  const handleParseError = (msg: string) => {
+    setErrorMessage(msg);
+    setParseError(true);
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // File type check
     if (file.type !== "application/pdf") {
-      setErrorMessage("Please upload a PDF version of your CV.");
-      setParseError(true);
+      handleParseError("Please upload a PDF version of your CV.");
       return;
     }
-
-    // File size check
     if (file.size > 10 * 1024 * 1024) {
-      setErrorMessage("Your CV is too large. Please use a version under 10MB.");
-      setParseError(true);
+      handleParseError("Your CV is too large. Please use a version under 10MB.");
       return;
     }
 
@@ -69,7 +79,6 @@ const Welcome = () => {
     setErrorMessage("");
 
     try {
-      // Send PDF directly as multipart form data to the edge function
       const formData = new FormData();
       formData.append("file", file);
 
@@ -78,32 +87,50 @@ const Welcome = () => {
       });
 
       if (fnError) {
-        console.error("Parse error:", fnError);
-        setErrorMessage(fnError.message || "Failed to parse your CV.");
-        setParseError(true);
-        setUploading(false);
+        handleParseError(fnError.message || "Failed to parse your CV.");
         return;
       }
-
-      // The function always returns 200; check success flag
       if (data?.success === false) {
-        console.error("Parse-cv failed:", data.step, data.message);
-        setErrorMessage(data.message || "Failed to parse your CV.");
-        setParseError(true);
-        setUploading(false);
+        handleParseError(data.message || "Failed to parse your CV.");
         return;
       }
-
-      const cvData = data as ParsedCVData;
-      setParsed(cvData);
-
-      const expCount = cvData.work_experiences?.length || 0;
-      const skillCount = (cvData.hard_skills?.length || 0) + (cvData.soft_skills?.length || 0);
-      setSummary(`We found ${expCount} experience${expCount !== 1 ? "s" : ""} and ${skillCount} skill${skillCount !== 1 ? "s" : ""}. Review and edit below.`);
+      handleParseSuccess(data as ParsedCVData);
     } catch (err) {
-      console.error("CV upload error:", err);
-      setErrorMessage(err instanceof Error ? err.message : "An unexpected error occurred.");
-      setParseError(true);
+      handleParseError(err instanceof Error ? err.message : "An unexpected error occurred.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handlePasteSubmit = async () => {
+    if (!pastedText.trim() || pastedText.trim().length < 50) {
+      handleParseError("Please paste more text. We need your full CV to parse it.");
+      return;
+    }
+
+    setUploading(true);
+    setParsed(null);
+    setSummary("");
+    setParseError(false);
+    setErrorMessage("");
+
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke("parse-cv", {
+        body: { text: pastedText },
+      });
+
+      if (fnError) {
+        handleParseError(fnError.message || "Failed to parse your CV.");
+        return;
+      }
+      if (data?.success === false) {
+        handleParseError(data.message || "Failed to parse your CV.");
+        return;
+      }
+      handleParseSuccess(data as ParsedCVData);
+      setShowPasteMode(false);
+    } catch (err) {
+      handleParseError(err instanceof Error ? err.message : "An unexpected error occurred.");
     } finally {
       setUploading(false);
     }
@@ -114,6 +141,7 @@ const Welcome = () => {
     setParsed(null);
     setSummary("");
     if (fileInputRef.current) fileInputRef.current.value = "";
+    if (showPasteMode) return; // stay in paste mode
     fileInputRef.current?.click();
   };
 
@@ -167,8 +195,11 @@ const Welcome = () => {
                 <Button variant="outline" size="sm" onClick={handleRetry} className="gap-1.5">
                   <RotateCcw className="h-3.5 w-3.5" /> Retry
                 </Button>
+                <Button variant="outline" size="sm" onClick={() => { setParseError(false); setShowPasteMode(true); }}>
+                  Paste as text instead
+                </Button>
                 <Button variant="outline" size="sm" onClick={handleProceed}>
-                  Build profile manually
+                  Build manually
                 </Button>
               </div>
             </div>
@@ -177,15 +208,43 @@ const Welcome = () => {
               <CheckCircle className="h-8 w-8 text-primary" />
               <p className="text-sm font-medium text-foreground">{summary}</p>
             </div>
+          ) : showPasteMode ? (
+            <div className="flex flex-col gap-3">
+              <p className="text-sm font-medium text-foreground">Paste your CV text below</p>
+              <Textarea
+                value={pastedText}
+                onChange={(e) => setPastedText(e.target.value)}
+                placeholder="Paste your full CV text here..."
+                className="min-h-[200px] text-sm"
+              />
+              <div className="flex gap-3 justify-center">
+                <Button size="sm" onClick={handlePasteSubmit} disabled={!pastedText.trim()} className="gap-1.5">
+                  <ClipboardPaste className="h-3.5 w-3.5" /> Parse CV
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => { setShowPasteMode(false); setPastedText(""); }}>
+                  Back
+                </Button>
+              </div>
+            </div>
           ) : (
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="flex items-center justify-center gap-2 w-full text-sm font-medium text-primary hover:text-accent transition-colors"
-            >
-              <Upload className="h-4 w-4" />
-              Import from CV (PDF)
-            </button>
+            <div className="flex flex-col items-center gap-3">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center justify-center gap-2 w-full text-sm font-medium text-primary hover:text-accent transition-colors"
+              >
+                <Upload className="h-4 w-4" />
+                Import from CV (PDF)
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowPasteMode(true)}
+                className="flex items-center justify-center gap-2 w-full text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ClipboardPaste className="h-4 w-4" />
+                Paste CV as text
+              </button>
+            </div>
           )}
         </div>
 
