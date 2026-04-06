@@ -242,7 +242,11 @@ const JobDetail = () => {
   const [cvOutput, setCvOutput] = useState<CvOutput | null>(null);
   const [cvLoading, setCvLoading] = useState(false);
   const [cvFetched, setCvFetched] = useState(false);
-  const [userProfile, setUserProfile] = useState<{ full_name: string | null; email: string | null }>({ full_name: null, email: null });
+  const [userProfile, setUserProfile] = useState<{
+    full_name: string | null; email: string | null;
+    work_experiences: any[]; education: any[]; languages: any[];
+    interests: string[]; awards: any[]; volunteering: any[];
+  }>({ full_name: null, email: null, work_experiences: [], education: [], languages: [], interests: [], awards: [], volunteering: [] });
   const [copiedCv, setCopiedCv] = useState(false);
   const [cvHistory, setCvHistory] = useState<any[]>([]);
   const [regenConfirmOpen, setRegenConfirmOpen] = useState(false);
