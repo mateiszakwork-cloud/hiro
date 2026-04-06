@@ -315,6 +315,11 @@ const JobDetail = () => {
   // Skill add animation
   const [recentlyAdded, setRecentlyAdded] = useState<Set<string>>(new Set());
 
+  // Interview prep state
+  const [interviewPrep, setInterviewPrep] = useState<any | null>(null);
+  const [interviewLoading, setInterviewLoading] = useState(false);
+  const [interviewFetched, setInterviewFetched] = useState(false);
+
   useEffect(() => {
     const init = async () => {
       setJobLoading(true);
