@@ -82,7 +82,7 @@ const Login = () => {
     const { error } = await supabase.auth.resend({
       type: "signup",
       email,
-      options: { emailRedirectTo: window.location.origin },
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
     });
     if (error) {
       toast.error(error.message);
