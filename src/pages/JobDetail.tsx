@@ -22,8 +22,10 @@ import { cn } from "@/lib/utils";
 type CvOutput = {
   id: string;
   profile_headline: string | null;
+  tailored_summary: string | null;
   selected_experiences: any[];
-  selected_hard_skills: string[];
+  selected_bullets: Record<string, string[]> | null;
+  selected_hard_skills: string[] | Record<string, string[]> | null;
   selected_soft_skills: string[];
   selected_education: any[];
   selected_languages: any[];
