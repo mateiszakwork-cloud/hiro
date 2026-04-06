@@ -79,7 +79,7 @@ serve(async (req) => {
       // ── Step C: Extract text using pdf-parse ──
       try {
         console.log("Step C: Extracting text with pdf-parse");
-        const pdfData = await pdfParse(Buffer.from(pdfBytes));
+        const pdfData = await pdf(pdfBytes);
         cvText = pdfData.text || "";
         if (!cvText.trim() || cvText.trim().length < 100) {
           return fail("extraction", "Could not extract text from your PDF. Please try copy-pasting your CV as text instead.");
