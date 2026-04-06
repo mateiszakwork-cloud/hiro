@@ -19,10 +19,13 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
+type BulletItem = { original: string; tailored: string; use_tailored: boolean };
+type BulletBlock = { company: string; job_title: string; bullets: BulletItem[] | string[] };
+
 type CvOutput = {
   id: string;
   tailored_summary: string | null;
-  selected_bullets: { company: string; job_title: string; bullets: string[] }[] | null;
+  selected_bullets: BulletBlock[] | null;
   selected_hard_skills: Record<string, string[]> | null;
   selected_soft_skills: string[];
   tailoring_notes: string[];
@@ -91,6 +94,16 @@ const TagList = ({ tags, className = "", soft = false }: { tags: string[] | null
     </div>
   );
 };
+
+/* ── Bullet toggle helper ── */
+function normalizeBullet(b: any): BulletItem {
+  if (typeof b === "string") return { original: b, tailored: b, use_tailored: true };
+  return { original: b.original || b.tailored || "", tailored: b.tailored || b.original || "", use_tailored: b.use_tailored !== false };
+}
+
+function bulletsAreIdentical(b: BulletItem) {
+  return b.original === b.tailored;
+}
 
 /* ── Contact Card ── */
 const ContactCard = ({ contact, onUpdate, onDelete }: {
@@ -247,6 +260,16 @@ const JobDetail = () => {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [previewVersion, setPreviewVersion] = useState<any | null>(null);
 
+  // Bullet toggle state: map of "blockIdx-bulletIdx" -> boolean (true = show tailored)
+  const [bulletToggles, setBulletToggles] = useState<Record<string, boolean>>({});
+
+  // Master skills for suggestions
+  const [masterHardSkills, setMasterHardSkills] = useState<string[]>([]);
+  const [masterSoftSkills, setMasterSoftSkills] = useState<string[]>([]);
+
+  // Skill add animation
+  const [recentlyAdded, setRecentlyAdded] = useState<Set<string>>(new Set());
+
   useEffect(() => {
     const init = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -263,7 +286,6 @@ const JobDetail = () => {
       setJob(jobData as any);
       setNotes(jobData.notes || "");
 
-      // If no match score yet, it might be calculating — poll for it
       if (jobData.match_score === null) {
         setMatchLoading(true);
         const pollInterval = setInterval(async () => {
@@ -278,7 +300,6 @@ const JobDetail = () => {
             clearInterval(pollInterval);
           }
         }, 3000);
-        // Stop polling after 60s
         setTimeout(() => { clearInterval(pollInterval); setMatchLoading(false); }, 60000);
       }
 
@@ -290,7 +311,6 @@ const JobDetail = () => {
         .order("created_at", { ascending: true });
       if (contactData) setContacts(contactData as any);
 
-      // Fetch existing CV output
       const { data: cvData } = await supabase
         .from("cv_outputs")
         .select("*")
@@ -300,7 +320,6 @@ const JobDetail = () => {
       if (cvData) setCvOutput(cvData as any);
       setCvFetched(true);
 
-      // Fetch CV history
       const { data: histData } = await supabase
         .from("cv_output_history")
         .select("*")
@@ -309,9 +328,8 @@ const JobDetail = () => {
         .order("created_at", { ascending: false });
       if (histData) setCvHistory(histData);
 
-      // Fetch user profile + all profile data for CV rendering
       const uid = session.user.id;
-      const [profileRes, workRes, eduRes, langRes, interestsRes, awardsRes, volRes] = await Promise.all([
+      const [profileRes, workRes, eduRes, langRes, interestsRes, awardsRes, volRes, skillsRes] = await Promise.all([
         supabase.from("profiles").select("full_name, email").eq("id", uid).single(),
         supabase.from("work_experiences").select("*").eq("user_id", uid).order("start_year", { ascending: false }),
         supabase.from("education").select("*").eq("user_id", uid).order("start_year", { ascending: false }),
@@ -319,6 +337,7 @@ const JobDetail = () => {
         supabase.from("interests").select("*").eq("user_id", uid).maybeSingle(),
         supabase.from("awards").select("*").eq("user_id", uid),
         supabase.from("volunteering").select("*").eq("user_id", uid).order("start_year", { ascending: false }),
+        supabase.from("skills").select("*").eq("user_id", uid).maybeSingle(),
       ]);
       setUserProfile({
         full_name: profileRes.data?.full_name || null,
@@ -330,9 +349,16 @@ const JobDetail = () => {
         awards: awardsRes.data || [],
         volunteering: volRes.data || [],
       });
+      setMasterHardSkills((skillsRes.data as any)?.hard_skills || []);
+      setMasterSoftSkills((skillsRes.data as any)?.soft_skills || []);
     };
     init();
   }, [jobId, navigate]);
+
+  // Reset bullet toggles when cvOutput changes
+  useEffect(() => {
+    setBulletToggles({});
+  }, [cvOutput?.id, cvOutput?.updated_at]);
 
   const handleStatusChange = async (newStatus: string) => {
     if (!job) return;
@@ -399,7 +425,6 @@ const JobDetail = () => {
     setCvLoading(true);
     setCvError(null);
     try {
-      // Save current version to history before regenerating
       if (cvOutput) {
         const snapshot = {
           tailored_summary: cvOutput.tailored_summary,
@@ -495,6 +520,79 @@ const JobDetail = () => {
     toast.success("Copied to clipboard");
   };
 
+  // Toggle a bullet between tailored/original
+  const toggleBullet = (blockIdx: number, bulletIdx: number) => {
+    const key = `${blockIdx}-${bulletIdx}`;
+    setBulletToggles(prev => ({ ...prev, [key]: prev[key] === undefined ? false : !prev[key] }));
+  };
+
+  // Get whether a bullet should show tailored version
+  const isBulletTailored = (blockIdx: number, bulletIdx: number): boolean => {
+    const key = `${blockIdx}-${bulletIdx}`;
+    return bulletToggles[key] === undefined ? true : bulletToggles[key];
+  };
+
+  // Add a hard skill to the cv_output
+  const addHardSkill = async (skill: string) => {
+    if (!cvOutput || !jobId) return;
+    const current = { ...(cvOutput.selected_hard_skills || {}) };
+    // Add to "Other" category or first available
+    const categories = Object.keys(current);
+    const targetCat = categories.length > 0 ? categories[categories.length - 1] : "Other";
+    if (!current[targetCat]) current[targetCat] = [];
+    current[targetCat] = [...current[targetCat], skill];
+
+    setCvOutput(prev => prev ? { ...prev, selected_hard_skills: current } : prev);
+    setRecentlyAdded(prev => new Set(prev).add(skill));
+    setTimeout(() => setRecentlyAdded(prev => { const n = new Set(prev); n.delete(skill); return n; }), 600);
+
+    await supabase.from("cv_outputs").update({ selected_hard_skills: current as any }).eq("id", cvOutput.id);
+  };
+
+  // Add a soft skill to the cv_output
+  const addSoftSkill = async (skill: string) => {
+    if (!cvOutput || !jobId) return;
+    const current = [...(cvOutput.selected_soft_skills || []), skill];
+    setCvOutput(prev => prev ? { ...prev, selected_soft_skills: current } : prev);
+    setRecentlyAdded(prev => new Set(prev).add(skill));
+    setTimeout(() => setRecentlyAdded(prev => { const n = new Set(prev); n.delete(skill); return n; }), 600);
+
+    await supabase.from("cv_outputs").update({ selected_soft_skills: current }).eq("id", cvOutput.id);
+  };
+
+  // Compute hard skill suggestions
+  const getHardSkillSuggestions = () => {
+    if (!cvOutput || !job) return { fromJob: [] as string[], fromProfile: [] as string[] };
+    const selectedFlat = new Set(
+      Object.values(cvOutput.selected_hard_skills || {}).flat().map(s => s.toLowerCase())
+    );
+
+    const jobSkills = [...(job.hard_skills || []), ...(job.skills_nice_to_have || [])];
+    const fromJob = jobSkills.filter(s => !selectedFlat.has(s.toLowerCase())).slice(0, 8);
+
+    const fromProfile = masterHardSkills
+      .filter(s => !selectedFlat.has(s.toLowerCase()) && !fromJob.some(j => j.toLowerCase() === s.toLowerCase()))
+      .slice(0, 6);
+
+    return { fromJob, fromProfile };
+  };
+
+  // Compute soft skill suggestions
+  const getSoftSkillSuggestions = () => {
+    if (!cvOutput || !job) return { fromJob: [] as string[], fromProfile: [] as string[] };
+    const selectedFlat = new Set((cvOutput.selected_soft_skills || []).map(s => s.toLowerCase()));
+
+    const fromJob = (job.soft_skills || [])
+      .filter(s => !selectedFlat.has(s.toLowerCase()))
+      .slice(0, 8);
+
+    const fromProfile = masterSoftSkills
+      .filter(s => !selectedFlat.has(s.toLowerCase()) && !fromJob.some(j => j.toLowerCase() === s.toLowerCase()))
+      .slice(0, 6);
+
+    return { fromJob, fromProfile };
+  };
+
   if (!job) return null;
 
   return (
@@ -510,7 +608,6 @@ const JobDetail = () => {
             <p className="text-lg text-muted-foreground">{job.company_name || "Unknown Company"}</p>
           </div>
           <div className="flex items-center gap-3">
-            {/* Applied Date */}
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className={cn("gap-1.5 text-sm", !job.applied_date && "text-muted-foreground")}>
@@ -642,7 +739,6 @@ const JobDetail = () => {
                 </div>
               ) : job.match_score !== null && job.match_details ? (
                 <div className="space-y-6">
-                  {/* Score + Summary */}
                   <div className="flex items-center gap-5">
                     <span className={`inline-flex items-center justify-center h-16 w-16 rounded-full border-2 text-2xl font-bold shrink-0 ${getScoreColor(job.match_score)}`}>
                       {job.match_score}
@@ -651,8 +747,6 @@ const JobDetail = () => {
                       <p className="text-sm text-muted-foreground italic">{job.match_details.match_summary}</p>
                     )}
                   </div>
-
-                  {/* Sub-score bars */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {[
                       { label: "Hard Skills", value: job.match_details.hard_skills_match },
@@ -669,8 +763,6 @@ const JobDetail = () => {
                       </div>
                     ))}
                   </div>
-
-                  {/* Strengths & Missing Skills */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     {job.match_details.strengths?.length > 0 && (
                       <div>
@@ -843,35 +935,64 @@ const JobDetail = () => {
                   <CardContent className="p-5">
                     <h4 className="font-semibold text-foreground mb-4">Selected Bullet Points</h4>
                     <div className="space-y-5">
-                      {(cvOutput.selected_bullets as { company: string; job_title: string; bullets: string[] }[]).map((block, i) => (
-                        <div key={i}>
-                          <div className="flex items-center justify-between mb-2">
-                            <div>
-                              <p className="font-semibold text-sm text-foreground">{block.company}</p>
-                              <p className="text-xs text-muted-foreground">{block.job_title}</p>
+                      {(cvOutput.selected_bullets as BulletBlock[]).map((block, blockIdx) => {
+                        const normalizedBullets = (block.bullets || []).map(normalizeBullet);
+                        return (
+                          <div key={blockIdx}>
+                            <div className="flex items-center justify-between mb-2">
+                              <div>
+                                <p className="font-semibold text-sm text-foreground">{block.company}</p>
+                                <p className="text-xs text-muted-foreground">{block.job_title}</p>
+                              </div>
+                              <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => {
+                                const text = normalizedBullets
+                                  .map((b, bulletIdx) => {
+                                    const showTailored = isBulletTailored(blockIdx, bulletIdx);
+                                    return `• ${showTailored ? b.tailored : b.original}`;
+                                  })
+                                  .join("\n");
+                                copyToClipboard(text, `${block.company} bullets`);
+                              }}>
+                                <Copy className="h-3 w-3" /> Copy
+                              </Button>
                             </div>
-                            <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => {
-                              const container = document.getElementById(`bullets-${i}`);
-                              if (container) copyToClipboard(container.innerText, `${block.company} bullets`);
-                            }}>
-                              <Copy className="h-3 w-3" /> Copy
-                            </Button>
+                            <ul className="space-y-2.5">
+                              {normalizedBullets.map((bullet, bulletIdx) => {
+                                const identical = bulletsAreIdentical(bullet);
+                                const showTailored = isBulletTailored(blockIdx, bulletIdx);
+                                return (
+                                  <li key={bulletIdx} className="flex items-start gap-2 group">
+                                    <span className="text-muted-foreground mt-1.5 shrink-0">•</span>
+                                    <div className="flex-1 min-w-0">
+                                      <span
+                                        contentEditable
+                                        suppressContentEditableWarning
+                                        className="text-sm text-foreground outline-none focus:ring-1 focus:ring-ring rounded px-0.5 block"
+                                      >
+                                        {showTailored ? bullet.tailored : bullet.original}
+                                      </span>
+                                    </div>
+                                    {!identical && (
+                                      <button
+                                        onClick={() => toggleBullet(blockIdx, bulletIdx)}
+                                        className="shrink-0 mt-0.5 flex items-center gap-1"
+                                        title={showTailored ? "Showing tailored version" : "Showing original version"}
+                                      >
+                                        <div className={`relative inline-flex h-4 w-8 items-center rounded-full transition-colors ${showTailored ? "bg-[#950606]" : "bg-gray-300"}`}>
+                                          <div className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${showTailored ? "translate-x-4" : "translate-x-0.5"}`} />
+                                        </div>
+                                        <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                                          {showTailored ? "Tailored" : "Original"}
+                                        </span>
+                                      </button>
+                                    )}
+                                  </li>
+                                );
+                              })}
+                            </ul>
                           </div>
-                          <ul id={`bullets-${i}`} className="space-y-1.5 ml-4 list-disc list-outside">
-                            {block.bullets.map((b, j) => (
-                              <li key={j} className="text-sm text-foreground">
-                                <span
-                                  contentEditable
-                                  suppressContentEditableWarning
-                                  className="outline-none focus:ring-1 focus:ring-ring rounded px-0.5"
-                                >
-                                  {b}
-                                </span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </CardContent>
                 </Card>
@@ -879,58 +1000,160 @@ const JobDetail = () => {
 
               {/* Card 3: Hard Skills */}
               {cvOutput.selected_hard_skills && Object.keys(cvOutput.selected_hard_skills).length > 0 && (
-                <Card>
-                  <CardContent className="p-5">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold text-foreground">Hard Skills</h4>
-                      <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => {
-                        const parts = Object.entries(cvOutput.selected_hard_skills!).map(
-                          ([cat, skills]) => `${cat}: ${(skills as string[]).join(", ")}`
-                        );
-                        copyToClipboard("Software Skills: " + parts.join("; ") + ".", "Hard skills");
-                      }}>
-                        <Copy className="h-3 w-3" /> Copy all
-                      </Button>
-                    </div>
-                    <div className="space-y-3">
-                      {Object.entries(cvOutput.selected_hard_skills).map(([category, skills]) => (
-                        <div key={category}>
-                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5">{category}</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {(skills as string[]).map((skill, i) => (
-                              <span key={i} className="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground">
-                                {skill}
-                              </span>
-                            ))}
+                <>
+                  <Card>
+                    <CardContent className="p-5">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-semibold text-foreground">Hard Skills</h4>
+                        <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => {
+                          const parts = Object.entries(cvOutput.selected_hard_skills!).map(
+                            ([cat, skills]) => `${cat}: ${(skills as string[]).join(", ")}`
+                          );
+                          copyToClipboard("Software Skills: " + parts.join("; ") + ".", "Hard skills");
+                        }}>
+                          <Copy className="h-3 w-3" /> Copy all
+                        </Button>
+                      </div>
+                      <div className="space-y-3">
+                        {Object.entries(cvOutput.selected_hard_skills).map(([category, skills]) => (
+                          <div key={category}>
+                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5">{category}</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {(skills as string[]).map((skill, i) => (
+                                <span
+                                  key={i}
+                                  className={cn(
+                                    "inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground transition-all",
+                                    recentlyAdded.has(skill) && "animate-in fade-in-0 zoom-in-95 duration-300 ring-1 ring-green-400"
+                                  )}
+                                >
+                                  {skill}
+                                </span>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Hard Skill Suggestions */}
+                  {(() => {
+                    const { fromJob, fromProfile } = getHardSkillSuggestions();
+                    if (fromJob.length === 0 && fromProfile.length === 0) return null;
+                    return (
+                      <div className="space-y-2 -mt-3">
+                        <p className="text-xs font-medium text-muted-foreground">Also relevant for this role</p>
+                        {fromJob.length > 0 && (
+                          <div>
+                            <p className="text-[10px] uppercase tracking-widest text-muted-foreground/70 mb-1.5">From job requirements</p>
+                            <div className="flex flex-wrap gap-1.5 overflow-x-auto">
+                              {fromJob.map((skill) => (
+                                <button
+                                  key={skill}
+                                  onClick={() => addHardSkill(skill)}
+                                  className="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#F3F4F6] text-gray-600 border border-gray-200 hover:scale-105 hover:border-gray-300 transition-all cursor-pointer"
+                                >
+                                  + {skill}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {fromProfile.length > 0 && (
+                          <div>
+                            <p className="text-[10px] uppercase tracking-widest text-muted-foreground/70 mb-1.5">From your profile</p>
+                            <div className="flex flex-wrap gap-1.5 overflow-x-auto">
+                              {fromProfile.map((skill) => (
+                                <button
+                                  key={skill}
+                                  onClick={() => addHardSkill(skill)}
+                                  className="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#F3F4F6] text-gray-600 border border-gray-200 hover:scale-105 hover:border-gray-300 transition-all cursor-pointer"
+                                >
+                                  + {skill}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </>
               )}
 
               {/* Card 4: Soft Skills */}
               {cvOutput.selected_soft_skills?.length > 0 && (
-                <Card>
-                  <CardContent className="p-5">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold text-foreground">Soft Skills</h4>
-                      <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => {
-                        copyToClipboard(cvOutput.selected_soft_skills.join(", "), "Soft skills");
-                      }}>
-                        <Copy className="h-3 w-3" /> Copy all
-                      </Button>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {cvOutput.selected_soft_skills.map((skill, i) => (
-                        <span key={i} className="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground">
-                          {skill}
-                        </span>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+                <>
+                  <Card>
+                    <CardContent className="p-5">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-semibold text-foreground">Soft Skills</h4>
+                        <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => {
+                          copyToClipboard(cvOutput.selected_soft_skills.join(", "), "Soft skills");
+                        }}>
+                          <Copy className="h-3 w-3" /> Copy all
+                        </Button>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {cvOutput.selected_soft_skills.map((skill, i) => (
+                          <span
+                            key={i}
+                            className={cn(
+                              "inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground transition-all",
+                              recentlyAdded.has(skill) && "animate-in fade-in-0 zoom-in-95 duration-300 ring-1 ring-green-400"
+                            )}
+                          >
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Soft Skill Suggestions */}
+                  {(() => {
+                    const { fromJob, fromProfile } = getSoftSkillSuggestions();
+                    if (fromJob.length === 0 && fromProfile.length === 0) return null;
+                    return (
+                      <div className="space-y-2 -mt-3">
+                        <p className="text-xs font-medium text-muted-foreground">Also relevant for this role</p>
+                        {fromJob.length > 0 && (
+                          <div>
+                            <p className="text-[10px] uppercase tracking-widest text-muted-foreground/70 mb-1.5">From job requirements</p>
+                            <div className="flex flex-wrap gap-1.5 overflow-x-auto">
+                              {fromJob.map((skill) => (
+                                <button
+                                  key={skill}
+                                  onClick={() => addSoftSkill(skill)}
+                                  className="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#F3F4F6] text-gray-600 border border-gray-200 hover:scale-105 hover:border-gray-300 transition-all cursor-pointer"
+                                >
+                                  + {skill}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {fromProfile.length > 0 && (
+                          <div>
+                            <p className="text-[10px] uppercase tracking-widest text-muted-foreground/70 mb-1.5">From your profile</p>
+                            <div className="flex flex-wrap gap-1.5 overflow-x-auto">
+                              {fromProfile.map((skill) => (
+                                <button
+                                  key={skill}
+                                  onClick={() => addSoftSkill(skill)}
+                                  className="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#F3F4F6] text-gray-600 border border-gray-200 hover:scale-105 hover:border-gray-300 transition-all cursor-pointer"
+                                >
+                                  + {skill}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </>
               )}
 
               {/* Tailoring Notes */}
@@ -1029,7 +1252,9 @@ const JobDetail = () => {
                         <div key={i} className="mb-3">
                           <p className="font-semibold">{block.company} — {block.job_title}</p>
                           <ul className="list-disc list-outside ml-4 mt-1 space-y-0.5">
-                            {(block.bullets || []).map((b: string, j: number) => <li key={j}>{b}</li>)}
+                            {(block.bullets || []).map((b: any, j: number) => (
+                              <li key={j}>{typeof b === "string" ? b : b.tailored || b.original}</li>
+                            ))}
                           </ul>
                         </div>
                       ))}
