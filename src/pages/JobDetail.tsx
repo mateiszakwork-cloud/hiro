@@ -80,6 +80,10 @@ const getScoreColor = (score: number | null) => {
   return "text-red-600 border-red-300 bg-red-50";
 };
 
+const FUNCTION_VALUES = ["Strategy", "Finance", "Marketing", "Product", "Operations", "HR", "Consulting", "Other"];
+const WORK_MODE_VALUES = ["Onsite", "Hybrid", "Remote"];
+const PRIORITY_OPTIONS_EDIT = ["High", "Medium", "Low"];
+
 /* ── Tag list renderer ── */
 const TagList = ({ tags, className = "", soft = false }: { tags: string[] | null; className?: string; soft?: boolean }) => {
   if (!tags?.length) return <span className="text-muted-foreground">–</span>;
@@ -91,6 +95,41 @@ const TagList = ({ tags, className = "", soft = false }: { tags: string[] | null
       {tags.map((t, i) => (
         <span key={i} className={`${base} ${className}`}>{t}</span>
       ))}
+    </div>
+  );
+};
+
+/* ── Editable Tag Input ── */
+const TagInput = ({ tags, onChange, placeholder = "Type and press Enter" }: { tags: string[]; onChange: (t: string[]) => void; placeholder?: string }) => {
+  const [input, setInput] = useState("");
+  const handleKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if ((e.key === "Enter" || e.key === ",") && input.trim()) {
+      e.preventDefault();
+      if (!tags.some(t => t.toLowerCase() === input.trim().toLowerCase())) {
+        onChange([...tags, input.trim()]);
+      }
+      setInput("");
+    } else if (e.key === "Backspace" && !input && tags.length > 0) {
+      onChange(tags.slice(0, -1));
+    }
+  };
+  return (
+    <div className="flex flex-wrap gap-1.5 p-2 border rounded-lg bg-background min-h-[38px] items-center">
+      {tags.map((tag, i) => (
+        <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground">
+          {tag}
+          <button type="button" onClick={() => onChange(tags.filter((_, j) => j !== i))} className="text-muted-foreground hover:text-foreground">
+            <XIcon className="h-3 w-3" />
+          </button>
+        </span>
+      ))}
+      <input
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={handleKey}
+        placeholder={tags.length === 0 ? placeholder : ""}
+        className="flex-1 min-w-[120px] text-sm bg-transparent outline-none"
+      />
     </div>
   );
 };
