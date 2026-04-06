@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -6,36 +7,49 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const ok = (body: Record<string, unknown>) =>
+const json200 = (body: Record<string, unknown>) =>
   new Response(JSON.stringify(body), {
     status: 200,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
 const fail = (step: string, message: string) =>
-  ok({ success: false, step, message });
+  json200({ success: false, step, message });
 
 serve(async (req) => {
+  // CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // GET health check
+  // Health check
   if (req.method === "GET") {
-    return ok({ status: "ok" });
+    return json200({ status: "ok" });
   }
 
   try {
-    // --- Step 1: Read multipart form data with the PDF ---
+    // ── Step A: Auth ──
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const sb = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user }, error: userErr } = await sb.auth.getUser();
+    if (userErr || !user) {
+      return fail("auth", "Session expired. Please log in again.");
+    }
+
+    // ── Step B: Read PDF ──
     let pdfBytes: Uint8Array;
     try {
       const formData = await req.formData();
       const file = formData.get("file");
       if (!file || !(file instanceof File)) {
-        return fail("upload", "No PDF file was provided. Please try again.");
+        return fail("upload", "No PDF file provided.");
       }
       if (file.size > 10 * 1024 * 1024) {
-        return fail("upload", "Your CV is too large. Please use a version under 10 MB.");
+        return fail("upload", "File too large. Please use a CV under 10MB.");
       }
       pdfBytes = new Uint8Array(await file.arrayBuffer());
     } catch (e) {
@@ -43,24 +57,24 @@ serve(async (req) => {
       return fail("upload", "Could not read the uploaded file. Please try again.");
     }
 
-    // --- Step 2: Convert PDF to base64 and extract text via OpenAI Vision ---
+    // Convert to base64 in chunks to avoid stack overflow
+    let binary = "";
+    const chunkSize = 8192;
+    for (let i = 0; i < pdfBytes.length; i += chunkSize) {
+      const chunk = pdfBytes.subarray(i, i + chunkSize);
+      binary += String.fromCharCode(...chunk);
+    }
+    const base64 = btoa(binary);
+
+    // ── Step C: Extract text via OpenAI Vision ──
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+    if (!OPENAI_API_KEY) {
+      return fail("extraction", "AI text extraction is not configured on the server.");
+    }
+
     let cvText: string;
     try {
-      const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-      if (!OPENAI_API_KEY) {
-        return fail("extraction", "AI text extraction is not configured on the server.");
-      }
-
-      // Build base64 in chunks to avoid stack overflow
-      let binary = "";
-      const chunkSize = 8192;
-      for (let i = 0; i < pdfBytes.length; i += chunkSize) {
-        const chunk = pdfBytes.subarray(i, i + chunkSize);
-        binary += String.fromCharCode(...chunk);
-      }
-      const base64 = btoa(binary);
-
-      console.log("Step 2: Sending PDF to OpenAI for text extraction");
+      console.log("Step C: Sending PDF to OpenAI for text extraction");
       const extractRes = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -79,7 +93,7 @@ serve(async (req) => {
                 },
                 {
                   type: "text",
-                  text: "Extract all text content from this PDF CV and return it as plain text preserving all information and structure. Return ONLY the extracted text, nothing else.",
+                  text: "Extract all text from this CV PDF and return it as plain text only. Preserve all content including names, dates, bullet points, and section headings. Return nothing except the extracted text.",
                 },
               ],
             },
@@ -91,7 +105,7 @@ serve(async (req) => {
       if (!extractRes.ok) {
         const errBody = await extractRes.text();
         console.error("OpenAI extraction error:", extractRes.status, errBody);
-        return fail("extraction", "Could not read your PDF. Make sure it is a text-based PDF, not a scanned image.");
+        return fail("extraction", "Could not read your PDF. Make sure it is a text-based PDF.");
       }
 
       const extractData = await extractRes.json();
@@ -99,18 +113,16 @@ serve(async (req) => {
       if (!cvText.trim()) {
         return fail("extraction", "No text could be extracted from your PDF. Please try a different file.");
       }
-      console.log("Step 2 done: extracted", cvText.length, "chars");
+      console.log("Step C done: extracted", cvText.length, "chars");
     } catch (e) {
       console.error("Extraction error:", e);
       return fail("extraction", "Could not read your PDF. Please try again.");
     }
 
-    // --- Step 3: Parse extracted text into structured data via OpenAI ---
+    // ── Step D: Parse extracted text into structured data ──
     try {
-      const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY")!;
-
-      const systemPrompt = `You are a CV/resume parser. Parse the following CV text and return ONLY valid JSON (no markdown, no code fences) with these exact keys:
-
+      console.log("Step D: Parsing CV text with OpenAI");
+      const systemPrompt = `You are a CV parser. Extract all information from the CV text and return ONLY valid JSON with exactly these keys:
 {
   "work_experiences": [
     {
@@ -133,8 +145,7 @@ serve(async (req) => {
       "start_year": number,
       "end_year": number or null,
       "grade": "string or null",
-      "activities": "string or null",
-      "description": "string or null"
+      "activities": "string or null"
     }
   ],
   "hard_skills": ["string"],
@@ -148,12 +159,12 @@ serve(async (req) => {
 }
 
 Rules:
+- Extract ALL work experiences and ALL bullet points. Never return empty arrays if the CV contains this information.
 - Extract bullet points from descriptions. If no bullets exist, create them from paragraph text.
 - Separate hard skills (tools, software, technical) from soft skills (interpersonal, management).
 - Map language proficiency to the closest option from: Basic, Conversational, Professional Working, Fluent, Native.
 - Return ONLY valid JSON. No markdown, no code fences, no extra text.`;
 
-      console.log("Step 3: Parsing CV text with OpenAI");
       const parseRes = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -194,14 +205,15 @@ Rules:
         return fail("parsing", "The AI returned an unexpected format. Please try again or build your profile manually.");
       }
 
-      console.log("Parse-cv completed successfully");
-      return ok({ success: true, ...parsed });
+      // ── Step E: Return success ──
+      console.log("parse-cv completed successfully");
+      return json200({ success: true, ...parsed });
     } catch (e) {
       console.error("Parsing error:", e);
       return fail("parsing", "Could not parse your CV content. Please try again or build your profile manually.");
     }
   } catch (e) {
     console.error("parse-cv unexpected error:", e);
-    return fail("upload", e instanceof Error ? e.message : "An unexpected error occurred. Please try again.");
+    return fail("unknown", "An unexpected error occurred. Please try again.");
   }
 });
