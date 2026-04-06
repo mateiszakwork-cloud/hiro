@@ -89,7 +89,19 @@ serve(async (req) => {
 
     const systemPrompt = `You are an expert CV editor for competitive graduate and internship applications. You will receive a candidate's profile and a specific job description. Return ONLY a valid JSON object with these exact keys:
 
-- tailored_summary: string (rewrite the candidate's professional summary for this specific role and company. 3-4 sentences. Reference the company by name. Be specific about why this candidate fits this role. Use confident, professional language. Base it on their actual experience.)
+- tailored_summary: string. Generate the professional summary following these strict rules:
+  - Always write in first person (never "Máté is..." always "CEMS student with...")
+  - Never use flattery or filler phrases like "accomplished professional", "ideal candidate", "perfectly aligns", "invaluable", "passionate", "eager"
+  - Open directly with your degree/current status and the most relevant functional experience for this role
+  - Reference 2-3 specific, concrete things from the candidate's actual experience that are relevant to this job
+  - End with exactly: "Looking to join [Company Name] in [Month/timing if known from job description]."
+  - Maximum 3 sentences. Never 4.
+  - Match the tone of these real examples:
+    Example 1 (CRM/Sales role): "CEMS Master in International Management student graduating soon with experience across sales development, go to market execution, and solution focused analytics in SaaS and AI startups. Comfortable working with CRM tools, product and revenue KPIs, and cross functional teams across Europe and Asia. Looking to join Salesforce in August."
+    Example 2 (Marketing role): "CEMS MSc student with experience in operational marketing and multi-market campaign execution. Proven track record managing product launches, creating marketing materials, and analyzing consumer engagement to drive activation and retention. Looking to join Estée Lauder Companies starting July."
+    Example 3 (Analytics role): "CEMS MSc student with experience in performance analysis, consumer insights, and data-driven content strategy across startups in Paris, Singapore, and Hong Kong. Track record of turning data into clear recommendations and identifying market trends. Looking to join a role in [Company] combining analytics and consumer understanding."
+    Example 4 (GTM/Strategy role): "CEMS MSc student with proven success in global go-to-market execution and performance-driven content strategy across international hubs. Experienced in building best practice libraries, creating playbooks and toolkits, and driving performance improvements through CRM insights and workflow automation. Looking to join [Company] starting [Month]."
+  Use these examples as the tone and structure reference. Never deviate from this style.
 
 - selected_bullets: array of objects, each with:
   - company: string (exact company name)
@@ -105,7 +117,7 @@ serve(async (req) => {
 Rules:
 - Never invent experience or skills not present in the profile.
 - Keep bullet points truthful. Only lightly rephrase for relevance.
-- The summary must always be rewritten specifically for this role.
+- The summary must always be rewritten specifically for this role following the strict rules above.
 - Match the tone of the original CV: professional, concise, achievement-focused.`;
 
     const userPrompt = JSON.stringify({ job: jobData, candidate: candidateProfile });
