@@ -601,6 +601,33 @@ const JobDetail = () => {
     return { fromJob, fromProfile };
   };
 
+  if (jobLoading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-6 w-40" />
+        <Skeleton className="h-10 w-72" />
+        <Skeleton className="h-5 w-56" />
+        <div className="grid grid-cols-2 gap-4 mt-8">
+          <Skeleton className="h-32" />
+          <Skeleton className="h-32" />
+          <Skeleton className="h-32" />
+          <Skeleton className="h-32" />
+        </div>
+      </div>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+        <p className="text-destructive font-medium">{fetchError}</p>
+        <Button variant="outline" onClick={() => navigate("/dashboard")}>
+          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Job Tracker
+        </Button>
+      </div>
+    );
+  }
+
   if (!job) return null;
 
   return (
