@@ -1557,6 +1557,159 @@ const JobDetail = () => {
           </Dialog>
         </TabsContent>
 
+        {/* Interview Prep Tab */}
+        <TabsContent value="interview" className="mt-6 space-y-6">
+          {/* Interview banner */}
+          {job && ["Interview", "Offer"].includes(job.status) && !interviewPrep && (
+            <div className="flex items-center gap-3 p-4 rounded-xl border-2 border-[#950606] bg-[#950606]/5">
+              <AlertTriangle className="h-5 w-5 text-[#950606] shrink-0" />
+              <div className="flex-1">
+                <p className="font-semibold text-[#950606] text-sm">You have an interview — generate your prep kit now</p>
+              </div>
+              <Button size="sm" onClick={handleGenerateInterviewPrep} disabled={interviewLoading} style={{ backgroundColor: '#950606' }}>
+                {interviewLoading ? <><Loader2 className="h-4 w-4 animate-spin mr-1.5" /> Generating...</> : "Generate Prep Kit"}
+              </Button>
+            </div>
+          )}
+
+          {/* Loading state */}
+          {interviewLoading && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 py-8 justify-center">
+                <Loader2 className="h-6 w-6 animate-spin text-[#950606]" />
+                <p className="text-muted-foreground font-medium animate-pulse">Preparing your interview kit...</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <Skeleton className="h-32 rounded-xl" />
+                <Skeleton className="h-32 rounded-xl" />
+              </div>
+              <Skeleton className="h-40 rounded-xl" />
+              <Skeleton className="h-48 rounded-xl" />
+            </div>
+          )}
+
+          {/* Empty state */}
+          {!interviewLoading && !interviewPrep && interviewFetched && (
+            <Card>
+              <CardContent className="py-16 flex flex-col items-center justify-center text-center gap-4">
+                <div className="h-14 w-14 rounded-2xl bg-muted flex items-center justify-center">
+                  <FileText className="h-7 w-7 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="font-semibold text-foreground">No interview prep generated yet</p>
+                  <p className="text-sm text-muted-foreground mt-1">Generate a personalized prep kit with company insights, talking points, and practice questions.</p>
+                </div>
+                <Button onClick={handleGenerateInterviewPrep} disabled={interviewLoading} className="gap-2" style={{ backgroundColor: '#950606' }}>
+                  Generate Interview Prep
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Generated content */}
+          {!interviewLoading && interviewPrep && (
+            <>
+              {/* Regenerate button */}
+              <div className="flex justify-end">
+                <Button variant="outline" size="sm" onClick={handleGenerateInterviewPrep} className="gap-1.5 text-xs">
+                  <RefreshCw className="h-3.5 w-3.5" /> Regenerate
+                </Button>
+              </div>
+
+              {/* Company Overview + Role Intelligence side by side */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card>
+                  <CardContent className="p-5">
+                    <h4 className="font-semibold text-sm text-foreground mb-2">Company Overview</h4>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{interviewPrep.company_overview}</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-5">
+                    <h4 className="font-semibold text-sm text-foreground mb-2">Role Intelligence</h4>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{interviewPrep.role_intelligence}</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Your Pitch */}
+              {Array.isArray(interviewPrep.your_pitch) && interviewPrep.your_pitch.length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-sm text-foreground mb-3">Your Pitch</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {interviewPrep.your_pitch.map((pitch: string, i: number) => (
+                      <Card key={i} className="border-l-4" style={{ borderLeftColor: '#950606' }}>
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-start gap-3">
+                              <span className="inline-flex items-center justify-center h-6 w-6 rounded-full text-xs font-bold text-white shrink-0" style={{ backgroundColor: '#950606' }}>{i + 1}</span>
+                              <p className="text-sm text-foreground leading-relaxed">{pitch}</p>
+                            </div>
+                            <button onClick={() => copyToClipboard(pitch, `Pitch ${i + 1}`)} className="text-muted-foreground hover:text-foreground shrink-0 mt-0.5">
+                              <Copy className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Preparation Gaps */}
+              {Array.isArray(interviewPrep.preparation_gaps) && interviewPrep.preparation_gaps.length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-sm text-foreground mb-3">Preparation Gaps</h4>
+                  <div className="space-y-3">
+                    {interviewPrep.preparation_gaps.map((g: any, i: number) => (
+                      <Card key={i} className="bg-amber-50 border-amber-200">
+                        <CardContent className="p-4">
+                          <p className="font-semibold text-sm text-amber-900 mb-1.5">{g.gap}</p>
+                          <p className="text-sm text-amber-800 leading-relaxed">{g.suggested_response}</p>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Question Bank */}
+              {Array.isArray(interviewPrep.interview_questions) && interviewPrep.interview_questions.length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-sm text-foreground mb-3">Question Bank ({interviewPrep.interview_questions.length})</h4>
+                  <Accordion type="multiple" className="space-y-2">
+                    {interviewPrep.interview_questions.map((q: any, i: number) => {
+                      const catColors: Record<string, string> = {
+                        Behavioral: "bg-blue-100 text-blue-700",
+                        Technical: "bg-purple-100 text-purple-700",
+                        Motivational: "bg-green-100 text-green-700",
+                        Situational: "bg-orange-100 text-orange-700",
+                      };
+                      return (
+                        <AccordionItem key={i} value={`q-${i}`} className="border rounded-lg px-4">
+                          <AccordionTrigger className="hover:no-underline py-3">
+                            <div className="flex items-center gap-3 text-left">
+                              <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide shrink-0 ${catColors[q.category] || "bg-muted text-muted-foreground"}`}>
+                                {q.category}
+                              </span>
+                              <span className="text-sm font-medium text-foreground">{q.question}</span>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="pb-4">
+                            <div className="pl-[calc(theme(spacing.3)+70px)] text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+                              {q.suggested_answer_framework}
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      );
+                    })}
+                  </Accordion>
+                </div>
+              )}
+            </>
+          )}
+        </TabsContent>
+
         {/* Notes Tab */}
         <TabsContent value="notes" className="mt-6">
           <Card>
