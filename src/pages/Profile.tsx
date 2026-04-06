@@ -179,6 +179,42 @@ const Profile = () => {
     } catch { setCvError(true); } finally { setCvUploading(false); if (cvInputRef.current) cvInputRef.current.value = ""; }
   };
 
+  const handleBaseCvUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !userId) return;
+    if (file.type !== "application/pdf" || file.size > 10 * 1024 * 1024) {
+      toast.error("Please upload a PDF file under 10MB.");
+      return;
+    }
+    setBaseCvUploading(true);
+    try {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let fullText = "";
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        const pageText = content.items.map((item: any) => item.str).join(" ");
+        fullText += pageText + "\n";
+      }
+      const now = new Date().toISOString();
+      const { error } = await supabase.from("profiles").update({
+        base_cv_text: fullText.trim(),
+        base_cv_uploaded_at: now,
+      } as any).eq("id", userId);
+      if (error) { toast.error("Failed to save CV text."); return; }
+      setBaseCvText(fullText.trim());
+      setBaseCvUploadedAt(now);
+      toast.success("Base CV saved. Hiro will use this as the starting point for all your tailored CVs.");
+    } catch (err) {
+      toast.error("Failed to extract text from PDF.");
+    } finally {
+      setBaseCvUploading(false);
+      if (baseCvInputRef.current) baseCvInputRef.current.value = "";
+    }
+  };
+
   const startEdit = (section: string) => {
     setEditSection(section);
     if (section === "work") setEditWork(workExps.map(w => ({ ...w, bullet_points: [...w.bullet_points] })));
