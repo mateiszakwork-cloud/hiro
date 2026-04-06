@@ -117,7 +117,7 @@ serve(async (req) => {
 - tailoring_notes: array of 3-5 short strings explaining the key tailoring decisions
 
 Rules:
-- You MUST return a minimum of 2 bullet points and a maximum of 4 for every single work experience in the candidate's profile without exception. Never return fewer than 2 bullets for any experience regardless of relevance. If only 1 bullet seems relevant, include the next most relevant one as well.
+- For each work experience, select between 2 and 4 bullet points based on relevance to this specific role. If the experience is highly relevant to the role, select 3 or 4 bullets. If it is moderately relevant, select 2 or 3. Never select fewer than 2 and never more than 4. Let relevance to the job description drive the number, not a fixed count.
 - Never invent experience or skills not present in the profile.
 - Keep bullet points truthful. Only lightly rephrase for relevance.
 - The summary must always be rewritten specifically for this role following the strict rules above.

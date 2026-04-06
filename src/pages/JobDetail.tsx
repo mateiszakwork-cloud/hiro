@@ -1269,6 +1269,47 @@ const JobDetail = () => {
                                 );
                               })}
                             </ul>
+                            {/* +/- bullet controls */}
+                            <div className="flex items-center gap-2 mt-2">
+                              <button
+                                disabled={normalizedBullets.length <= 1}
+                                onClick={() => {
+                                  if (!cvOutput || !Array.isArray(cvOutput.selected_bullets)) return;
+                                  const updated = [...(cvOutput.selected_bullets as BulletBlock[])];
+                                  const updatedBlock = { ...updated[blockIdx], bullets: [...(updated[blockIdx].bullets || [])].slice(0, -1) };
+                                  updated[blockIdx] = updatedBlock;
+                                  setCvOutput({ ...cvOutput, selected_bullets: updated });
+                                }}
+                                className="h-6 w-6 rounded border border-border bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                title="Remove last bullet"
+                              >
+                                <Minus className="h-3 w-3" />
+                              </button>
+                              <button
+                                disabled={normalizedBullets.length >= 4}
+                                onClick={() => {
+                                  if (!cvOutput || !Array.isArray(cvOutput.selected_bullets)) return;
+                                  // Find unused bullets from original work experiences
+                                  const currentTexts = new Set(normalizedBullets.map(b => b.original));
+                                  const matchExp = masterWorkExperiences.find((w: any) =>
+                                    w.company_name === block.company && w.job_title === block.job_title
+                                  );
+                                  if (!matchExp || !Array.isArray(matchExp.bullet_points)) return;
+                                  const unused = matchExp.bullet_points.filter((bp: string) => !currentTexts.has(bp));
+                                  if (unused.length === 0) return;
+                                  const newBullet = { original: unused[0], tailored: unused[0], use_tailored: true };
+                                  const updated = [...(cvOutput.selected_bullets as BulletBlock[])];
+                                  const updatedBlock = { ...updated[blockIdx], bullets: [...(updated[blockIdx].bullets || []), newBullet] };
+                                  updated[blockIdx] = updatedBlock;
+                                  setCvOutput({ ...cvOutput, selected_bullets: updated });
+                                }}
+                                className="h-6 w-6 rounded border border-border bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                title="Add bullet from profile"
+                              >
+                                <Plus className="h-3 w-3" />
+                              </button>
+                              <span className="text-[10px] text-muted-foreground">{normalizedBullets.length}/4 bullets</span>
+                            </div>
                           </div>
                         );
                       })}
