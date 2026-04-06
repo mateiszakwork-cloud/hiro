@@ -389,6 +389,8 @@ export type Database = {
       }
       profiles: {
         Row: {
+          base_cv_text: string | null
+          base_cv_uploaded_at: string | null
           created_at: string
           email: string | null
           full_name: string | null
@@ -396,6 +398,8 @@ export type Database = {
           onboarding_complete: boolean
         }
         Insert: {
+          base_cv_text?: string | null
+          base_cv_uploaded_at?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
@@ -403,6 +407,8 @@ export type Database = {
           onboarding_complete?: boolean
         }
         Update: {
+          base_cv_text?: string | null
+          base_cv_uploaded_at?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null

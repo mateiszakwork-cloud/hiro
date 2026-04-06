@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, type KeyboardEvent, type ChangeEvent } from "react";
+import * as pdfjsLib from "pdfjs-dist";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Pencil, Trash2, X, Upload, Loader2, CheckCircle, AlertTriangle, RotateCcw } from "lucide-react";
+import { Pencil, Trash2, X, Upload, Loader2, CheckCircle, AlertTriangle, RotateCcw, FileText, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import type { ParsedCVData } from "@/types/cv";
@@ -99,6 +100,13 @@ const Profile = () => {
   const [cvError, setCvError] = useState(false);
   const [cvSuccess, setCvSuccess] = useState("");
 
+  // Base CV state
+  const baseCvInputRef = useRef<HTMLInputElement>(null);
+  const [baseCvText, setBaseCvText] = useState<string | null>(null);
+  const [baseCvUploadedAt, setBaseCvUploadedAt] = useState<string | null>(null);
+  const [baseCvUploading, setBaseCvUploading] = useState(false);
+  const [showExtractedText, setShowExtractedText] = useState(false);
+
   useEffect(() => {
     const init = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -106,10 +114,12 @@ const Profile = () => {
       const uid = session.user.id;
       setUserId(uid);
       setEmail(session.user.email || "");
-      const { data: profile } = await supabase.from("profiles").select("created_at, full_name").eq("id", uid).single();
+      const { data: profile } = await supabase.from("profiles").select("created_at, full_name, base_cv_text, base_cv_uploaded_at").eq("id", uid).single();
       if (profile) {
         setMemberSince(format(new Date(profile.created_at), "MMMM yyyy"));
         setFullName(profile.full_name || "");
+        setBaseCvText((profile as any).base_cv_text || null);
+        setBaseCvUploadedAt((profile as any).base_cv_uploaded_at || null);
       }
       fetchAll(uid);
     };
@@ -167,6 +177,42 @@ const Profile = () => {
       setCvSuccess(`Imported ${expCount} experience${expCount !== 1 ? "s" : ""} and ${skillCount} skill${skillCount !== 1 ? "s" : ""}. Review and save each section.`);
       toast.success("CV imported! Review each section and save.");
     } catch { setCvError(true); } finally { setCvUploading(false); if (cvInputRef.current) cvInputRef.current.value = ""; }
+  };
+
+  const handleBaseCvUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !userId) return;
+    if (file.type !== "application/pdf" || file.size > 10 * 1024 * 1024) {
+      toast.error("Please upload a PDF file under 10MB.");
+      return;
+    }
+    setBaseCvUploading(true);
+    try {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let fullText = "";
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        const pageText = content.items.map((item: any) => item.str).join(" ");
+        fullText += pageText + "\n";
+      }
+      const now = new Date().toISOString();
+      const { error } = await supabase.from("profiles").update({
+        base_cv_text: fullText.trim(),
+        base_cv_uploaded_at: now,
+      } as any).eq("id", userId);
+      if (error) { toast.error("Failed to save CV text."); return; }
+      setBaseCvText(fullText.trim());
+      setBaseCvUploadedAt(now);
+      toast.success("Base CV saved. Hiro will use this as the starting point for all your tailored CVs.");
+    } catch (err) {
+      toast.error("Failed to extract text from PDF.");
+    } finally {
+      setBaseCvUploading(false);
+      if (baseCvInputRef.current) baseCvInputRef.current.value = "";
+    }
   };
 
   const startEdit = (section: string) => {
@@ -296,7 +342,47 @@ const Profile = () => {
         </div>
       </div>
 
-      {/* ─── Work Experience ─── */}
+      {/* ─── Base CV ─── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg text-primary flex items-center gap-2"><FileText className="h-5 w-5" /> Your Base CV</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <input ref={baseCvInputRef} type="file" accept="application/pdf" onChange={handleBaseCvUpload} className="hidden" />
+          {baseCvText ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-foreground">CV uploaded</p>
+                  {baseCvUploadedAt && <p className="text-xs text-muted-foreground">Uploaded on {format(new Date(baseCvUploadedAt), "d MMMM yyyy, HH:mm")}</p>}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setShowExtractedText(!showExtractedText)}>
+                    {showExtractedText ? <><EyeOff className="h-3.5 w-3.5" /> Hide text</> : <><Eye className="h-3.5 w-3.5" /> View extracted text</>}
+                  </Button>
+                  <Button variant="outline" size="sm" className="gap-1.5" onClick={() => baseCvInputRef.current?.click()} disabled={baseCvUploading}>
+                    {baseCvUploading ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Extracting...</> : <><RotateCcw className="h-3.5 w-3.5" /> Replace CV</>}
+                  </Button>
+                </div>
+              </div>
+              {showExtractedText && (
+                <div className="rounded-lg border border-border bg-muted/30 p-4 max-h-[400px] overflow-y-auto">
+                  <pre className="text-xs text-foreground whitespace-pre-wrap font-mono">{baseCvText}</pre>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <FileText className="h-10 w-10 text-muted-foreground/50 mb-3" />
+              <p className="text-sm text-muted-foreground mb-4 max-w-md">Upload your CV once. Hiro will use it as the base template for every tailored application.</p>
+              <Button variant="default" className="gap-1.5 bg-primary hover:bg-primary/90" onClick={() => baseCvInputRef.current?.click()} disabled={baseCvUploading}>
+                {baseCvUploading ? <><Loader2 className="h-4 w-4 animate-spin" /> Extracting text...</> : <><Upload className="h-4 w-4" /> Upload Base CV (PDF)</>}
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <Card>
         {sectionHeader("Work Experience", "work")}
         <CardContent>
