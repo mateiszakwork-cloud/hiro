@@ -182,14 +182,14 @@ const Welcome = () => {
           ) : parseError ? (
             <div className="flex flex-col items-center gap-3">
               <AlertTriangle className="h-8 w-8 text-destructive" />
-              <p className="text-sm font-medium text-foreground">We had trouble reading your CV.</p>
+              <p className="text-sm font-medium text-foreground">{errorMessage || "We had trouble reading your CV."}</p>
               <p className="text-xs text-muted-foreground">You can try again or fill in your profile manually.</p>
               <div className="flex gap-3 mt-1">
                 <Button variant="outline" size="sm" onClick={handleRetry} className="gap-1.5">
                   <RotateCcw className="h-3.5 w-3.5" /> Retry
                 </Button>
                 <Button variant="outline" size="sm" onClick={handleProceed}>
-                  Fill in manually
+                  Build profile manually
                 </Button>
               </div>
             </div>
