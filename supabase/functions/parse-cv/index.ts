@@ -91,6 +91,11 @@ serve(async (req) => {
       }
     }
 
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+    if (!OPENAI_API_KEY) {
+      return fail("parsing", "AI parsing is not configured on the server.");
+    }
+
     // ── Step D: Parse extracted text into structured data ──
     try {
       console.log("Step D: Parsing CV text with OpenAI");
