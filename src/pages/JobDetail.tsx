@@ -767,64 +767,194 @@ const JobDetail = () => {
         <TabsContent value="overview" className="mt-6">
           <Card>
             <CardContent className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Location</p>
-                  <p className="text-sm text-foreground flex items-center gap-1.5">
-                    {job.location ? <><MapPin className="h-3.5 w-3.5 text-muted-foreground" />{job.location}</> : "–"}
-                  </p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Work Mode</p>
-                  <p className="text-sm text-foreground">{job.work_mode || "–"}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Duration</p>
-                  <p className="text-sm text-foreground">{job.duration || "–"}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Function</p>
-                  <p className="text-sm text-foreground">{job.function || "–"}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Application Deadline</p>
-                  <p className="text-sm text-foreground">{job.application_deadline || "–"}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Match Score</p>
-                  <span className={`inline-flex items-center justify-center h-12 w-12 rounded-full border-2 text-lg font-bold ${getScoreColor(job.match_score)}`}>
-                    {job.match_score ?? "–"}
-                  </span>
-                </div>
-                <div className="space-y-1 col-span-full">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Required Skills</p>
-                  <TagList tags={[...(job.hard_skills || []), ...(job.soft_skills || [])]} />
-                </div>
-                {(job.skills_nice_to_have?.length ?? 0) > 0 && (
-                  <div className="space-y-1 col-span-full">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Nice-to-Have Skills</p>
-                    <TagList tags={job.skills_nice_to_have} soft />
+              <div className="flex justify-end mb-4">
+                {isEditing ? (
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={cancelEdit}>Cancel</Button>
+                    <Button size="sm" onClick={saveEdit} className="gap-1.5" style={{ backgroundColor: '#950606' }}>
+                      <Check className="h-3.5 w-3.5" /> Save
+                    </Button>
                   </div>
-                )}
-                <div className="space-y-1 col-span-full">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Required Languages</p>
-                  <TagList tags={job.languages_required} />
-                </div>
-                {(job.languages_nice_to_have?.length ?? 0) > 0 && (
-                  <div className="space-y-1 col-span-full">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Nice-to-Have Languages</p>
-                    <TagList tags={job.languages_nice_to_have} soft />
-                  </div>
-                )}
-                {job.url && (
-                  <div className="space-y-1 col-span-full">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Job URL</p>
-                    <a href={job.url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1">
-                      {job.url} <ExternalLink className="h-3.5 w-3.5" />
-                    </a>
-                  </div>
+                ) : (
+                  <Button variant="outline" size="sm" onClick={startEdit} className="gap-1.5">
+                    <Pencil className="h-3.5 w-3.5" /> Edit
+                  </Button>
                 )}
               </div>
+
+              {isEditing ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Job Title</p>
+                    <Input value={editData.job_title || ""} onChange={(e) => setEditData(d => ({ ...d, job_title: e.target.value }))} className="h-9" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Company</p>
+                    <Input value={editData.company_name || ""} onChange={(e) => setEditData(d => ({ ...d, company_name: e.target.value }))} className="h-9" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Location</p>
+                    <Input value={editData.location || ""} onChange={(e) => setEditData(d => ({ ...d, location: e.target.value }))} className="h-9" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Work Mode</p>
+                    <Select value={editData.work_mode || ""} onValueChange={(v) => setEditData(d => ({ ...d, work_mode: v }))}>
+                      <SelectTrigger className="h-9"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        {WORK_MODE_VALUES.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Duration</p>
+                    <Input value={editData.duration || ""} onChange={(e) => setEditData(d => ({ ...d, duration: e.target.value }))} className="h-9" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Function</p>
+                    <Select value={editData.function || ""} onValueChange={(v) => setEditData(d => ({ ...d, function: v }))}>
+                      <SelectTrigger className="h-9"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        {FUNCTION_VALUES.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Application Deadline</p>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className={cn("w-full justify-start text-left h-9", !editData.application_deadline && "text-muted-foreground")}>
+                          <CalendarIcon className="h-3.5 w-3.5 mr-2" />
+                          {editData.application_deadline ? format(new Date(editData.application_deadline), "MMM d, yyyy") : "Set deadline"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={editData.application_deadline ? new Date(editData.application_deadline) : undefined}
+                          onSelect={(d) => setEditData(prev => ({ ...prev, application_deadline: d ? format(d, "yyyy-MM-dd") : null }))}
+                          className={cn("p-3 pointer-events-auto")}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Status</p>
+                    <Select value={editData.status || ""} onValueChange={(v) => setEditData(d => ({ ...d, status: v }))}>
+                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {STATUS_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.value}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Priority</p>
+                    <Select value={editData.priority || ""} onValueChange={(v) => setEditData(d => ({ ...d, priority: v }))}>
+                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {PRIORITY_OPTIONS_EDIT.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Job URL</p>
+                    <Input value={editData.url || ""} onChange={(e) => setEditData(d => ({ ...d, url: e.target.value }))} className="h-9" />
+                  </div>
+                  <div className="space-y-1 col-span-full">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Hard Skills</p>
+                    <TagInput tags={editData.hard_skills || []} onChange={(t) => setEditData(d => ({ ...d, hard_skills: t }))} placeholder="Add hard skill..." />
+                  </div>
+                  <div className="space-y-1 col-span-full">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Soft Skills</p>
+                    <TagInput tags={editData.soft_skills || []} onChange={(t) => setEditData(d => ({ ...d, soft_skills: t }))} placeholder="Add soft skill..." />
+                  </div>
+                  <div className="space-y-1 col-span-full">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Nice-to-Have Skills</p>
+                    <TagInput tags={editData.skills_nice_to_have || []} onChange={(t) => setEditData(d => ({ ...d, skills_nice_to_have: t }))} placeholder="Add nice-to-have skill..." />
+                  </div>
+                  <div className="space-y-1 col-span-full">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Required Languages</p>
+                    <TagInput tags={editData.languages_required || []} onChange={(t) => setEditData(d => ({ ...d, languages_required: t }))} placeholder="Add language..." />
+                  </div>
+                  <div className="space-y-1 col-span-full">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Nice-to-Have Languages</p>
+                    <TagInput tags={editData.languages_nice_to_have || []} onChange={(t) => setEditData(d => ({ ...d, languages_nice_to_have: t }))} placeholder="Add language..." />
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Location</p>
+                    <p className="text-sm text-foreground flex items-center gap-1.5">
+                      {job.location ? <><MapPin className="h-3.5 w-3.5 text-muted-foreground" />{job.location}</> : "–"}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Work Mode</p>
+                    <p className="text-sm text-foreground">{job.work_mode || "–"}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Duration</p>
+                    <p className="text-sm text-foreground">{job.duration || "–"}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Function</p>
+                    <p className="text-sm text-foreground">{job.function || "–"}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Application Deadline</p>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button className="text-sm text-foreground flex items-center gap-1.5 hover:text-primary transition-colors">
+                          {job.application_deadline ? format(new Date(job.application_deadline), "MMM d, yyyy") : "–"}
+                          <Pencil className="h-3 w-3 text-muted-foreground" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={job.application_deadline ? new Date(job.application_deadline) : undefined}
+                          onSelect={handleDeadlineInline}
+                          className={cn("p-3 pointer-events-auto")}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Match Score</p>
+                    <span className={`inline-flex items-center justify-center h-12 w-12 rounded-full border-2 text-lg font-bold ${getScoreColor(job.match_score)}`}>
+                      {job.match_score ?? "–"}
+                    </span>
+                  </div>
+                  <div className="space-y-1 col-span-full">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Required Skills</p>
+                    <TagList tags={[...(job.hard_skills || []), ...(job.soft_skills || [])]} />
+                  </div>
+                  {(job.skills_nice_to_have?.length ?? 0) > 0 && (
+                    <div className="space-y-1 col-span-full">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Nice-to-Have Skills</p>
+                      <TagList tags={job.skills_nice_to_have} soft />
+                    </div>
+                  )}
+                  <div className="space-y-1 col-span-full">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Required Languages</p>
+                    <TagList tags={job.languages_required} />
+                  </div>
+                  {(job.languages_nice_to_have?.length ?? 0) > 0 && (
+                    <div className="space-y-1 col-span-full">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Nice-to-Have Languages</p>
+                      <TagList tags={job.languages_nice_to_have} soft />
+                    </div>
+                  )}
+                  {job.url && (
+                    <div className="space-y-1 col-span-full">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Job URL</p>
+                      <a href={job.url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1">
+                        {job.url} <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 
