@@ -107,6 +107,11 @@ const StepWorkExperience = ({ userId, onNext, initialData }: Props) => {
       <h1 className="text-2xl font-bold text-foreground">Tell us about your experience</h1>
       <p className="mt-1 text-muted-foreground">Add your work history. Be detailed with your bullet points, as the AI will use them to tailor your CV.</p>
 
+      <div className="mt-4 mb-6 rounded-lg bg-muted/60 border border-border px-4 py-3 flex items-start gap-2.5">
+        <span className="text-muted-foreground shrink-0 mt-0.5 text-sm">ℹ️</span>
+        <p className="text-sm text-muted-foreground">Add as many bullet points as you can (up to 10 per role). Hiro will select the most relevant ones for each job application.</p>
+      </div>
+
       <div className="mt-6 space-y-6">
         {blocks.map((block, idx) => (
           <div key={idx} className="rounded-lg border border-border p-5 space-y-4">
