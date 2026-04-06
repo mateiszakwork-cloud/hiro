@@ -114,10 +114,12 @@ const Profile = () => {
       const uid = session.user.id;
       setUserId(uid);
       setEmail(session.user.email || "");
-      const { data: profile } = await supabase.from("profiles").select("created_at, full_name").eq("id", uid).single();
+      const { data: profile } = await supabase.from("profiles").select("created_at, full_name, base_cv_text, base_cv_uploaded_at").eq("id", uid).single();
       if (profile) {
         setMemberSince(format(new Date(profile.created_at), "MMMM yyyy"));
         setFullName(profile.full_name || "");
+        setBaseCvText((profile as any).base_cv_text || null);
+        setBaseCvUploadedAt((profile as any).base_cv_uploaded_at || null);
       }
       fetchAll(uid);
     };
