@@ -244,8 +244,9 @@ const JobDetail = () => {
   const [notesSaved, setNotesSaved] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout>>();
-
   const [matchLoading, setMatchLoading] = useState(false);
+  const [jobLoading, setJobLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [cvOutput, setCvOutput] = useState<CvOutput | null>(null);
   const [cvLoading, setCvLoading] = useState(false);
   const [cvFetched, setCvFetched] = useState(false);
@@ -272,17 +273,23 @@ const JobDetail = () => {
 
   useEffect(() => {
     const init = async () => {
+      setJobLoading(true);
+      setFetchError(null);
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { navigate("/login"); return; }
       setUserId(session.user.id);
 
-      const { data: jobData } = await supabase
+      const { data: jobData, error: jobError } = await supabase
         .from("jobs")
         .select("*")
         .eq("id", jobId!)
         .eq("user_id", session.user.id)
         .single();
-      if (!jobData) { navigate("/dashboard"); return; }
+      if (jobError || !jobData) {
+        setFetchError(jobError?.message || "Job not found or access denied.");
+        setJobLoading(false);
+        return;
+      }
       setJob(jobData as any);
       setNotes(jobData.notes || "");
 
@@ -351,6 +358,7 @@ const JobDetail = () => {
       });
       setMasterHardSkills((skillsRes.data as any)?.hard_skills || []);
       setMasterSoftSkills((skillsRes.data as any)?.soft_skills || []);
+      setJobLoading(false);
     };
     init();
   }, [jobId, navigate]);
@@ -592,6 +600,33 @@ const JobDetail = () => {
 
     return { fromJob, fromProfile };
   };
+
+  if (jobLoading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-6 w-40" />
+        <Skeleton className="h-10 w-72" />
+        <Skeleton className="h-5 w-56" />
+        <div className="grid grid-cols-2 gap-4 mt-8">
+          <Skeleton className="h-32" />
+          <Skeleton className="h-32" />
+          <Skeleton className="h-32" />
+          <Skeleton className="h-32" />
+        </div>
+      </div>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+        <p className="text-destructive font-medium">{fetchError}</p>
+        <Button variant="outline" onClick={() => navigate("/dashboard")}>
+          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Job Tracker
+        </Button>
+      </div>
+    );
+  }
 
   if (!job) return null;
 
