@@ -109,7 +109,15 @@ const Welcome = () => {
       // Check if the response itself contains an error (edge function returned non-2xx)
       if (data?.error) {
         console.error("Parse-cv returned error:", data.error, "step:", data.step);
-        setErrorMessage(data.error);
+        const stepMessages: Record<string, string> = {
+          auth: "Your session expired. Please log in again.",
+          storage_download: "Could not upload your file. Please try again.",
+          text_extraction: "Could not read your PDF. Make sure it is a text-based PDF, not a scanned image.",
+          ai_parsing: "Could not parse your CV content. Please try again or build your profile manually.",
+          ai_config: "Could not parse your CV content. Please try again or build your profile manually.",
+          database_save: "CV was read but could not be saved. Please try again.",
+        };
+        setErrorMessage(stepMessages[data.step] || data.error);
         setParseError(true);
         setUploading(false);
         return;
