@@ -97,8 +97,12 @@ const Profile = () => {
   // CV re-import state
   const cvInputRef = useRef<HTMLInputElement>(null);
   const [cvUploading, setCvUploading] = useState(false);
-  const [cvError, setCvError] = useState(false);
+  const [cvError, setCvError] = useState<string | null>(null);
+  const [cvErrorStep, setCvErrorStep] = useState<string | null>(null);
   const [cvSuccess, setCvSuccess] = useState("");
+  const [parsedCvData, setParsedCvData] = useState<ParsedCVData | null>(null);
+  const importCvInputRef = useRef<HTMLInputElement>(null);
+  const [applyingCv, setApplyingCv] = useState(false);
 
   // Base CV state
   const baseCvInputRef = useRef<HTMLInputElement>(null);
@@ -145,37 +149,109 @@ const Profile = () => {
     if (int.data) setInterests((int.data as any).interests || []);
   };
 
-  const handleCvReimport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !userId) return;
-    if (file.type !== "application/pdf" || file.size > 10 * 1024 * 1024) { setCvError(true); return; }
-    setCvUploading(true); setCvError(false); setCvSuccess("");
+  const handleCvImport = async (file: File) => {
+    if (!userId) return;
+    if (file.type !== "application/pdf") { setCvError("Please upload a PDF version of your CV."); setCvErrorStep("upload"); return; }
+    if (file.size > 10 * 1024 * 1024) { setCvError("Your CV is too large. Please use a version under 10MB."); setCvErrorStep("upload"); return; }
+    setCvUploading(true); setCvError(null); setCvErrorStep(null); setCvSuccess(""); setParsedCvData(null);
     try {
       const formData = new FormData();
       formData.append("file", file);
       const { data, error: fnErr } = await supabase.functions.invoke("parse-cv", { body: formData });
-      if (fnErr || !data || data.success === false) { setCvError(true); setCvUploading(false); return; }
+      if (fnErr || !data || data.success === false) {
+        setCvError(data?.message || "Failed to parse CV.");
+        setCvErrorStep(data?.step || "unknown");
+        setCvUploading(false);
+        return;
+      }
       const cv = data as ParsedCVData;
-      // Pre-fill edit states and open all sections for review
-      if (cv.work_experiences?.length) {
-        const mapped = cv.work_experiences.map(d => ({ company_name: d.company_name || "", job_title: d.job_title || "", location: d.location || null, start_month: d.start_month ? MONTHS.indexOf(d.start_month) + 1 : 1, start_year: d.start_year || 2024, end_month: d.end_month ? MONTHS.indexOf(d.end_month) + 1 : null, end_year: d.end_year || null, is_current: d.is_current || false, bullet_points: d.bullet_points?.length ? d.bullet_points : [""] }));
-        setEditWork(mapped as any); setEditSection("work");
+      setParsedCvData(cv);
+
+      // Also save raw text to base_cv_text
+      if (data.raw_text) {
+        await supabase.from("profiles").update({ base_cv_text: data.raw_text, base_cv_uploaded_at: new Date().toISOString() } as any).eq("id", userId);
+        setBaseCvText(data.raw_text);
+        setBaseCvUploadedAt(new Date().toISOString());
       }
-      if (cv.education?.length) {
-        const mapped = cv.education.map(d => ({ institution: d.institution || "", degree: d.degree || "", field_of_study: d.field_of_study || "", start_year: d.start_year || 2024, end_year: d.end_year || null, is_expected: false, grade: d.grade || null, activities: d.activities || null, description: d.description || null }));
-        setEditEdu(mapped as any);
-      }
-      if (cv.hard_skills?.length || cv.soft_skills?.length) {
-        setEditSkills({ hard_skills: cv.hard_skills || [], soft_skills: cv.soft_skills || [] });
-      }
-      if (cv.languages?.length) {
-        setEditLangs(cv.languages.map(l => ({ language_name: l.name || "", proficiency: l.proficiency || "Professional Working" })));
-      }
+
       const expCount = cv.work_experiences?.length || 0;
       const skillCount = (cv.hard_skills?.length || 0) + (cv.soft_skills?.length || 0);
-      setCvSuccess(`Imported ${expCount} experience${expCount !== 1 ? "s" : ""} and ${skillCount} skill${skillCount !== 1 ? "s" : ""}. Review and save each section.`);
-      toast.success("CV imported! Review each section and save.");
-    } catch { setCvError(true); } finally { setCvUploading(false); if (cvInputRef.current) cvInputRef.current.value = ""; }
+      setCvSuccess(`We found ${expCount} experience${expCount !== 1 ? "s" : ""} and ${skillCount} skill${skillCount !== 1 ? "s" : ""}.`);
+    } catch { setCvError("An unexpected error occurred."); setCvErrorStep("unknown"); } finally { setCvUploading(false); }
+  };
+
+  const handleCvReimport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await handleCvImport(file);
+    if (cvInputRef.current) cvInputRef.current.value = "";
+  };
+
+  const handleImportCvUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await handleCvImport(file);
+    if (importCvInputRef.current) importCvInputRef.current.value = "";
+  };
+
+  const applyParsedCvToProfile = async () => {
+    if (!parsedCvData || !userId) return;
+    setApplyingCv(true);
+    try {
+      const cv = parsedCvData;
+      // Work experiences
+      if (cv.work_experiences?.length) {
+        await supabase.from("work_experiences").delete().eq("user_id", userId);
+        const rows = cv.work_experiences.map(d => ({ user_id: userId, company_name: d.company_name || "", job_title: d.job_title || "", location: d.location || null, start_month: d.start_month ? MONTHS.indexOf(d.start_month) + 1 : 1, start_year: d.start_year || 2024, end_month: d.end_month ? MONTHS.indexOf(d.end_month) + 1 : null, end_year: d.end_year || null, is_current: d.is_current || false, bullet_points: d.bullet_points?.length ? d.bullet_points : [] }));
+        await supabase.from("work_experiences").insert(rows);
+      }
+      // Education
+      if (cv.education?.length) {
+        await supabase.from("education").delete().eq("user_id", userId);
+        const rows = cv.education.map(d => ({ user_id: userId, institution: d.institution || "", degree: d.degree || "", field_of_study: d.field_of_study || "", start_year: d.start_year || 2024, end_year: d.end_year || null, is_expected: false, grade: d.grade || null, activities: d.activities || null, description: d.description || null }));
+        await supabase.from("education").insert(rows);
+      }
+      // Skills
+      if (cv.hard_skills?.length || cv.soft_skills?.length) {
+        await supabase.from("skills").delete().eq("user_id", userId);
+        await supabase.from("skills").insert({ user_id: userId, hard_skills: cv.hard_skills || [], soft_skills: cv.soft_skills || [] });
+      }
+      // Languages
+      if (cv.languages?.length) {
+        await supabase.from("languages").delete().eq("user_id", userId);
+        const rows = cv.languages.filter(l => l.name.trim()).map(l => ({ user_id: userId, language_name: l.name.trim(), proficiency: l.proficiency || "Professional Working" }));
+        if (rows.length) await supabase.from("languages").insert(rows);
+      }
+      await fetchAll(userId);
+      setParsedCvData(null);
+      setCvSuccess("");
+      toast.success("Profile updated from CV");
+    } catch {
+      toast.error("Failed to apply CV data.");
+    } finally {
+      setApplyingCv(false);
+    }
+  };
+
+  const reviewParsedCv = () => {
+    if (!parsedCvData) return;
+    const cv = parsedCvData;
+    if (cv.work_experiences?.length) {
+      const mapped = cv.work_experiences.map(d => ({ company_name: d.company_name || "", job_title: d.job_title || "", location: d.location || null, start_month: d.start_month ? MONTHS.indexOf(d.start_month) + 1 : 1, start_year: d.start_year || 2024, end_month: d.end_month ? MONTHS.indexOf(d.end_month) + 1 : null, end_year: d.end_year || null, is_current: d.is_current || false, bullet_points: d.bullet_points?.length ? d.bullet_points : [""] }));
+      setEditWork(mapped as any); setEditSection("work");
+    }
+    if (cv.education?.length) {
+      setEditEdu(cv.education.map(d => ({ institution: d.institution || "", degree: d.degree || "", field_of_study: d.field_of_study || "", start_year: d.start_year || 2024, end_year: d.end_year || null, is_expected: false, grade: d.grade || null, activities: d.activities || null, description: d.description || null })) as any);
+    }
+    if (cv.hard_skills?.length || cv.soft_skills?.length) {
+      setEditSkills({ hard_skills: cv.hard_skills || [], soft_skills: cv.soft_skills || [] });
+    }
+    if (cv.languages?.length) {
+      setEditLangs(cv.languages.map(l => ({ language_name: l.name || "", proficiency: l.proficiency || "Professional Working" })));
+    }
+    setParsedCvData(null);
+    setCvSuccess("");
+    toast.success("CV data loaded into edit forms. Review and save each section.");
   };
 
   const handleBaseCvUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -332,14 +408,80 @@ const Profile = () => {
             </Button>
             {cvError && (
               <div className="flex items-center gap-2 text-xs text-destructive">
-                <AlertTriangle className="h-3 w-3" /> Failed to parse CV.
-                <button onClick={() => { setCvError(false); cvInputRef.current?.click(); }} className="underline">Retry</button>
+                <AlertTriangle className="h-3 w-3" /> {cvError}
+                <button onClick={() => { setCvError(null); cvInputRef.current?.click(); }} className="underline">Retry</button>
               </div>
             )}
-            {cvSuccess && <p className="text-xs text-primary flex items-center gap-1"><CheckCircle className="h-3 w-3" /> {cvSuccess}</p>}
+            {cvSuccess && !parsedCvData && <p className="text-xs text-primary flex items-center gap-1"><CheckCircle className="h-3 w-3" /> {cvSuccess}</p>}
           </div>
         </div>
       </div>
+
+      {/* ─── Import from CV ─── */}
+      <Card className="border-2 border-dashed" style={{ borderColor: '#950606', backgroundColor: '#FFF5F5' }}>
+        <CardContent className="p-6">
+          <input ref={importCvInputRef} type="file" accept="application/pdf" onChange={handleImportCvUpload} className="hidden" />
+
+          {/* Loading state */}
+          {cvUploading && (
+            <div className="flex flex-col items-center justify-center py-8 gap-3">
+              <Loader2 className="h-8 w-8 animate-spin" style={{ color: '#950606' }} />
+              <p className="text-sm font-medium text-muted-foreground animate-pulse">Reading your CV...</p>
+            </div>
+          )}
+
+          {/* Success state with apply/review options */}
+          {!cvUploading && parsedCvData && cvSuccess && (
+            <div className="flex flex-col items-center justify-center py-6 gap-4 text-center">
+              <CheckCircle className="h-8 w-8" style={{ color: '#950606' }} />
+              <p className="text-sm font-medium text-foreground">{cvSuccess} Apply to profile?</p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button onClick={applyParsedCvToProfile} disabled={applyingCv} className="gap-1.5" style={{ backgroundColor: '#950606' }}>
+                  {applyingCv ? <><Loader2 className="h-4 w-4 animate-spin" /> Applying...</> : "Apply to profile"}
+                </Button>
+                <Button variant="outline" onClick={reviewParsedCv} className="gap-1.5">
+                  Review first
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Error state */}
+          {!cvUploading && cvError && !parsedCvData && (
+            <div className="flex flex-col items-center justify-center py-6 gap-4 text-center">
+              <AlertTriangle className="h-8 w-8 text-destructive" />
+              <div>
+                {cvErrorStep && <p className="text-xs text-muted-foreground mb-1">Failed at: {cvErrorStep}</p>}
+                <p className="text-sm text-destructive font-medium">{cvError}</p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button variant="outline" onClick={() => { setCvError(null); setCvErrorStep(null); importCvInputRef.current?.click(); }} className="gap-1.5">
+                  <RotateCcw className="h-4 w-4" /> Retry
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Default upload state */}
+          {!cvUploading && !parsedCvData && !cvError && (
+            <div className="flex flex-col items-center justify-center py-8 text-center gap-4">
+              <div className="h-14 w-14 rounded-2xl flex items-center justify-center" style={{ backgroundColor: 'rgba(149, 6, 6, 0.1)' }}>
+                <FileText className="h-7 w-7" style={{ color: '#950606' }} />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">Import from CV</p>
+                <p className="text-xs text-muted-foreground mt-1">Upload your CV to auto-fill your profile</p>
+              </div>
+              <Button onClick={() => importCvInputRef.current?.click()} className="gap-1.5" style={{ backgroundColor: '#950606' }}>
+                <Upload className="h-4 w-4" /> Upload CV (PDF)
+              </Button>
+              {baseCvUploadedAt && (
+                <p className="text-xs text-muted-foreground">Last uploaded: {format(new Date(baseCvUploadedAt), "d MMM yyyy")}</p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* ─── Base CV ─── */}
       <Card>
