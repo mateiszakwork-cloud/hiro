@@ -884,10 +884,10 @@ const JobDetail = () => {
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="font-semibold text-foreground">Hard Skills</h4>
                       <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => {
-                        const lines = Object.entries(cvOutput.selected_hard_skills!).map(
+                        const parts = Object.entries(cvOutput.selected_hard_skills!).map(
                           ([cat, skills]) => `${cat}: ${(skills as string[]).join(", ")}`
                         );
-                        copyToClipboard(lines.join("\n"), "Hard skills");
+                        copyToClipboard("Software Skills: " + parts.join("; ") + ".", "Hard skills");
                       }}>
                         <Copy className="h-3 w-3" /> Copy all
                       </Button>
