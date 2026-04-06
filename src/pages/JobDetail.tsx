@@ -300,6 +300,10 @@ const JobDetail = () => {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [previewVersion, setPreviewVersion] = useState<any | null>(null);
 
+  // Edit mode state
+  const [isEditing, setIsEditing] = useState(searchParams.get("edit") === "true");
+  const [editData, setEditData] = useState<Partial<Job>>({});
+
   // Bullet toggle state: map of "blockIdx-bulletIdx" -> boolean (true = show tailored)
   const [bulletToggles, setBulletToggles] = useState<Record<string, boolean>>({});
 
