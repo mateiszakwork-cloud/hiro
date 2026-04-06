@@ -505,80 +505,94 @@ const JobDetail = () => {
 
   const buildCvPlainText = () => {
     if (!cvOutput) return "";
+    const MONTHS_S = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const fmtD = (m: number, y: number) => `${MONTHS_S[m - 1] || ""} ${y}`;
     const lines: string[] = [];
-    if (userProfile.full_name) lines.push(userProfile.full_name);
-    if (userProfile.email) lines.push(userProfile.email);
-    if (cvOutput.tailored_summary) {
-      lines.push(cvOutput.tailored_summary);
-    } else if (cvOutput.profile_headline) {
-      lines.push(cvOutput.profile_headline);
-    }
+
+    // Header
+    if (userProfile.full_name) lines.push(userProfile.full_name.toUpperCase());
+    lines.push([userProfile.email, job?.location].filter(Boolean).join(" • "));
     lines.push("");
 
-    // Base CV mode: experience with selected_bullets map
-    if (isBaseCvMode(cvOutput) && cvOutput.selected_bullets) {
-      lines.push("EXPERIENCE");
-      lines.push("─".repeat(40));
-      for (const [company, bullets] of Object.entries(cvOutput.selected_bullets)) {
-        lines.push(company);
-        for (const b of bullets as string[]) lines.push(`  • ${b}`);
-        lines.push("");
-      }
-    } else if (cvOutput.selected_experiences?.length) {
-      lines.push("EXPERIENCE");
-      lines.push("─".repeat(40));
-      for (const exp of cvOutput.selected_experiences) {
-        lines.push(`${exp.company} — ${exp.job_title}`);
-        lines.push(`${exp.start_date} – ${exp.end_date}${exp.location ? ` | ${exp.location}` : ""}`);
-        for (const b of exp.selected_bullets || []) lines.push(`  • ${b}`);
+    // Summary
+    const summary = cvOutput.tailored_summary || cvOutput.profile_headline;
+    if (summary) {
+      lines.push("SUMMARY");
+      lines.push("─".repeat(50));
+      lines.push(summary);
+      lines.push("");
+    }
+
+    // Professional Experience
+    if (userProfile.work_experiences?.length) {
+      lines.push("PROFESSIONAL EXPERIENCE");
+      lines.push("─".repeat(50));
+      for (const exp of userProfile.work_experiences) {
+        const bullets = isBaseCvMode(cvOutput) && cvOutput.selected_bullets
+          ? (cvOutput.selected_bullets[exp.company_name] || exp.bullet_points || [])
+          : (cvOutput.selected_experiences?.find((se: any) => se.company === exp.company_name)?.selected_bullets || exp.bullet_points || []);
+        lines.push(`${exp.job_title.toUpperCase()}`);
+        lines.push(`${exp.company_name}  |  ${fmtD(exp.start_month, exp.start_year)} – ${exp.is_current ? "Present" : exp.end_month && exp.end_year ? fmtD(exp.end_month, exp.end_year) : ""}${exp.location ? `  |  ${exp.location}` : ""}`);
+        for (const b of bullets) lines.push(`  • ${b}`);
         lines.push("");
       }
     }
 
-    if (cvOutput.selected_education?.length) {
-      lines.push("EDUCATION");
-      lines.push("─".repeat(40));
-      for (const edu of cvOutput.selected_education) {
-        lines.push(`${edu.institution} — ${edu.degree}, ${edu.field}`);
-        if (edu.grade) lines.push(`  Grade: ${edu.grade}`);
-        if (edu.activities) lines.push(`  Activities: ${edu.activities}`);
+    // Volunteering
+    if (userProfile.volunteering?.length) {
+      lines.push("ENTREPRENEURIAL & VOLUNTEER EXPERIENCE");
+      lines.push("─".repeat(50));
+      for (const v of userProfile.volunteering) {
+        lines.push(`${(v.role || v.organization).toUpperCase()}`);
+        if (v.role) lines.push(v.organization);
+        if (v.start_year) lines.push(`${v.start_year} – ${v.is_ongoing ? "Present" : v.end_year || ""}`);
+        if (v.description) lines.push(v.description);
         lines.push("");
       }
+    }
+
+    // Education
+    if (userProfile.education?.length) {
+      lines.push("EDUCATION");
+      lines.push("─".repeat(50));
+      for (const edu of userProfile.education) {
+        lines.push(`${edu.institution}  |  ${edu.start_year} – ${edu.is_expected ? "Expected" : edu.end_year || ""}`);
+        lines.push(`${edu.degree} in ${edu.field_of_study}`);
+        if (edu.grade) lines.push(`GPA: ${edu.grade}`);
+        if (edu.activities) lines.push(edu.activities);
+        lines.push("");
+      }
+    }
+
+    // Footer sections
+    if (userProfile.languages?.length) {
+      lines.push("LANGUAGES");
+      for (const l of userProfile.languages) lines.push(`${l.language_name} (${l.proficiency})`);
+      lines.push("");
     }
 
     const hardFlat = getHardSkillsFlat(cvOutput);
-    if (hardFlat.length || cvOutput.selected_soft_skills?.length) {
-      lines.push("SKILLS");
-      lines.push("─".repeat(40));
+    if (hardFlat.length) {
+      lines.push("SOFTWARE & SKILLS");
       if (isBaseCvMode(cvOutput) && cvOutput.selected_hard_skills && !Array.isArray(cvOutput.selected_hard_skills)) {
         for (const [cat, skills] of Object.entries(cvOutput.selected_hard_skills)) {
           lines.push(`${cat}: ${(skills as string[]).join(", ")}`);
         }
-      } else if (hardFlat.length) {
-        lines.push(`Hard Skills: ${hardFlat.join(", ")}`);
+      } else {
+        lines.push(hardFlat.join(", "));
       }
-      if (cvOutput.selected_soft_skills?.length) lines.push(`Soft Skills: ${cvOutput.selected_soft_skills.join(", ")}`);
       lines.push("");
     }
 
-    if (cvOutput.selected_languages?.length) {
-      lines.push("LANGUAGES");
-      lines.push("─".repeat(40));
-      for (const l of cvOutput.selected_languages) lines.push(`${l.language} — ${l.proficiency}`);
+    if (userProfile.interests?.length) {
+      lines.push("PERSONAL INTERESTS");
+      lines.push(userProfile.interests.join(", "));
       lines.push("");
     }
 
-    if (cvOutput.selected_awards?.length) {
-      lines.push("AWARDS");
-      lines.push("─".repeat(40));
-      for (const a of cvOutput.selected_awards) lines.push(`${a.award_name || a.name}${a.organization ? ` — ${a.organization}` : ""}${a.year ? ` (${a.year})` : ""}`);
-      lines.push("");
-    }
-
-    if (cvOutput.selected_volunteering?.length) {
-      lines.push("VOLUNTEERING");
-      lines.push("─".repeat(40));
-      for (const v of cvOutput.selected_volunteering) lines.push(`${v.organization}${v.role ? ` — ${v.role}` : ""}${v.start_year ? ` (${v.start_year}–${v.end_year || "Present"})` : ""}`);
+    if (userProfile.awards?.length) {
+      lines.push("AWARDS & HONOURS");
+      for (const a of userProfile.awards) lines.push(`${a.award_name}${a.issuing_organization ? ` — ${a.issuing_organization}` : ""}${a.year ? ` (${a.year})` : ""}`);
       lines.push("");
     }
 
@@ -593,79 +607,98 @@ const JobDetail = () => {
     toast.success("CV copied to clipboard");
   };
 
-  const handleDownloadPdf = async () => {
+  const handleDownloadPdf = () => {
     if (!cvOutput) return;
-    // Build a printable HTML document
+    const MONTHS_S = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const fmtD = (m: number, y: number) => `${MONTHS_S[m - 1] || ""} ${y}`;
     const name = userProfile.full_name || "";
-    const email = userProfile.email || "";
-    const headline = cvOutput.tailored_summary || cvOutput.profile_headline || "";
+    const contactLine = [userProfile.email, job?.location].filter(Boolean).join("  •  ");
+    const summary = cvOutput.tailored_summary || cvOutput.profile_headline || "";
 
-    const sectionStyle = `style="margin-top:18px;font-size:12px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #950606;padding-bottom:3px;margin-bottom:8px;"`;
-    const bodyStyle = `style="font-size:10px;line-height:1.5;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;max-width:700px;margin:0 auto;padding:40px;"`;
+    const secH = `style="margin-top:16px;font-size:10px;font-weight:bold;text-transform:uppercase;letter-spacing:2px;border-bottom:1px solid #333;padding-bottom:3px;margin-bottom:8px;"`;
 
-    let html = `<html><head><style>@page{margin:50px 60px;}body{font-size:10px;line-height:1.5;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;max-width:700px;margin:0 auto;padding:40px;}ul{margin:3px 0;padding-left:18px;}li{margin-bottom:2px;}</style></head><body ${bodyStyle}>`;
+    let html = `<html><head><style>@page{margin:40px 50px;}body{font-size:9.5px;line-height:1.45;font-family:Georgia,'Times New Roman',serif;max-width:700px;margin:0 auto;padding:40px 50px;}ul{margin:2px 0;padding-left:16px;}li{margin-bottom:1px;}</style></head><body>`;
 
     // Header
-    html += `<div style="text-align:center;margin-bottom:16px;">`;
-    html += `<div style="font-size:18px;font-weight:bold;">${name}</div>`;
-    if (email) html += `<div style="font-size:10px;color:#666;">${email}</div>`;
-    if (headline) html += `<div style="font-size:10px;font-style:italic;color:#444;margin-top:4px;">${headline}</div>`;
+    html += `<div style="text-align:center;margin-bottom:4px;">`;
+    html += `<div style="font-size:20px;font-weight:bold;text-transform:uppercase;letter-spacing:3px;">${name}</div>`;
+    if (contactLine) html += `<div style="font-size:9px;color:#555;margin-top:4px;letter-spacing:0.5px;">${contactLine}</div>`;
     html += `</div>`;
 
-    // Experience
-    if (cvOutput.selected_experiences?.length) {
-      html += `<div ${sectionStyle}>Experience</div>`;
-      for (const exp of cvOutput.selected_experiences) {
-        html += `<div style="display:flex;justify-content:space-between;margin-top:8px;"><div><strong>${exp.company}</strong> — ${exp.job_title}</div><div style="color:#666;font-size:9px;">${exp.start_date} – ${exp.end_date}</div></div>`;
-        if (exp.location) html += `<div style="color:#888;font-size:9px;">${exp.location}</div>`;
-        if (exp.selected_bullets?.length) {
+    // Summary
+    if (summary) {
+      html += `<div ${secH}>Summary</div>`;
+      html += `<div style="font-size:9.5px;">${summary}</div>`;
+    }
+
+    // Professional Experience
+    if (userProfile.work_experiences?.length) {
+      html += `<div ${secH}>Professional Experience</div>`;
+      for (const exp of userProfile.work_experiences) {
+        const bullets = isBaseCvMode(cvOutput) && cvOutput.selected_bullets
+          ? (cvOutput.selected_bullets[exp.company_name] || exp.bullet_points || [])
+          : (cvOutput.selected_experiences?.find((se: any) => se.company === exp.company_name)?.selected_bullets || exp.bullet_points || []);
+        html += `<div style="display:flex;justify-content:space-between;margin-top:8px;"><div><strong style="text-transform:uppercase;letter-spacing:0.5px;">${exp.job_title}</strong><br/><em>${exp.company_name}</em></div><div style="text-align:right;color:#555;font-size:9px;white-space:nowrap;">${fmtD(exp.start_month, exp.start_year)} – ${exp.is_current ? "Present" : exp.end_month && exp.end_year ? fmtD(exp.end_month, exp.end_year) : ""}<br/>${exp.location || ""}</div></div>`;
+        if (bullets.length) {
           html += `<ul>`;
-          for (const b of exp.selected_bullets) html += `<li>${b}</li>`;
+          for (const b of bullets) html += `<li>${b}</li>`;
           html += `</ul>`;
         }
       }
     }
 
+    // Volunteering
+    if (userProfile.volunteering?.length) {
+      html += `<div ${secH}>Entrepreneurial & Volunteer Experience</div>`;
+      for (const v of userProfile.volunteering) {
+        html += `<div style="display:flex;justify-content:space-between;margin-top:6px;"><div><strong style="text-transform:uppercase;">${v.role || v.organization}</strong>${v.role ? `<br/><em>${v.organization}</em>` : ""}</div><div style="text-align:right;color:#555;font-size:9px;">${v.start_year ? `${v.start_year} – ${v.is_ongoing ? "Present" : v.end_year || ""}` : ""}</div></div>`;
+        if (v.description) html += `<div style="margin-top:2px;">${v.description}</div>`;
+      }
+    }
+
     // Education
-    if (cvOutput.selected_education?.length) {
-      html += `<div ${sectionStyle}>Education</div>`;
-      for (const edu of cvOutput.selected_education) {
-        html += `<div style="margin-top:6px;"><strong>${edu.institution}</strong> — ${edu.degree}, ${edu.field}</div>`;
-        if (edu.grade) html += `<div style="font-size:9px;color:#666;">Grade: ${edu.grade}</div>`;
-        if (edu.activities) html += `<div style="font-size:9px;color:#666;">Activities: ${edu.activities}</div>`;
+    if (userProfile.education?.length) {
+      html += `<div ${secH}>Education</div>`;
+      for (const edu of userProfile.education) {
+        html += `<div style="display:flex;justify-content:space-between;margin-top:6px;"><div><strong>${edu.institution}</strong><br/>${edu.degree} in ${edu.field_of_study}</div><div style="text-align:right;color:#555;font-size:9px;">${edu.start_year} – ${edu.is_expected ? "Expected" : edu.end_year || ""}</div></div>`;
+        if (edu.grade) html += `<div style="font-size:9px;color:#555;">GPA: ${edu.grade}</div>`;
+        if (edu.activities) html += `<div style="font-size:9px;margin-top:1px;">${edu.activities}</div>`;
+        if (edu.description) html += `<div style="font-size:9px;margin-top:1px;">${edu.description}</div>`;
       }
     }
 
-    // Skills
-    const pdfHardFlat = getHardSkillsFlat(cvOutput);
-    if (pdfHardFlat.length || cvOutput.selected_soft_skills?.length) {
-      html += `<div ${sectionStyle}>Skills</div>`;
-      if (isBaseCvMode(cvOutput) && cvOutput.selected_hard_skills && !Array.isArray(cvOutput.selected_hard_skills)) {
-        for (const [cat, skills] of Object.entries(cvOutput.selected_hard_skills)) {
-          html += `<div><strong>${cat}:</strong> ${(skills as string[]).join(", ")}</div>`;
+    // Footer: Languages | Skills | Interests
+    const hasFooter = userProfile.languages?.length || getHardSkillsFlat(cvOutput).length || userProfile.interests?.length;
+    if (hasFooter) {
+      html += `<div style="margin-top:16px;border-top:1px solid #333;padding-top:8px;display:flex;gap:24px;">`;
+      if (userProfile.languages?.length) {
+        html += `<div style="flex:1;"><div style="font-size:9px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">Languages</div>`;
+        for (const l of userProfile.languages) html += `<div style="font-size:9px;">${l.language_name} (${l.proficiency})</div>`;
+        html += `</div>`;
+      }
+      if (cvOutput.selected_hard_skills) {
+        html += `<div style="flex:1;"><div style="font-size:9px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">Software & Skills</div>`;
+        if (!Array.isArray(cvOutput.selected_hard_skills)) {
+          for (const [cat, skills] of Object.entries(cvOutput.selected_hard_skills)) {
+            html += `<div style="font-size:8px;font-weight:bold;text-transform:uppercase;color:#666;">${cat}</div>`;
+            html += `<div style="font-size:9px;">${(skills as string[]).join(", ")}</div>`;
+          }
+        } else {
+          html += `<div style="font-size:9px;">${(cvOutput.selected_hard_skills as string[]).join(", ")}</div>`;
         }
-      } else if (pdfHardFlat.length) {
-        html += `<div><strong>Hard Skills:</strong> ${pdfHardFlat.join(", ")}</div>`;
+        html += `</div>`;
       }
-      if (cvOutput.selected_soft_skills?.length) html += `<div><strong>Soft Skills:</strong> ${cvOutput.selected_soft_skills.join(", ")}</div>`;
-    }
-
-    // Languages
-    if (cvOutput.selected_languages?.length) {
-      html += `<div ${sectionStyle}>Languages</div>`;
-      for (const l of cvOutput.selected_languages) html += `<div>${l.language} — ${l.proficiency}</div>`;
+      if (userProfile.interests?.length) {
+        html += `<div style="flex:1;"><div style="font-size:9px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">Personal Interests</div>`;
+        html += `<div style="font-size:9px;">${userProfile.interests.join(", ")}</div></div>`;
+      }
+      html += `</div>`;
     }
 
     // Awards
-    if (cvOutput.selected_awards?.length) {
-      html += `<div ${sectionStyle}>Awards</div>`;
-      for (const a of cvOutput.selected_awards) html += `<div>${a.award_name || a.name}${a.organization ? ` — ${a.organization}` : ""}${a.year ? ` (${a.year})` : ""}</div>`;
-    }
-
-    // Volunteering
-    if (cvOutput.selected_volunteering?.length) {
-      html += `<div ${sectionStyle}>Volunteering</div>`;
-      for (const v of cvOutput.selected_volunteering) html += `<div>${v.organization}${v.role ? ` — ${v.role}` : ""}${v.start_year ? ` (${v.start_year}–${v.end_year || "Present"})` : ""}</div>`;
+    if (userProfile.awards?.length) {
+      html += `<div ${secH}>Awards & Honours</div>`;
+      for (const a of userProfile.awards) html += `<div style="font-size:9px;">${a.award_name}${a.issuing_organization ? ` — ${a.issuing_organization}` : ""}${a.year ? ` (${a.year})` : ""}</div>`;
     }
 
     html += `</body></html>`;
