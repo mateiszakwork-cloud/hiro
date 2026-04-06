@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, ExternalLink, MapPin, Copy, Check, Trash2, ChevronDown, ChevronUp, FileText, Download, CheckCircle2, XCircle, CalendarIcon, RefreshCw, Lightbulb, History, RotateCcw } from "lucide-react";
+import { ArrowLeft, ExternalLink, MapPin, Copy, Check, Trash2, ChevronDown, ChevronUp, FileText, CheckCircle2, XCircle, CalendarIcon, RefreshCw, Lightbulb, History, RotateCcw } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
@@ -21,16 +21,10 @@ import { cn } from "@/lib/utils";
 
 type CvOutput = {
   id: string;
-  profile_headline: string | null;
   tailored_summary: string | null;
-  selected_experiences: any[];
-  selected_bullets: Record<string, string[]> | null;
-  selected_hard_skills: string[] | Record<string, string[]> | null;
+  selected_bullets: { company: string; job_title: string; bullets: string[] }[] | null;
+  selected_hard_skills: Record<string, string[]> | null;
   selected_soft_skills: string[];
-  selected_education: any[];
-  selected_languages: any[];
-  selected_awards: any[];
-  selected_volunteering: any[];
   tailoring_notes: string[];
   created_at: string;
   updated_at: string;
@@ -242,12 +236,12 @@ const JobDetail = () => {
   const [cvOutput, setCvOutput] = useState<CvOutput | null>(null);
   const [cvLoading, setCvLoading] = useState(false);
   const [cvFetched, setCvFetched] = useState(false);
+  const [cvError, setCvError] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<{
     full_name: string | null; email: string | null;
     work_experiences: any[]; education: any[]; languages: any[];
     interests: string[]; awards: any[]; volunteering: any[];
   }>({ full_name: null, email: null, work_experiences: [], education: [], languages: [], interests: [], awards: [], volunteering: [] });
-  const [copiedCv, setCopiedCv] = useState(false);
   const [cvHistory, setCvHistory] = useState<any[]>([]);
   const [regenConfirmOpen, setRegenConfirmOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -396,7 +390,6 @@ const JobDetail = () => {
   const handleGenerateCv = async (skipConfirm = false) => {
     if (!jobId || !userId) return;
 
-    // If CV exists and not confirmed, show confirmation
     if (cvOutput && !skipConfirm) {
       setRegenConfirmOpen(true);
       return;
@@ -404,18 +397,15 @@ const JobDetail = () => {
 
     setRegenConfirmOpen(false);
     setCvLoading(true);
+    setCvError(null);
     try {
       // Save current version to history before regenerating
       if (cvOutput) {
         const snapshot = {
-          profile_headline: cvOutput.profile_headline,
-          selected_experiences: cvOutput.selected_experiences,
+          tailored_summary: cvOutput.tailored_summary,
+          selected_bullets: cvOutput.selected_bullets,
           selected_hard_skills: cvOutput.selected_hard_skills,
           selected_soft_skills: cvOutput.selected_soft_skills,
-          selected_education: cvOutput.selected_education,
-          selected_languages: cvOutput.selected_languages,
-          selected_awards: cvOutput.selected_awards,
-          selected_volunteering: cvOutput.selected_volunteering,
           tailoring_notes: cvOutput.tailoring_notes,
           updated_at: cvOutput.updated_at,
         };
@@ -426,7 +416,6 @@ const JobDetail = () => {
           snapshot,
         });
 
-        // Enforce max 5 history entries — delete oldest if over limit
         const { data: allHist } = await supabase
           .from("cv_output_history")
           .select("id, created_at")
@@ -443,13 +432,14 @@ const JobDetail = () => {
         body: { job_id: jobId },
       });
       if (error || !data?.success) {
-        toast.error(data?.message || "CV generation failed. Please try again.");
+        const msg = data?.error || error?.message || "CV generation failed. Please try again.";
+        setCvError(msg);
+        toast.error(msg);
         return;
       }
       setCvOutput(data.data as CvOutput);
-      toast.success("CV generated successfully!");
+      toast.success("Application kit generated!");
 
-      // Refresh history
       const { data: histData } = await supabase
         .from("cv_output_history")
         .select("*")
@@ -457,8 +447,10 @@ const JobDetail = () => {
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
       if (histData) setCvHistory(histData);
-    } catch {
-      toast.error("CV generation failed. Please try again.");
+    } catch (e: any) {
+      const msg = e?.message || "CV generation failed. Please try again.";
+      setCvError(msg);
+      toast.error(msg);
     } finally {
       setCvLoading(false);
     }
@@ -470,14 +462,10 @@ const JobDetail = () => {
     const { error } = await supabase
       .from("cv_outputs")
       .update({
-        profile_headline: snapshot.profile_headline,
-        selected_experiences: snapshot.selected_experiences,
+        tailored_summary: snapshot.tailored_summary,
+        selected_bullets: snapshot.selected_bullets,
         selected_hard_skills: snapshot.selected_hard_skills,
         selected_soft_skills: snapshot.selected_soft_skills,
-        selected_education: snapshot.selected_education,
-        selected_languages: snapshot.selected_languages,
-        selected_awards: snapshot.selected_awards,
-        selected_volunteering: snapshot.selected_volunteering,
         tailoring_notes: snapshot.tailoring_notes,
       })
       .eq("id", cvOutput.id);
@@ -485,149 +473,14 @@ const JobDetail = () => {
       toast.error("Failed to restore version.");
       return;
     }
-    setCvOutput(prev => prev ? {
-      ...prev,
-      ...snapshot,
-      updated_at: new Date().toISOString(),
-    } : prev);
+    setCvOutput(prev => prev ? { ...prev, ...snapshot, updated_at: new Date().toISOString() } : prev);
     setPreviewVersion(null);
-    toast.success("Version restored successfully!");
+    toast.success("Version restored!");
   };
 
-  const isBaseCvMode = (cv: CvOutput) => !!cv.tailored_summary || (cv.selected_bullets && typeof cv.selected_bullets === "object" && !Array.isArray(cv.selected_bullets) && Object.keys(cv.selected_bullets).length > 0);
-
-  const getHardSkillsFlat = (cv: CvOutput): string[] => {
-    const hs = cv.selected_hard_skills;
-    if (!hs) return [];
-    if (Array.isArray(hs)) return hs;
-    return Object.values(hs).flat();
-  };
-
-  const buildCvPlainText = () => {
-    if (!cvOutput) return "";
-    const MONTHS_S = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-    const fmtD = (m: number, y: number) => `${MONTHS_S[m - 1] || ""} ${y}`;
-    const lines: string[] = [];
-
-    // Header
-    if (userProfile.full_name) lines.push(userProfile.full_name.toUpperCase());
-    lines.push([userProfile.email, job?.location].filter(Boolean).join(" • "));
-    lines.push("");
-
-    // Summary
-    const summary = cvOutput.tailored_summary || cvOutput.profile_headline;
-    if (summary) {
-      lines.push("SUMMARY");
-      lines.push("─".repeat(50));
-      lines.push(summary);
-      lines.push("");
-    }
-
-    // Professional Experience
-    if (userProfile.work_experiences?.length) {
-      lines.push("PROFESSIONAL EXPERIENCE");
-      lines.push("─".repeat(50));
-      for (const exp of userProfile.work_experiences) {
-        const bullets = isBaseCvMode(cvOutput) && cvOutput.selected_bullets
-          ? (cvOutput.selected_bullets[exp.company_name] || exp.bullet_points || [])
-          : (cvOutput.selected_experiences?.find((se: any) => se.company === exp.company_name)?.selected_bullets || exp.bullet_points || []);
-        lines.push(`${exp.job_title.toUpperCase()}`);
-        lines.push(`${exp.company_name}  |  ${fmtD(exp.start_month, exp.start_year)} – ${exp.is_current ? "Present" : exp.end_month && exp.end_year ? fmtD(exp.end_month, exp.end_year) : ""}${exp.location ? `  |  ${exp.location}` : ""}`);
-        for (const b of bullets) lines.push(`  • ${b}`);
-        lines.push("");
-      }
-    }
-
-    // Volunteering
-    if (userProfile.volunteering?.length) {
-      lines.push("ENTREPRENEURIAL & VOLUNTEER EXPERIENCE");
-      lines.push("─".repeat(50));
-      for (const v of userProfile.volunteering) {
-        lines.push(`${(v.role || v.organization).toUpperCase()}`);
-        if (v.role) lines.push(v.organization);
-        if (v.start_year) lines.push(`${v.start_year} – ${v.is_ongoing ? "Present" : v.end_year || ""}`);
-        if (v.description) lines.push(v.description);
-        lines.push("");
-      }
-    }
-
-    // Education
-    if (userProfile.education?.length) {
-      lines.push("EDUCATION");
-      lines.push("─".repeat(50));
-      for (const edu of userProfile.education) {
-        lines.push(`${edu.institution}  |  ${edu.start_year} – ${edu.is_expected ? "Expected" : edu.end_year || ""}`);
-        lines.push(`${edu.degree} in ${edu.field_of_study}`);
-        if (edu.grade) lines.push(`GPA: ${edu.grade}`);
-        if (edu.activities) lines.push(edu.activities);
-        lines.push("");
-      }
-    }
-
-    // Footer sections
-    if (userProfile.languages?.length) {
-      lines.push("LANGUAGES");
-      for (const l of userProfile.languages) lines.push(`${l.language_name} (${l.proficiency})`);
-      lines.push("");
-    }
-
-    const hardFlat = getHardSkillsFlat(cvOutput);
-    if (hardFlat.length) {
-      lines.push("SOFTWARE & SKILLS");
-      if (isBaseCvMode(cvOutput) && cvOutput.selected_hard_skills && !Array.isArray(cvOutput.selected_hard_skills)) {
-        for (const [cat, skills] of Object.entries(cvOutput.selected_hard_skills)) {
-          lines.push(`${cat}: ${(skills as string[]).join(", ")}`);
-        }
-      } else {
-        lines.push(hardFlat.join(", "));
-      }
-      lines.push("");
-    }
-
-    if (userProfile.interests?.length) {
-      lines.push("PERSONAL INTERESTS");
-      lines.push(userProfile.interests.join(", "));
-      lines.push("");
-    }
-
-    if (userProfile.awards?.length) {
-      lines.push("AWARDS & HONOURS");
-      for (const a of userProfile.awards) lines.push(`${a.award_name}${a.issuing_organization ? ` — ${a.issuing_organization}` : ""}${a.year ? ` (${a.year})` : ""}`);
-      lines.push("");
-    }
-
-    return lines.join("\n");
-  };
-
-  const handleCopyCv = async () => {
-    const text = buildCvPlainText();
+  const copyToClipboard = async (text: string, label: string) => {
     await navigator.clipboard.writeText(text);
-    setCopiedCv(true);
-    setTimeout(() => setCopiedCv(false), 2000);
-    toast.success("CV copied to clipboard");
-  };
-
-  const handleDownloadDocx = async () => {
-    if (!cvOutput) return;
-    const { generateCvDocx } = await import("@/lib/generateCvDocx");
-    await generateCvDocx({
-      fullName: userProfile.full_name || "",
-      email: userProfile.email,
-      location: job?.location || null,
-      summary: cvOutput.tailored_summary || cvOutput.profile_headline || null,
-      workExperiences: userProfile.work_experiences,
-      volunteering: userProfile.volunteering,
-      education: userProfile.education,
-      languages: userProfile.languages,
-      interests: userProfile.interests,
-      awards: userProfile.awards,
-      selectedBullets: isBaseCvMode(cvOutput) ? cvOutput.selected_bullets : null,
-      selectedExperiences: !isBaseCvMode(cvOutput) ? cvOutput.selected_experiences : null,
-      selectedHardSkills: cvOutput.selected_hard_skills,
-      isBaseCvMode: isBaseCvMode(cvOutput),
-      companyName: job?.company_name || "",
-    });
-    toast.success("CV downloaded!");
+    toast.success(`${label} copied to clipboard`);
   };
 
   const handleCopyAll = async () => {
@@ -881,13 +734,13 @@ const JobDetail = () => {
           )}
         </TabsContent>
 
-        {/* CV Tab */}
+        {/* CV Tab — Application Kit */}
         <TabsContent value="cv" className="mt-6 space-y-6">
           {/* Generate / Regenerate button */}
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-semibold text-foreground">AI-Tailored CV</h3>
-              <p className="text-sm text-muted-foreground">Generate a CV tailored to this specific job posting.</p>
+              <h3 className="font-semibold text-foreground">Application Kit</h3>
+              <p className="text-sm text-muted-foreground">AI-tailored components ready to copy into your CV.</p>
               {cvOutput && (
                 <p className="text-xs text-muted-foreground mt-1">
                   Last generated {format(new Date(cvOutput.updated_at), "MMM d, yyyy 'at' h:mm a")}
@@ -915,223 +768,193 @@ const JobDetail = () => {
               <CardContent className="p-8 space-y-6">
                 <div className="text-center space-y-3">
                   <RefreshCw className="h-8 w-8 text-[#950606] animate-spin mx-auto" />
-                  <p className="text-sm font-medium text-foreground">Hiro is tailoring your CV for this role...</p>
-                  <p className="text-xs text-muted-foreground">This usually takes 10–15 seconds. We're selecting the best experiences, rewriting bullets, and optimising your profile.</p>
+                  <p className="text-sm font-medium text-foreground">Building your application kit...</p>
+                  <p className="text-xs text-muted-foreground">This usually takes 10–15 seconds. Hiro is selecting the best bullets, rewriting your summary, and picking skills.</p>
                 </div>
                 <div className="space-y-4">
-                  <Skeleton className="h-8 w-3/4 mx-auto" />
-                  <Skeleton className="h-4 w-1/2 mx-auto" />
-                  <Skeleton className="h-4 w-2/3 mx-auto" />
-                  <div className="space-y-3 pt-4">
-                    {[1,2,3].map(i => (
-                      <div key={i} className="space-y-2">
-                        <Skeleton className="h-5 w-48" />
-                        <Skeleton className="h-3 w-full" />
-                        <Skeleton className="h-3 w-5/6" />
-                        <Skeleton className="h-3 w-4/6" />
-                      </div>
-                    ))}
-                  </div>
+                  {[1,2,3,4].map(i => (
+                    <div key={i} className="space-y-2">
+                      <Skeleton className="h-5 w-48" />
+                      <Skeleton className="h-3 w-full" />
+                      <Skeleton className="h-3 w-5/6" />
+                    </div>
+                  ))}
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Error state */}
+          {!cvLoading && cvError && !cvOutput && (
+            <Card className="border-destructive">
+              <CardContent className="p-6 text-center space-y-3">
+                <p className="text-sm text-destructive font-medium">{cvError}</p>
+                <Button variant="outline" size="sm" onClick={() => { setCvError(null); handleGenerateCv(true); }}>
+                  <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry
+                </Button>
               </CardContent>
             </Card>
           )}
 
           {/* Empty state */}
-          {!cvLoading && !cvOutput && cvFetched && (
+          {!cvLoading && !cvOutput && cvFetched && !cvError && (
             <Card>
               <CardContent className="p-8 text-center">
                 <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground">Click "Generate Tailored CV" to create a CV optimised for this position.</p>
+                <p className="text-muted-foreground">Click "Generate Tailored CV" to create an application kit for this position.</p>
               </CardContent>
             </Card>
           )}
 
-          {/* CV Preview */}
+          {/* Application Kit Cards */}
           {!cvLoading && cvOutput && (
             <>
-              <Card className="shadow-md">
-                <CardContent className="p-0">
-                  <div className="max-w-[750px] mx-auto py-10 px-12" style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}>
-
-                    {/* 1. Header */}
-                    <div className="text-center mb-1">
-                      <h2 className="text-2xl font-bold tracking-wide text-foreground uppercase">{userProfile.full_name || "Your Name"}</h2>
-                      <p className="text-xs text-muted-foreground mt-1.5 tracking-wide">
-                        {[userProfile.email, job?.location].filter(Boolean).join("  •  ")}
-                      </p>
+              {/* Card 1: Professional Summary */}
+              <Card>
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-semibold text-foreground">Professional Summary</h4>
+                      <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-[#950606]/10 text-[#950606]">
+                        Tailored for {job.company_name}
+                      </span>
                     </div>
-
-                    {/* 2. Summary */}
-                    {(cvOutput.tailored_summary || cvOutput.profile_headline) && (
-                      <div className="mt-5">
-                        <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-foreground border-b border-foreground/30 pb-1 mb-2">Summary</h3>
-                        <p className="text-[11px] leading-relaxed text-foreground/90">{cvOutput.tailored_summary || cvOutput.profile_headline}</p>
-                      </div>
-                    )}
-
-                    {/* 3. Professional Experience */}
-                    {(() => {
-                      const MONTHS_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-                      const fmtDate = (m: number, y: number) => `${MONTHS_SHORT[m - 1] || ""} ${y}`;
-                      const exps = userProfile.work_experiences;
-                      if (!exps?.length) return null;
-                      return (
-                        <div className="mt-5">
-                          <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-foreground border-b border-foreground/30 pb-1 mb-3">Professional Experience</h3>
-                          <div className="space-y-4">
-                            {exps.map((exp: any, i: number) => {
-                              const bullets = isBaseCvMode(cvOutput) && cvOutput.selected_bullets
-                                ? (cvOutput.selected_bullets[exp.company_name] || exp.bullet_points || [])
-                                : (cvOutput.selected_experiences?.find((se: any) => se.company === exp.company_name)?.selected_bullets || exp.bullet_points || []);
-                              return (
-                                <div key={i}>
-                                  <div className="flex items-start justify-between">
-                                    <div>
-                                      <p className="text-[11px] font-bold uppercase tracking-wide text-foreground">{exp.job_title}</p>
-                                      <p className="text-[11px] text-foreground/80 italic">{exp.company_name}</p>
-                                    </div>
-                                    <div className="text-right shrink-0 ml-4">
-                                      <p className="text-[10px] text-muted-foreground">{fmtDate(exp.start_month, exp.start_year)} – {exp.is_current ? "Present" : exp.end_month && exp.end_year ? fmtDate(exp.end_month, exp.end_year) : ""}</p>
-                                      {exp.location && <p className="text-[10px] text-muted-foreground">{exp.location}</p>}
-                                    </div>
-                                  </div>
-                                  {bullets.length > 0 && (
-                                    <ul className="mt-1 space-y-0.5 list-disc list-outside ml-4">
-                                      {bullets.map((b: string, j: number) => (
-                                        <li key={j} className="text-[10.5px] leading-snug text-foreground/90">{b}</li>
-                                      ))}
-                                    </ul>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })()}
-
-                    {/* 4. Volunteering / Entrepreneurial */}
-                    {userProfile.volunteering?.length > 0 && (
-                      <div className="mt-5">
-                        <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-foreground border-b border-foreground/30 pb-1 mb-3">Entrepreneurial &amp; Volunteer Experience</h3>
-                        <div className="space-y-3">
-                          {userProfile.volunteering.map((v: any, i: number) => (
-                            <div key={i}>
-                              <div className="flex items-start justify-between">
-                                <div>
-                                  <p className="text-[11px] font-bold uppercase tracking-wide text-foreground">{v.role || v.organization}</p>
-                                  {v.role && <p className="text-[11px] text-foreground/80 italic">{v.organization}</p>}
-                                </div>
-                                <p className="text-[10px] text-muted-foreground shrink-0 ml-4">
-                                  {v.start_year ? `${v.start_year} – ${v.is_ongoing ? "Present" : v.end_year || ""}` : ""}
-                                </p>
-                              </div>
-                              {v.description && <p className="text-[10.5px] text-foreground/90 mt-0.5">{v.description}</p>}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 5. Education */}
-                    {userProfile.education?.length > 0 && (
-                      <div className="mt-5">
-                        <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-foreground border-b border-foreground/30 pb-1 mb-3">Education</h3>
-                        <div className="space-y-3">
-                          {userProfile.education.map((edu: any, i: number) => (
-                            <div key={i}>
-                              <div className="flex items-start justify-between">
-                                <div>
-                                  <p className="text-[11px] font-bold text-foreground">{edu.institution}</p>
-                                  <p className="text-[11px] text-foreground/80">{edu.degree} in {edu.field_of_study}</p>
-                                </div>
-                                <div className="text-right shrink-0 ml-4">
-                                  <p className="text-[10px] text-muted-foreground">{edu.start_year} – {edu.is_expected ? "Expected" : edu.end_year || ""}</p>
-                                </div>
-                              </div>
-                              {edu.grade && <p className="text-[10px] text-muted-foreground">GPA: {edu.grade}</p>}
-                              {edu.activities && <p className="text-[10px] text-foreground/80 mt-0.5">{edu.activities}</p>}
-                              {edu.description && <p className="text-[10px] text-foreground/80 mt-0.5">{edu.description}</p>}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 6. Footer: Languages | Skills | Interests */}
-                    {(userProfile.languages?.length > 0 || getHardSkillsFlat(cvOutput).length > 0 || userProfile.interests?.length > 0) && (
-                      <div className="mt-5 border-t border-foreground/30 pt-3">
-                        <div className="grid grid-cols-3 gap-4">
-                          {userProfile.languages?.length > 0 && (
-                            <div>
-                              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-foreground mb-1">Languages</p>
-                              <div className="space-y-0.5">
-                                {userProfile.languages.map((l: any, i: number) => (
-                                  <p key={i} className="text-[10px] text-foreground/90">{l.language_name} <span className="text-muted-foreground">({l.proficiency})</span></p>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                          {cvOutput.selected_hard_skills && (
-                            <div>
-                              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-foreground mb-1">Software &amp; Skills</p>
-                              {!Array.isArray(cvOutput.selected_hard_skills) ? (
-                                <div className="space-y-1">
-                                  {Object.entries(cvOutput.selected_hard_skills).map(([cat, skills]) => (
-                                    <div key={cat}>
-                                      <p className="text-[9px] font-semibold text-muted-foreground uppercase">{cat}</p>
-                                      <p className="text-[10px] text-foreground/90">{(skills as string[]).join(", ")}</p>
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <p className="text-[10px] text-foreground/90">{(cvOutput.selected_hard_skills as string[]).join(", ")}</p>
-                              )}
-                            </div>
-                          )}
-                          {userProfile.interests?.length > 0 && (
-                            <div>
-                              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-foreground mb-1">Personal Interests</p>
-                              <p className="text-[10px] text-foreground/90">{userProfile.interests.join(", ")}</p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Awards */}
-                    {userProfile.awards?.length > 0 && (
-                      <div className="mt-4">
-                        <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-foreground border-b border-foreground/30 pb-1 mb-2">Awards &amp; Honours</h3>
-                        <div className="space-y-0.5">
-                          {userProfile.awards.map((a: any, i: number) => (
-                            <p key={i} className="text-[10.5px] text-foreground/90">
-                              {a.award_name}{a.issuing_organization ? ` — ${a.issuing_organization}` : ""}{a.year ? ` (${a.year})` : ""}
-                            </p>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => {
+                      const el = document.getElementById("summary-editable");
+                      if (el) copyToClipboard(el.innerText, "Summary");
+                    }}>
+                      <Copy className="h-3 w-3" /> Copy
+                    </Button>
+                  </div>
+                  <div
+                    id="summary-editable"
+                    contentEditable
+                    suppressContentEditableWarning
+                    className="text-sm text-foreground leading-relaxed outline-none focus:ring-1 focus:ring-ring rounded p-2 -m-2"
+                  >
+                    {cvOutput.tailored_summary}
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Tailoring Notes */}
-              {cvOutput.tailoring_notes?.length > 0 && (
-                <Card className="bg-amber-50 border-amber-200">
+              {/* Card 2: Experience Bullet Points */}
+              {Array.isArray(cvOutput.selected_bullets) && cvOutput.selected_bullets.length > 0 && (
+                <Card>
                   <CardContent className="p-5">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Lightbulb className="h-4 w-4 text-amber-600" />
-                      <h4 className="font-semibold text-sm text-amber-900">Why Hiro tailored it this way</h4>
-                    </div>
-                    <ul className="space-y-1.5 list-disc list-outside ml-5">
-                      {cvOutput.tailoring_notes.map((note, i) => (
-                        <li key={i} className="text-sm text-amber-800">{note}</li>
+                    <h4 className="font-semibold text-foreground mb-4">Selected Bullet Points</h4>
+                    <div className="space-y-5">
+                      {(cvOutput.selected_bullets as { company: string; job_title: string; bullets: string[] }[]).map((block, i) => (
+                        <div key={i}>
+                          <div className="flex items-center justify-between mb-2">
+                            <div>
+                              <p className="font-semibold text-sm text-foreground">{block.company}</p>
+                              <p className="text-xs text-muted-foreground">{block.job_title}</p>
+                            </div>
+                            <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => {
+                              const container = document.getElementById(`bullets-${i}`);
+                              if (container) copyToClipboard(container.innerText, `${block.company} bullets`);
+                            }}>
+                              <Copy className="h-3 w-3" /> Copy
+                            </Button>
+                          </div>
+                          <ul id={`bullets-${i}`} className="space-y-1.5 ml-4 list-disc list-outside">
+                            {block.bullets.map((b, j) => (
+                              <li key={j} className="text-sm text-foreground">
+                                <span
+                                  contentEditable
+                                  suppressContentEditableWarning
+                                  className="outline-none focus:ring-1 focus:ring-ring rounded px-0.5"
+                                >
+                                  {b}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                   </CardContent>
                 </Card>
+              )}
+
+              {/* Card 3: Hard Skills */}
+              {cvOutput.selected_hard_skills && Object.keys(cvOutput.selected_hard_skills).length > 0 && (
+                <Card>
+                  <CardContent className="p-5">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-semibold text-foreground">Hard Skills</h4>
+                      <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => {
+                        const lines = Object.entries(cvOutput.selected_hard_skills!).map(
+                          ([cat, skills]) => `${cat}: ${(skills as string[]).join(", ")}`
+                        );
+                        copyToClipboard(lines.join("\n"), "Hard skills");
+                      }}>
+                        <Copy className="h-3 w-3" /> Copy all
+                      </Button>
+                    </div>
+                    <div className="space-y-3">
+                      {Object.entries(cvOutput.selected_hard_skills).map(([category, skills]) => (
+                        <div key={category}>
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5">{category}</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {(skills as string[]).map((skill, i) => (
+                              <span key={i} className="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground">
+                                {skill}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Card 4: Soft Skills */}
+              {cvOutput.selected_soft_skills?.length > 0 && (
+                <Card>
+                  <CardContent className="p-5">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-semibold text-foreground">Soft Skills</h4>
+                      <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => {
+                        copyToClipboard(cvOutput.selected_soft_skills.join(", "), "Soft skills");
+                      }}>
+                        <Copy className="h-3 w-3" /> Copy all
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {cvOutput.selected_soft_skills.map((skill, i) => (
+                        <span key={i} className="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground">
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Tailoring Notes */}
+              {cvOutput.tailoring_notes?.length > 0 && (
+                <Collapsible>
+                  <CollapsibleTrigger asChild>
+                    <button className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                      <Lightbulb className="h-4 w-4" />
+                      Why Hiro chose these
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-3">
+                    <Card className="bg-amber-50 border-amber-200">
+                      <CardContent className="p-5">
+                        <ul className="space-y-1.5 list-disc list-outside ml-5">
+                          {cvOutput.tailoring_notes.map((note, i) => (
+                            <li key={i} className="text-sm text-amber-800">{note}</li>
+                          ))}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  </CollapsibleContent>
+                </Collapsible>
               )}
 
               {/* Version History */}
@@ -1167,17 +990,6 @@ const JobDetail = () => {
                   </CollapsibleContent>
                 </Collapsible>
               )}
-
-              {/* Action Buttons */}
-              <div className="flex gap-3 justify-end">
-                <Button variant="outline" size="sm" className="gap-1.5" onClick={handleCopyCv}>
-                  {copiedCv ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                  {copiedCv ? "Copied!" : "Copy all text"}
-                </Button>
-                <Button size="sm" className="gap-1.5 bg-[#950606] hover:bg-[#7a0505] text-white" onClick={handleDownloadDocx}>
-                  <Download className="h-3.5 w-3.5" /> Download .docx
-                </Button>
-              </div>
             </>
           )}
 
@@ -1199,41 +1011,34 @@ const JobDetail = () => {
           <Dialog open={!!previewVersion} onOpenChange={(open) => !open && setPreviewVersion(null)}>
             <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>CV Version — {previewVersion && format(new Date(previewVersion.created_at), "MMM d, yyyy 'at' h:mm a")}</DialogTitle>
-                <DialogDescription>Preview of a previous CV version.</DialogDescription>
+                <DialogTitle>Version — {previewVersion && format(new Date(previewVersion.created_at), "MMM d, yyyy 'at' h:mm a")}</DialogTitle>
+                <DialogDescription>Preview of a previous version.</DialogDescription>
               </DialogHeader>
               {previewVersion?.snapshot && (
                 <div className="space-y-4 text-sm">
-                  {previewVersion.snapshot.profile_headline && (
-                    <p className="italic text-muted-foreground">{previewVersion.snapshot.profile_headline}</p>
-                  )}
-                  {previewVersion.snapshot.selected_experiences?.length > 0 && (
+                  {previewVersion.snapshot.tailored_summary && (
                     <div>
-                      <h4 className="font-bold text-xs uppercase tracking-widest border-b pb-1 mb-2">Experience</h4>
-                      {previewVersion.snapshot.selected_experiences.map((exp: any, i: number) => (
+                      <h4 className="font-bold text-xs uppercase tracking-widest border-b pb-1 mb-2">Summary</h4>
+                      <p>{previewVersion.snapshot.tailored_summary}</p>
+                    </div>
+                  )}
+                  {Array.isArray(previewVersion.snapshot.selected_bullets) && previewVersion.snapshot.selected_bullets.length > 0 && (
+                    <div>
+                      <h4 className="font-bold text-xs uppercase tracking-widest border-b pb-1 mb-2">Bullets</h4>
+                      {previewVersion.snapshot.selected_bullets.map((block: any, i: number) => (
                         <div key={i} className="mb-3">
-                          <p className="font-semibold">{exp.company} — {exp.job_title}</p>
-                          <p className="text-xs text-muted-foreground">{exp.start_date} – {exp.end_date}{exp.location ? ` | ${exp.location}` : ""}</p>
+                          <p className="font-semibold">{block.company} — {block.job_title}</p>
                           <ul className="list-disc list-outside ml-4 mt-1 space-y-0.5">
-                            {(exp.selected_bullets || []).map((b: string, j: number) => <li key={j}>{b}</li>)}
+                            {(block.bullets || []).map((b: string, j: number) => <li key={j}>{b}</li>)}
                           </ul>
                         </div>
                       ))}
                     </div>
                   )}
-                  {(previewVersion.snapshot.selected_hard_skills?.length > 0 || previewVersion.snapshot.selected_soft_skills?.length > 0) && (
+                  {previewVersion.snapshot.selected_soft_skills?.length > 0 && (
                     <div>
-                      <h4 className="font-bold text-xs uppercase tracking-widest border-b pb-1 mb-2">Skills</h4>
-                      {previewVersion.snapshot.selected_hard_skills?.length > 0 && <p>Hard: {previewVersion.snapshot.selected_hard_skills.join(", ")}</p>}
-                      {previewVersion.snapshot.selected_soft_skills?.length > 0 && <p>Soft: {previewVersion.snapshot.selected_soft_skills.join(", ")}</p>}
-                    </div>
-                  )}
-                  {previewVersion.snapshot.selected_education?.length > 0 && (
-                    <div>
-                      <h4 className="font-bold text-xs uppercase tracking-widest border-b pb-1 mb-2">Education</h4>
-                      {previewVersion.snapshot.selected_education.map((edu: any, i: number) => (
-                        <p key={i}><strong>{edu.institution}</strong> — {edu.degree}, {edu.field}</p>
-                      ))}
+                      <h4 className="font-bold text-xs uppercase tracking-widest border-b pb-1 mb-2">Soft Skills</h4>
+                      <p>{previewVersion.snapshot.selected_soft_skills.join(", ")}</p>
                     </div>
                   )}
                 </div>

@@ -149,7 +149,7 @@ export type Database = {
           selected_bullets: Json | null
           selected_education: Json | null
           selected_experiences: Json | null
-          selected_hard_skills: string[] | null
+          selected_hard_skills: Json | null
           selected_languages: Json | null
           selected_soft_skills: string[] | null
           selected_volunteering: Json | null
@@ -167,7 +167,7 @@ export type Database = {
           selected_bullets?: Json | null
           selected_education?: Json | null
           selected_experiences?: Json | null
-          selected_hard_skills?: string[] | null
+          selected_hard_skills?: Json | null
           selected_languages?: Json | null
           selected_soft_skills?: string[] | null
           selected_volunteering?: Json | null
@@ -185,7 +185,7 @@ export type Database = {
           selected_bullets?: Json | null
           selected_education?: Json | null
           selected_experiences?: Json | null
-          selected_hard_skills?: string[] | null
+          selected_hard_skills?: Json | null
           selected_languages?: Json | null
           selected_soft_skills?: string[] | null
           selected_volunteering?: Json | null
