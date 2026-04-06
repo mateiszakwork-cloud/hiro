@@ -7,8 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
-const START_YEARS = Array.from({ length: 37 }, (_, i) => 1990 + i);
-const END_YEARS = Array.from({ length: 37 }, (_, i) => 1990 + i);
+const START_YEARS = Array.from({ length: 37 }, (_, i) => 2026 - i);
+const END_YEARS = Array.from({ length: 37 }, (_, i) => 2026 - i);
 
 interface EduBlock {
   institution: string; degree: string; fieldOfStudy: string;
