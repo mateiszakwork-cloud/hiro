@@ -40,7 +40,6 @@ serve(async (req) => {
       });
     }
 
-    // Fetch all data in parallel
     const [profileRes, jobRes, workRes, skillsRes] = await Promise.all([
       supabase.from("profiles").select("base_cv_text, full_name, email").eq("id", userId).single(),
       supabase.from("jobs").select("*").eq("id", job_id).eq("user_id", userId).single(),
@@ -106,7 +105,10 @@ serve(async (req) => {
 - selected_bullets: array of objects, each with:
   - company: string (exact company name)
   - job_title: string
-  - bullets: array of 2-4 strings (the most relevant bullet points for this job, chosen from the candidate's actual experience. Lightly rephrase only if it meaningfully improves relevance. Never invent.)
+  - bullets: array of objects, each with:
+    - original: string (exact text from the candidate's profile, completely unchanged)
+    - tailored: string (a lightly edited version that mirrors the language of the job description. Rules for tailoring: maximum 20% change, never alter numbers or percentages, never change the core action verb unless it meaningfully improves relevance, never invent new information, preserve the candidate's concise metric-driven tone. If a bullet is already well-suited to the role, return the same text for both original and tailored.)
+    - use_tailored: boolean (default true)
 
 - selected_hard_skills: object where keys are skill categories (preserve the candidate's existing categories exactly, e.g. "Data and Analytics", "Revenue Ops and CRM", "AI and Automation", "Design and Visual") and values are arrays of the most relevant skills from each category for this role. Remove irrelevant skills. Keep relevant ones exactly as written.
 
@@ -170,10 +172,8 @@ Rules:
       selected_bullets: parsed.selected_bullets || [],
       selected_hard_skills: parsed.selected_hard_skills || {},
       selected_soft_skills: parsed.selected_soft_skills || [],
-      selected_soft_skills: parsed.selected_soft_skills || [],
       tailoring_notes: parsed.tailoring_notes || [],
       updated_at: new Date().toISOString(),
-      // Clear legacy fields
       profile_headline: null,
       selected_experiences: [],
       selected_education: [],
