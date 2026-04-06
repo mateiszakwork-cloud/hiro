@@ -76,17 +76,18 @@ serve(async (req) => {
         return fail("upload", "Could not read the uploaded file. Please try again.");
       }
 
-      // ── Step C: Extract text using pdf-parse ──
+      // ── Step C: Extract text using unpdf ──
       try {
-        console.log("Step C: Extracting text with pdf-parse");
-        const pdfData = await pdf(pdfBytes);
-        cvText = pdfData.text || "";
+        console.log("Step C: Extracting text with unpdf");
+        const pdfDoc = await getDocumentProxy(pdfBytes);
+        const { text: extractedText } = await extractText(pdfDoc, { mergePages: true });
+        cvText = typeof extractedText === "string" ? extractedText : (extractedText as string[]).join("\n");
         if (!cvText.trim() || cvText.trim().length < 100) {
           return fail("extraction", "Could not extract text from your PDF. Please try copy-pasting your CV as text instead.");
         }
         console.log("Step C done: extracted", cvText.length, "chars");
       } catch (e) {
-        console.error("pdf-parse error:", e);
+        console.error("unpdf error:", e);
         return fail("extraction", "Could not extract text from your PDF. Please try copy-pasting your CV as text instead.");
       }
     }
