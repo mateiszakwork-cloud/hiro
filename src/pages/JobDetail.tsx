@@ -991,10 +991,31 @@ const JobDetail = () => {
                     )}
                   </div>
 
-                  {/* Experience */}
-                  {cvOutput.selected_experiences?.length > 0 && (
+                  {/* Experience - Base CV mode */}
+                  {isBaseCvMode(cvOutput) && cvOutput.selected_bullets && Object.keys(cvOutput.selected_bullets).length > 0 && (
                     <div className="mb-6">
-                      <h3 className="text-xs font-bold uppercase tracking-widest text-foreground border-b-2 border-[#950606] pb-1 mb-3">Experience</h3>
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-foreground border-b-2 border-primary pb-1 mb-3">Experience</h3>
+                      <div className="space-y-4">
+                        {Object.entries(cvOutput.selected_bullets).map(([company, bullets], i) => (
+                          <div key={i}>
+                            <span className="font-semibold text-sm text-foreground">{company}</span>
+                            {(bullets as string[]).length > 0 && (
+                              <ul className="mt-1.5 space-y-1 list-disc list-outside ml-4">
+                                {(bullets as string[]).map((b, j) => (
+                                  <li key={j} className="text-sm text-foreground">{b}</li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Experience - Legacy mode */}
+                  {!isBaseCvMode(cvOutput) && cvOutput.selected_experiences?.length > 0 && (
+                    <div className="mb-6">
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-foreground border-b-2 border-primary pb-1 mb-3">Experience</h3>
                       <div className="space-y-4">
                         {cvOutput.selected_experiences.map((exp: any, i: number) => (
                           <div key={i}>
@@ -1020,7 +1041,7 @@ const JobDetail = () => {
                         ))}
                       </div>
                     </div>
-                  )}
+                  )
 
                   {/* Education */}
                   {cvOutput.selected_education?.length > 0 && (
