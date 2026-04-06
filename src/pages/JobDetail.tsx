@@ -358,6 +358,7 @@ const JobDetail = () => {
       });
       setMasterHardSkills((skillsRes.data as any)?.hard_skills || []);
       setMasterSoftSkills((skillsRes.data as any)?.soft_skills || []);
+      setJobLoading(false);
     };
     init();
   }, [jobId, navigate]);
