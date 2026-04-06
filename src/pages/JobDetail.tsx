@@ -242,7 +242,6 @@ const JobDetail = () => {
     work_experiences: any[]; education: any[]; languages: any[];
     interests: string[]; awards: any[]; volunteering: any[];
   }>({ full_name: null, email: null, work_experiences: [], education: [], languages: [], interests: [], awards: [], volunteering: [] });
-  const [copiedCv, setCopiedCv] = useState(false);
   const [cvHistory, setCvHistory] = useState<any[]>([]);
   const [regenConfirmOpen, setRegenConfirmOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
