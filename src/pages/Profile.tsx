@@ -342,7 +342,47 @@ const Profile = () => {
         </div>
       </div>
 
-      {/* ─── Work Experience ─── */}
+      {/* ─── Base CV ─── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg text-primary flex items-center gap-2"><FileText className="h-5 w-5" /> Your Base CV</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <input ref={baseCvInputRef} type="file" accept="application/pdf" onChange={handleBaseCvUpload} className="hidden" />
+          {baseCvText ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-foreground">CV uploaded</p>
+                  {baseCvUploadedAt && <p className="text-xs text-muted-foreground">Uploaded on {format(new Date(baseCvUploadedAt), "d MMMM yyyy, HH:mm")}</p>}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setShowExtractedText(!showExtractedText)}>
+                    {showExtractedText ? <><EyeOff className="h-3.5 w-3.5" /> Hide text</> : <><Eye className="h-3.5 w-3.5" /> View extracted text</>}
+                  </Button>
+                  <Button variant="outline" size="sm" className="gap-1.5" onClick={() => baseCvInputRef.current?.click()} disabled={baseCvUploading}>
+                    {baseCvUploading ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Extracting...</> : <><RotateCcw className="h-3.5 w-3.5" /> Replace CV</>}
+                  </Button>
+                </div>
+              </div>
+              {showExtractedText && (
+                <div className="rounded-lg border border-border bg-muted/30 p-4 max-h-[400px] overflow-y-auto">
+                  <pre className="text-xs text-foreground whitespace-pre-wrap font-mono">{baseCvText}</pre>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <FileText className="h-10 w-10 text-muted-foreground/50 mb-3" />
+              <p className="text-sm text-muted-foreground mb-4 max-w-md">Upload your CV once. Hiro will use it as the base template for every tailored application.</p>
+              <Button variant="default" className="gap-1.5 bg-primary hover:bg-primary/90" onClick={() => baseCvInputRef.current?.click()} disabled={baseCvUploading}>
+                {baseCvUploading ? <><Loader2 className="h-4 w-4 animate-spin" /> Extracting text...</> : <><Upload className="h-4 w-4" /> Upload Base CV (PDF)</>}
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <Card>
         {sectionHeader("Work Experience", "work")}
         <CardContent>
