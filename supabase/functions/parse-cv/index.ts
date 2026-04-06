@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { extractText, getDocumentProxy } from "npm:unpdf";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -40,83 +41,60 @@ serve(async (req) => {
       return fail("auth", "Session expired. Please log in again.");
     }
 
-    // ── Step B: Read PDF ──
-    let pdfBytes: Uint8Array;
-    try {
-      const formData = await req.formData();
-      const file = formData.get("file");
-      if (!file || !(file instanceof File)) {
-        return fail("upload", "No PDF file provided.");
+    // ── Determine input mode: PDF file or raw text ──
+    let cvText: string;
+    const contentType = req.headers.get("content-type") || "";
+
+    if (contentType.includes("application/json")) {
+      // ── Text paste mode: skip Steps B & C ──
+      try {
+        const body = await req.json();
+        cvText = (body.text || "").trim();
+        if (!cvText || cvText.length < 50) {
+          return fail("upload", "The pasted text is too short. Please paste your full CV.");
+        }
+        console.log("Text paste mode: received", cvText.length, "chars");
+      } catch (e) {
+        console.error("JSON body read error:", e);
+        return fail("upload", "Could not read the pasted text. Please try again.");
       }
-      if (file.size > 10 * 1024 * 1024) {
-        return fail("upload", "File too large. Please use a CV under 10MB.");
+    } else {
+      // ── Step B: Read PDF file ──
+      let pdfBytes: Uint8Array;
+      try {
+        const formData = await req.formData();
+        const file = formData.get("file");
+        if (!file || !(file instanceof File)) {
+          return fail("upload", "No PDF file provided.");
+        }
+        if (file.size > 10 * 1024 * 1024) {
+          return fail("upload", "File too large. Please use a CV under 10MB.");
+        }
+        pdfBytes = new Uint8Array(await file.arrayBuffer());
+      } catch (e) {
+        console.error("Upload read error:", e);
+        return fail("upload", "Could not read the uploaded file. Please try again.");
       }
-      pdfBytes = new Uint8Array(await file.arrayBuffer());
-    } catch (e) {
-      console.error("Upload read error:", e);
-      return fail("upload", "Could not read the uploaded file. Please try again.");
+
+      // ── Step C: Extract text using unpdf ──
+      try {
+        console.log("Step C: Extracting text with unpdf");
+        const pdfDoc = await getDocumentProxy(pdfBytes);
+        const { text: extractedText } = await extractText(pdfDoc, { mergePages: true });
+        cvText = typeof extractedText === "string" ? extractedText : (extractedText as string[]).join("\n");
+        if (!cvText.trim() || cvText.trim().length < 100) {
+          return fail("extraction", "Could not extract text from your PDF. Please try copy-pasting your CV as text instead.");
+        }
+        console.log("Step C done: extracted", cvText.length, "chars");
+      } catch (e) {
+        console.error("unpdf error:", e);
+        return fail("extraction", "Could not extract text from your PDF. Please try copy-pasting your CV as text instead.");
+      }
     }
 
-    // Convert to base64 in chunks to avoid stack overflow
-    let binary = "";
-    const chunkSize = 8192;
-    for (let i = 0; i < pdfBytes.length; i += chunkSize) {
-      const chunk = pdfBytes.subarray(i, i + chunkSize);
-      binary += String.fromCharCode(...chunk);
-    }
-    const base64 = btoa(binary);
-
-    // ── Step C: Extract text via OpenAI Vision ──
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     if (!OPENAI_API_KEY) {
-      return fail("extraction", "AI text extraction is not configured on the server.");
-    }
-
-    let cvText: string;
-    try {
-      console.log("Step C: Sending PDF to OpenAI for text extraction");
-      const extractRes = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [
-            {
-              role: "user",
-              content: [
-                {
-                  type: "image_url",
-                  image_url: { url: `data:application/pdf;base64,${base64}` },
-                },
-                {
-                  type: "text",
-                  text: "Extract all text from this CV PDF and return it as plain text only. Preserve all content including names, dates, bullet points, and section headings. Return nothing except the extracted text.",
-                },
-              ],
-            },
-          ],
-          max_tokens: 4096,
-        }),
-      });
-
-      if (!extractRes.ok) {
-        const errBody = await extractRes.text();
-        console.error("OpenAI extraction error:", extractRes.status, errBody);
-        return fail("extraction", "Could not read your PDF. Make sure it is a text-based PDF.");
-      }
-
-      const extractData = await extractRes.json();
-      cvText = extractData.choices?.[0]?.message?.content || "";
-      if (!cvText.trim()) {
-        return fail("extraction", "No text could be extracted from your PDF. Please try a different file.");
-      }
-      console.log("Step C done: extracted", cvText.length, "chars");
-    } catch (e) {
-      console.error("Extraction error:", e);
-      return fail("extraction", "Could not read your PDF. Please try again.");
+      return fail("parsing", "AI parsing is not configured on the server.");
     }
 
     // ── Step D: Parse extracted text into structured data ──
