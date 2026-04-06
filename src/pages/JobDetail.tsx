@@ -384,6 +384,16 @@ const JobDetail = () => {
         .order("created_at", { ascending: false });
       if (histData) setCvHistory(histData);
 
+      // Fetch interview prep
+      const { data: prepData } = await supabase
+        .from("interview_prep")
+        .select("*")
+        .eq("job_id", jobId!)
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+      if (prepData) setInterviewPrep(prepData);
+      setInterviewFetched(true);
+
       const uid = session.user.id;
       const [profileRes, workRes, eduRes, langRes, interestsRes, awardsRes, volRes, skillsRes] = await Promise.all([
         supabase.from("profiles").select("full_name, email").eq("id", uid).single(),
