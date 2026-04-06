@@ -12,25 +12,52 @@ serve(async (req) => {
 
   try {
     const authHeader = req.headers.get("Authorization");
+    console.log(`[generate-interview-prep] Authorization header received: ${!!authHeader}`);
+
     if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
+      console.log("[generate-interview-prep] No Bearer token found, rejecting");
+      return new Response(JSON.stringify({ success: false, error: "Authentication failed. Please refresh the page and try again." }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
+    const token = authHeader.replace("Bearer ", "");
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      return new Response(JSON.stringify({ success: false, error: "Session expired. Please log in again." }), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // Use getClaims for reliable token validation (same pattern as tailor-cv)
+    let userId: string;
+    try {
+      const { data: claimsData, error: claimsError } = await (supabase.auth as any).getClaims(token);
+      if (claimsError || !claimsData?.claims?.sub) {
+        // Fallback: try getUser
+        console.log("[generate-interview-prep] getClaims failed, trying getUser fallback");
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user) {
+          console.log("[generate-interview-prep] Both auth methods failed");
+          return new Response(JSON.stringify({ success: false, error: "Authentication failed. Please refresh the page and try again." }), {
+            status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        userId = user.id;
+      } else {
+        userId = claimsData.claims.sub;
+      }
+    } catch {
+      // Fallback: try getUser
+      console.log("[generate-interview-prep] getClaims threw, trying getUser fallback");
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        return new Response(JSON.stringify({ success: false, error: "Authentication failed. Please refresh the page and try again." }), {
+          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      userId = user.id;
     }
-    const userId = user.id;
+    console.log(`[generate-interview-prep] Authenticated user: ${userId}`);
 
     const { job_id } = await req.json();
     if (!job_id) {
