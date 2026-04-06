@@ -21,16 +21,10 @@ import { cn } from "@/lib/utils";
 
 type CvOutput = {
   id: string;
-  profile_headline: string | null;
   tailored_summary: string | null;
-  selected_experiences: any[];
-  selected_bullets: Record<string, string[]> | null;
-  selected_hard_skills: string[] | Record<string, string[]> | null;
+  selected_bullets: { company: string; job_title: string; bullets: string[] }[] | null;
+  selected_hard_skills: Record<string, string[]> | null;
   selected_soft_skills: string[];
-  selected_education: any[];
-  selected_languages: any[];
-  selected_awards: any[];
-  selected_volunteering: any[];
   tailoring_notes: string[];
   created_at: string;
   updated_at: string;
