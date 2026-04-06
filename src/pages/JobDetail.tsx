@@ -236,6 +236,7 @@ const JobDetail = () => {
   const [cvOutput, setCvOutput] = useState<CvOutput | null>(null);
   const [cvLoading, setCvLoading] = useState(false);
   const [cvFetched, setCvFetched] = useState(false);
+  const [cvError, setCvError] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<{
     full_name: string | null; email: string | null;
     work_experiences: any[]; education: any[]; languages: any[];
