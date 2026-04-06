@@ -1044,23 +1044,34 @@ const JobDetail = () => {
                   )}
 
                   {/* Skills */}
-                  {(cvOutput.selected_hard_skills?.length > 0 || cvOutput.selected_soft_skills?.length > 0) && (
+                  {(getHardSkillsFlat(cvOutput).length > 0 || cvOutput.selected_soft_skills?.length > 0) && (
                     <div className="mb-6">
-                      <h3 className="text-xs font-bold uppercase tracking-widest text-foreground border-b-2 border-[#950606] pb-1 mb-3">Skills</h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {cvOutput.selected_hard_skills?.length > 0 && (
-                          <div>
-                            <p className="text-xs font-medium text-muted-foreground mb-1">Hard Skills</p>
-                            <p className="text-sm text-foreground">{cvOutput.selected_hard_skills.join(", ")}</p>
-                          </div>
-                        )}
-                        {cvOutput.selected_soft_skills?.length > 0 && (
-                          <div>
-                            <p className="text-xs font-medium text-muted-foreground mb-1">Soft Skills</p>
-                            <p className="text-sm text-foreground">{cvOutput.selected_soft_skills.join(", ")}</p>
-                          </div>
-                        )}
-                      </div>
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-foreground border-b-2 border-primary pb-1 mb-3">Skills</h3>
+                      {isBaseCvMode(cvOutput) && cvOutput.selected_hard_skills && !Array.isArray(cvOutput.selected_hard_skills) ? (
+                        <div className="space-y-2">
+                          {Object.entries(cvOutput.selected_hard_skills).map(([cat, skills]) => (
+                            <div key={cat}>
+                              <p className="text-xs font-medium text-muted-foreground mb-0.5">{cat}</p>
+                              <p className="text-sm text-foreground">{(skills as string[]).join(", ")}</p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {getHardSkillsFlat(cvOutput).length > 0 && (
+                            <div>
+                              <p className="text-xs font-medium text-muted-foreground mb-1">Hard Skills</p>
+                              <p className="text-sm text-foreground">{getHardSkillsFlat(cvOutput).join(", ")}</p>
+                            </div>
+                          )}
+                          {cvOutput.selected_soft_skills?.length > 0 && (
+                            <div>
+                              <p className="text-xs font-medium text-muted-foreground mb-1">Soft Skills</p>
+                              <p className="text-sm text-foreground">{cvOutput.selected_soft_skills.join(", ")}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
 
