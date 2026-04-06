@@ -69,35 +69,14 @@ const Welcome = () => {
     setErrorMessage("");
 
     try {
-      // Re-fetch session right before upload to guarantee freshness
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        setErrorMessage("Your session expired. Please log in again.");
-        setParseError(true);
-        setUploading(false);
-        return;
-      }
-
-      const uid = session.user.id;
-      const filePath = `${uid}/cv-${Date.now()}.pdf`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("cv-uploads")
-        .upload(filePath, file);
-
-      if (uploadError) {
-        console.error("Upload error:", uploadError);
-        setErrorMessage(`Failed to upload file: ${uploadError.message}`);
-        setParseError(true);
-        setUploading(false);
-        return;
-      }
+      // Send PDF directly as multipart form data to the edge function
+      const formData = new FormData();
+      formData.append("file", file);
 
       const { data, error: fnError } = await supabase.functions.invoke("parse-cv", {
-        body: { filePath },
+        body: formData,
       });
 
-      // supabase.functions.invoke returns errors in data when status >= 400
       if (fnError) {
         console.error("Parse error:", fnError);
         setErrorMessage(fnError.message || "Failed to parse your CV.");
@@ -106,18 +85,10 @@ const Welcome = () => {
         return;
       }
 
-      // Check if the response itself contains an error (edge function returned non-2xx)
-      if (data?.error) {
-        console.error("Parse-cv returned error:", data.error, "step:", data.step);
-        const stepMessages: Record<string, string> = {
-          auth: "Your session expired. Please log in again.",
-          storage_download: "Could not upload your file. Please try again.",
-          text_extraction: "Could not read your PDF. Make sure it is a text-based PDF, not a scanned image.",
-          ai_parsing: "Could not parse your CV content. Please try again or build your profile manually.",
-          ai_config: "Could not parse your CV content. Please try again or build your profile manually.",
-          database_save: "CV was read but could not be saved. Please try again.",
-        };
-        setErrorMessage(stepMessages[data.step] || data.error);
+      // The function always returns 200; check success flag
+      if (data?.success === false) {
+        console.error("Parse-cv failed:", data.step, data.message);
+        setErrorMessage(data.message || "Failed to parse your CV.");
         setParseError(true);
         setUploading(false);
         return;
