@@ -599,7 +599,7 @@ const JobTracker = () => {
                         ) : <span className="text-muted-foreground">–</span>}
                       </td>
                       {/* Kit column */}
-                      <td className="px-4 py-3" onClick={(e) => handleKitClick(e, job)}>
+                      <td className="px-4 py-3" onClick={(e) => { e.stopPropagation(); handleKitClick(e, job); }}>
                         <TooltipProvider delayDuration={200}>
                           <Tooltip>
                             <TooltipTrigger asChild>
