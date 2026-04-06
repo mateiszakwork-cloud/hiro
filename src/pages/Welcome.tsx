@@ -43,16 +43,22 @@ const Welcome = () => {
     );
   }
 
+  const [errorMessage, setErrorMessage] = useState("");
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // File type check
     if (file.type !== "application/pdf") {
+      setErrorMessage("Please upload a PDF version of your CV.");
       setParseError(true);
       return;
     }
 
+    // File size check
     if (file.size > 10 * 1024 * 1024) {
+      setErrorMessage("Your CV is too large. Please use a version under 10MB.");
       setParseError(true);
       return;
     }
@@ -61,11 +67,13 @@ const Welcome = () => {
     setParsed(null);
     setSummary("");
     setParseError(false);
+    setErrorMessage("");
 
     try {
       // Re-fetch session right before upload to guarantee freshness
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
+        setErrorMessage("Your session expired. Please log in again.");
         setParseError(true);
         setUploading(false);
         return;
@@ -80,6 +88,7 @@ const Welcome = () => {
 
       if (uploadError) {
         console.error("Upload error:", uploadError);
+        setErrorMessage(`Failed to upload file: ${uploadError.message}`);
         setParseError(true);
         setUploading(false);
         return;
@@ -89,8 +98,19 @@ const Welcome = () => {
         body: { filePath },
       });
 
+      // supabase.functions.invoke returns errors in data when status >= 400
       if (fnError) {
         console.error("Parse error:", fnError);
+        setErrorMessage(fnError.message || "Failed to parse your CV.");
+        setParseError(true);
+        setUploading(false);
+        return;
+      }
+
+      // Check if the response itself contains an error (edge function returned non-2xx)
+      if (data?.error) {
+        console.error("Parse-cv returned error:", data.error, "step:", data.step);
+        setErrorMessage(data.error);
         setParseError(true);
         setUploading(false);
         return;
@@ -104,6 +124,7 @@ const Welcome = () => {
       setSummary(`We found ${expCount} experience${expCount !== 1 ? "s" : ""} and ${skillCount} skill${skillCount !== 1 ? "s" : ""}. Review and edit below.`);
     } catch (err) {
       console.error("CV upload error:", err);
+      setErrorMessage(err instanceof Error ? err.message : "An unexpected error occurred.");
       setParseError(true);
     } finally {
       setUploading(false);
