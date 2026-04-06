@@ -11,9 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, ExternalLink, MapPin, Copy, Check, Trash2, ChevronDown, ChevronUp, FileText, CheckCircle2, XCircle, CalendarIcon, RefreshCw, Lightbulb, History, RotateCcw, Pencil, X as XIcon } from "lucide-react";
+import { ArrowLeft, ExternalLink, MapPin, Copy, Check, Trash2, ChevronDown, ChevronUp, FileText, CheckCircle2, XCircle, CalendarIcon, RefreshCw, Lightbulb, History, RotateCcw, Pencil, X as XIcon, AlertTriangle, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { toast } from "sonner";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -314,6 +315,11 @@ const JobDetail = () => {
   // Skill add animation
   const [recentlyAdded, setRecentlyAdded] = useState<Set<string>>(new Set());
 
+  // Interview prep state
+  const [interviewPrep, setInterviewPrep] = useState<any | null>(null);
+  const [interviewLoading, setInterviewLoading] = useState(false);
+  const [interviewFetched, setInterviewFetched] = useState(false);
+
   useEffect(() => {
     const init = async () => {
       setJobLoading(true);
@@ -377,6 +383,16 @@ const JobDetail = () => {
         .eq("user_id", session.user.id)
         .order("created_at", { ascending: false });
       if (histData) setCvHistory(histData);
+
+      // Fetch interview prep
+      const { data: prepData } = await supabase
+        .from("interview_prep")
+        .select("*")
+        .eq("job_id", jobId!)
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+      if (prepData) setInterviewPrep(prepData);
+      setInterviewFetched(true);
 
       const uid = session.user.id;
       const [profileRes, workRes, eduRes, langRes, interestsRes, awardsRes, volRes, skillsRes] = await Promise.all([
@@ -589,6 +605,26 @@ const JobDetail = () => {
     toast.success("Deadline updated");
   };
 
+  const handleGenerateInterviewPrep = async () => {
+    if (!jobId || !userId) return;
+    setInterviewLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-interview-prep", {
+        body: { job_id: jobId },
+      });
+      if (error || !data?.success) {
+        toast.error(data?.error || "Failed to generate interview prep.");
+        return;
+      }
+      setInterviewPrep(data.data);
+      toast.success("Interview prep kit ready!");
+    } catch {
+      toast.error("Failed to generate interview prep.");
+    } finally {
+      setInterviewLoading(false);
+    }
+  };
+
   const copyToClipboard = async (text: string, label: string) => {
     await navigator.clipboard.writeText(text);
     toast.success(`${label} copied to clipboard`);
@@ -752,7 +788,7 @@ const JobDetail = () => {
       {/* Tabs */}
       <Tabs defaultValue={defaultTab}>
         <TabsList className="w-full justify-start border-b rounded-none bg-transparent p-0 h-auto">
-          {["overview", "outreach", "cv", "notes"].map(tab => (
+          {["overview", "outreach", "cv", "interview", "notes"].map(tab => (
             <TabsTrigger
               key={tab}
               value={tab}
@@ -1519,6 +1555,159 @@ const JobDetail = () => {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+        </TabsContent>
+
+        {/* Interview Prep Tab */}
+        <TabsContent value="interview" className="mt-6 space-y-6">
+          {/* Interview banner */}
+          {job && ["Interview", "Offer"].includes(job.status) && !interviewPrep && (
+            <div className="flex items-center gap-3 p-4 rounded-xl border-2 border-[#950606] bg-[#950606]/5">
+              <AlertTriangle className="h-5 w-5 text-[#950606] shrink-0" />
+              <div className="flex-1">
+                <p className="font-semibold text-[#950606] text-sm">You have an interview — generate your prep kit now</p>
+              </div>
+              <Button size="sm" onClick={handleGenerateInterviewPrep} disabled={interviewLoading} style={{ backgroundColor: '#950606' }}>
+                {interviewLoading ? <><Loader2 className="h-4 w-4 animate-spin mr-1.5" /> Generating...</> : "Generate Prep Kit"}
+              </Button>
+            </div>
+          )}
+
+          {/* Loading state */}
+          {interviewLoading && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 py-8 justify-center">
+                <Loader2 className="h-6 w-6 animate-spin text-[#950606]" />
+                <p className="text-muted-foreground font-medium animate-pulse">Preparing your interview kit...</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <Skeleton className="h-32 rounded-xl" />
+                <Skeleton className="h-32 rounded-xl" />
+              </div>
+              <Skeleton className="h-40 rounded-xl" />
+              <Skeleton className="h-48 rounded-xl" />
+            </div>
+          )}
+
+          {/* Empty state */}
+          {!interviewLoading && !interviewPrep && interviewFetched && (
+            <Card>
+              <CardContent className="py-16 flex flex-col items-center justify-center text-center gap-4">
+                <div className="h-14 w-14 rounded-2xl bg-muted flex items-center justify-center">
+                  <FileText className="h-7 w-7 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="font-semibold text-foreground">No interview prep generated yet</p>
+                  <p className="text-sm text-muted-foreground mt-1">Generate a personalized prep kit with company insights, talking points, and practice questions.</p>
+                </div>
+                <Button onClick={handleGenerateInterviewPrep} disabled={interviewLoading} className="gap-2" style={{ backgroundColor: '#950606' }}>
+                  Generate Interview Prep
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Generated content */}
+          {!interviewLoading && interviewPrep && (
+            <>
+              {/* Regenerate button */}
+              <div className="flex justify-end">
+                <Button variant="outline" size="sm" onClick={handleGenerateInterviewPrep} className="gap-1.5 text-xs">
+                  <RefreshCw className="h-3.5 w-3.5" /> Regenerate
+                </Button>
+              </div>
+
+              {/* Company Overview + Role Intelligence side by side */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card>
+                  <CardContent className="p-5">
+                    <h4 className="font-semibold text-sm text-foreground mb-2">Company Overview</h4>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{interviewPrep.company_overview}</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-5">
+                    <h4 className="font-semibold text-sm text-foreground mb-2">Role Intelligence</h4>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{interviewPrep.role_intelligence}</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Your Pitch */}
+              {Array.isArray(interviewPrep.your_pitch) && interviewPrep.your_pitch.length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-sm text-foreground mb-3">Your Pitch</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {interviewPrep.your_pitch.map((pitch: string, i: number) => (
+                      <Card key={i} className="border-l-4" style={{ borderLeftColor: '#950606' }}>
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-start gap-3">
+                              <span className="inline-flex items-center justify-center h-6 w-6 rounded-full text-xs font-bold text-white shrink-0" style={{ backgroundColor: '#950606' }}>{i + 1}</span>
+                              <p className="text-sm text-foreground leading-relaxed">{pitch}</p>
+                            </div>
+                            <button onClick={() => copyToClipboard(pitch, `Pitch ${i + 1}`)} className="text-muted-foreground hover:text-foreground shrink-0 mt-0.5">
+                              <Copy className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Preparation Gaps */}
+              {Array.isArray(interviewPrep.preparation_gaps) && interviewPrep.preparation_gaps.length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-sm text-foreground mb-3">Preparation Gaps</h4>
+                  <div className="space-y-3">
+                    {interviewPrep.preparation_gaps.map((g: any, i: number) => (
+                      <Card key={i} className="bg-amber-50 border-amber-200">
+                        <CardContent className="p-4">
+                          <p className="font-semibold text-sm text-amber-900 mb-1.5">{g.gap}</p>
+                          <p className="text-sm text-amber-800 leading-relaxed">{g.suggested_response}</p>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Question Bank */}
+              {Array.isArray(interviewPrep.interview_questions) && interviewPrep.interview_questions.length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-sm text-foreground mb-3">Question Bank ({interviewPrep.interview_questions.length})</h4>
+                  <Accordion type="multiple" className="space-y-2">
+                    {interviewPrep.interview_questions.map((q: any, i: number) => {
+                      const catColors: Record<string, string> = {
+                        Behavioral: "bg-blue-100 text-blue-700",
+                        Technical: "bg-purple-100 text-purple-700",
+                        Motivational: "bg-green-100 text-green-700",
+                        Situational: "bg-orange-100 text-orange-700",
+                      };
+                      return (
+                        <AccordionItem key={i} value={`q-${i}`} className="border rounded-lg px-4">
+                          <AccordionTrigger className="hover:no-underline py-3">
+                            <div className="flex items-center gap-3 text-left">
+                              <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide shrink-0 ${catColors[q.category] || "bg-muted text-muted-foreground"}`}>
+                                {q.category}
+                              </span>
+                              <span className="text-sm font-medium text-foreground">{q.question}</span>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="pb-4">
+                            <div className="pl-[calc(theme(spacing.3)+70px)] text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+                              {q.suggested_answer_framework}
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      );
+                    })}
+                  </Accordion>
+                </div>
+              )}
+            </>
+          )}
         </TabsContent>
 
         {/* Notes Tab */}
