@@ -788,7 +788,7 @@ const JobDetail = () => {
       {/* Tabs */}
       <Tabs defaultValue={defaultTab}>
         <TabsList className="w-full justify-start border-b rounded-none bg-transparent p-0 h-auto">
-          {["overview", "outreach", "cv", "notes"].map(tab => (
+          {["overview", "outreach", "cv", "interview", "notes"].map(tab => (
             <TabsTrigger
               key={tab}
               value={tab}
