@@ -7,13 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Briefcase, MapPin, Trash2, ExternalLink, Loader2, CalendarIcon, ArrowUp, ArrowDown, ArrowUpDown, FileText, FileCheck } from "lucide-react";
+import { Briefcase, MapPin, Trash2, ExternalLink, Loader2, CalendarIcon, ArrowUp, ArrowDown, ArrowUpDown, Wand2, Check, Copy } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -24,6 +24,15 @@ type Job = {
   function: string | null; location: string | null; work_mode: string | null;
   duration: string | null; status: string; match_score: number | null; created_at: string;
   priority: string; applied_date: string | null;
+};
+
+type CvOutput = {
+  tailored_summary: string | null;
+  selected_bullets: { company: string; job_title: string; bullets: string[] }[] | null;
+  selected_hard_skills: Record<string, string[]> | null;
+  selected_soft_skills: string[] | null;
+  tailoring_notes: string[] | null;
+  updated_at: string;
 };
 
 const FUNCTION_COLORS: Record<string, string> = {
@@ -99,7 +108,7 @@ const COLUMNS: { label: string; key: SortKey | null }[] = [
   { label: "Duration", key: "duration" },
   { label: "Status", key: "status" },
   { label: "Match", key: "match_score" },
-  { label: "CV", key: null },
+  { label: "Kit", key: null },
   { label: "Priority", key: "priority" },
   { label: "Added", key: "created_at" },
   { label: "Applied", key: "applied_date" },
@@ -114,6 +123,11 @@ const compareStr = (a: string | null, b: string | null, dir: SortDir) => {
   return dir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
 };
 
+const copyToClipboard = (text: string, label: string) => {
+  navigator.clipboard.writeText(text);
+  toast.success(`${label} copied to clipboard`);
+};
+
 const JobTracker = () => {
   const navigate = useNavigate();
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -126,7 +140,9 @@ const JobTracker = () => {
   const [parseFailedUrl, setParseFailedUrl] = useState<string | null>(null);
   const [manualOpen, setManualOpen] = useState(false);
   const [manualPrefillUrl, setManualPrefillUrl] = useState("");
-  const [cvMap, setCvMap] = useState<Record<string, string>>({}); // job_id -> updated_at
+  const [cvMap, setCvMap] = useState<Record<string, CvOutput>>({});
+  const [generatingKit, setGeneratingKit] = useState<string | null>(null);
+  const [kitModalJobId, setKitModalJobId] = useState<string | null>(null);
 
   // Sort & filter state
   const [sortKey, setSortKey] = useState<SortKey>("created_at");
@@ -165,7 +181,6 @@ const JobTracker = () => {
           : new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
       }
       if (sortKey === "applied_date") {
-        // nulls always last
         if (!a.applied_date && !b.applied_date) return 0;
         if (!a.applied_date) return 1;
         if (!b.applied_date) return -1;
@@ -184,14 +199,22 @@ const JobTracker = () => {
       if (!session) return;
       setUserId(session.user.id);
       fetchJobs(session.user.id);
-      // Fetch CV statuses
       const { data: cvData } = await supabase
         .from("cv_outputs")
-        .select("job_id, updated_at")
+        .select("job_id, updated_at, tailored_summary, selected_bullets, selected_hard_skills, selected_soft_skills, tailoring_notes")
         .eq("user_id", session.user.id);
       if (cvData) {
-        const map: Record<string, string> = {};
-        for (const row of cvData) map[row.job_id] = row.updated_at;
+        const map: Record<string, CvOutput> = {};
+        for (const row of cvData) {
+          map[row.job_id] = {
+            tailored_summary: row.tailored_summary,
+            selected_bullets: row.selected_bullets as any,
+            selected_hard_skills: row.selected_hard_skills as any,
+            selected_soft_skills: row.selected_soft_skills,
+            tailoring_notes: row.tailoring_notes,
+            updated_at: row.updated_at,
+          };
+        }
         setCvMap(map);
       }
     };
@@ -207,19 +230,52 @@ const JobTracker = () => {
     if (data) setJobs(data as any);
   };
 
+  const handleGenerateKit = async (jobId: string, companyName: string | null) => {
+    setGeneratingKit(jobId);
+    try {
+      const { data, error } = await supabase.functions.invoke("tailor-cv", {
+        body: { job_id: jobId },
+      });
+      if (error || !data?.success) {
+        toast.error(data?.error || "Kit generation failed. Please try again.");
+        setGeneratingKit(null);
+        return;
+      }
+      const output = data.data;
+      const cvOutput: CvOutput = {
+        tailored_summary: output.tailored_summary,
+        selected_bullets: output.selected_bullets,
+        selected_hard_skills: output.selected_hard_skills,
+        selected_soft_skills: output.selected_soft_skills,
+        tailoring_notes: output.tailoring_notes,
+        updated_at: output.updated_at,
+      };
+      setCvMap(prev => ({ ...prev, [jobId]: cvOutput }));
+      toast.success(`Application Kit ready for ${companyName || "this role"}`);
+      setKitModalJobId(jobId);
+    } catch {
+      toast.error("Kit generation failed. Please try again.");
+    }
+    setGeneratingKit(null);
+  };
+
+  const handleKitClick = (e: React.MouseEvent, job: Job) => {
+    e.stopPropagation();
+    if (generatingKit === job.id) return;
+    if (cvMap[job.id]) {
+      setKitModalJobId(job.id);
+    } else {
+      handleGenerateKit(job.id, job.company_name);
+    }
+  };
+
   const handleAddJob = async () => {
     if (!userId) return;
     setUrlError("");
     const jobUrl = url.trim();
 
-    if (!jobUrl) {
-      setUrlError("Please paste a valid job posting URL");
-      return;
-    }
-    if (!isValidUrl(jobUrl)) {
-      setUrlError("Please paste a valid job posting URL");
-      return;
-    }
+    if (!jobUrl) { setUrlError("Please paste a valid job posting URL"); return; }
+    if (!isValidUrl(jobUrl)) { setUrlError("Please paste a valid job posting URL"); return; }
 
     setLoading(true);
     setParsing(true);
@@ -242,7 +298,6 @@ const JobTracker = () => {
         setJobs((prev) => [newJob, ...prev]);
         toast.success("Job added successfully ✓");
 
-        // Trigger match scoring in background
         supabase.functions.invoke("calculate-match-score", {
           body: { job_id: result.job.id },
         }).then(async ({ data: scoreResult }) => {
@@ -260,10 +315,7 @@ const JobTracker = () => {
         const errorType = result?.error;
         const message = result?.message || "Something went wrong.";
         toast.error(message);
-
-        if (errorType === "parse_failed") {
-          setParseFailedUrl(jobUrl);
-        }
+        if (errorType === "parse_failed") setParseFailedUrl(jobUrl);
       }
     } catch (e) {
       console.error("Add job error:", e);
@@ -300,7 +352,6 @@ const JobTracker = () => {
     setJobs((prev) => [job as any, ...prev]);
     toast.success("Job added successfully ✓");
 
-    // Trigger match scoring if job description was provided
     if (data.job_description?.trim()) {
       supabase.functions.invoke("calculate-match-score", {
         body: { job_id: job.id },
@@ -313,9 +364,7 @@ const JobTracker = () => {
   };
 
   const handleRetryParse = () => {
-    if (parseFailedUrl) {
-      setUrl(parseFailedUrl);
-    }
+    if (parseFailedUrl) setUrl(parseFailedUrl);
     setParseFailedUrl(null);
   };
 
@@ -348,6 +397,8 @@ const JobTracker = () => {
   };
 
   const showTable = parsing || jobs.length > 0;
+  const modalJob = kitModalJobId ? jobs.find(j => j.id === kitModalJobId) : null;
+  const modalCv = kitModalJobId ? cvMap[kitModalJobId] : null;
 
   return (
     <div className="space-y-6">
@@ -496,6 +547,7 @@ const JobTracker = () => {
                       <td className="px-4 py-3"><Skeleton className="h-4 w-20" /></td>
                       <td className="px-4 py-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
                       <td className="px-4 py-3"><Skeleton className="h-8 w-8 rounded-full" /></td>
+                      <td className="px-4 py-3"><Skeleton className="h-4 w-4" /></td>
                       <td className="px-4 py-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
                       <td className="px-4 py-3"><Skeleton className="h-4 w-12" /></td>
                       <td className="px-4 py-3"><Skeleton className="h-4 w-16" /></td>
@@ -546,22 +598,30 @@ const JobTracker = () => {
                           <span className={`inline-flex items-center justify-center h-8 w-8 rounded-full border text-xs font-bold ${getScoreColor(job.match_score)}`}>{job.match_score}</span>
                         ) : <span className="text-muted-foreground">–</span>}
                       </td>
-                      <td className="px-4 py-3" onClick={(e) => { e.stopPropagation(); navigate(`/jobs/${job.id}?tab=cv`); }}>
+                      {/* Kit column */}
+                      <td className="px-4 py-3" onClick={(e) => handleKitClick(e, job)}>
                         <TooltipProvider delayDuration={200}>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <button className="transition-colors">
-                                {cvMap[job.id] ? (
-                                  <FileCheck className="h-4 w-4 text-[#950606]" />
+                              <button className="transition-colors relative">
+                                {generatingKit === job.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                                ) : cvMap[job.id] ? (
+                                  <span className="relative inline-block">
+                                    <Wand2 className="h-4 w-4 text-[#950606]" />
+                                    <Check className="h-2.5 w-2.5 text-[#950606] absolute -bottom-0.5 -right-1 stroke-[3]" />
+                                  </span>
                                 ) : (
-                                  <FileText className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                                  <Wand2 className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                                 )}
                               </button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              {cvMap[job.id]
-                                ? `CV ready — last generated ${format(new Date(cvMap[job.id]), "MMM d, yyyy")}`
-                                : "Generate tailored CV"}
+                              {generatingKit === job.id
+                                ? "Generating..."
+                                : cvMap[job.id]
+                                  ? "Kit ready — click to view"
+                                  : "Generate Application Kit"}
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -625,6 +685,147 @@ const JobTracker = () => {
         </CardContent>
       </Card>
 
+      {/* Application Kit Modal */}
+      <Dialog open={!!kitModalJobId} onOpenChange={(open) => !open && setKitModalJobId(null)}>
+        <DialogContent className="max-w-[600px] max-h-[85vh] overflow-y-auto p-0">
+          {modalJob && modalCv && (
+            <>
+              <DialogHeader className="px-6 pt-6 pb-0">
+                <DialogTitle className="text-lg font-bold text-foreground">{modalJob.job_title || "Job"}</DialogTitle>
+                <p className="text-sm text-muted-foreground">{modalJob.company_name}</p>
+              </DialogHeader>
+              <div className="px-6 pb-6 pt-4 space-y-4">
+                {/* Summary */}
+                {modalCv.tailored_summary && (
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-semibold text-sm text-foreground">Professional Summary</h4>
+                          <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-[#950606]/10 text-[#950606]">
+                            Tailored for {modalJob.company_name}
+                          </span>
+                        </div>
+                        <Button variant="ghost" size="sm" className="gap-1 text-xs h-7" onClick={() => {
+                          const el = document.getElementById("modal-summary");
+                          if (el) copyToClipboard(el.innerText, "Summary");
+                        }}>
+                          <Copy className="h-3 w-3" /> Copy
+                        </Button>
+                      </div>
+                      <div
+                        id="modal-summary"
+                        contentEditable
+                        suppressContentEditableWarning
+                        className="text-sm text-foreground leading-relaxed outline-none focus:ring-1 focus:ring-ring rounded p-1.5 -m-1.5"
+                      >
+                        {modalCv.tailored_summary}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Bullets */}
+                {Array.isArray(modalCv.selected_bullets) && modalCv.selected_bullets.length > 0 && (
+                  <Card>
+                    <CardContent className="p-4">
+                      <h4 className="font-semibold text-sm text-foreground mb-3">Selected Bullet Points</h4>
+                      <div className="space-y-4">
+                        {modalCv.selected_bullets.map((block, i) => (
+                          <div key={i}>
+                            <div className="flex items-center justify-between mb-1.5">
+                              <div>
+                                <p className="font-semibold text-sm text-foreground">{block.company}</p>
+                                <p className="text-xs text-muted-foreground">{block.job_title}</p>
+                              </div>
+                              <Button variant="ghost" size="sm" className="gap-1 text-xs h-7" onClick={() => {
+                                const container = document.getElementById(`modal-bullets-${i}`);
+                                if (container) copyToClipboard(container.innerText, `${block.company} bullets`);
+                              }}>
+                                <Copy className="h-3 w-3" /> Copy
+                              </Button>
+                            </div>
+                            <ul id={`modal-bullets-${i}`} className="space-y-1 ml-4 list-disc list-outside">
+                              {block.bullets.map((b, j) => (
+                                <li key={j} className="text-sm text-foreground">
+                                  <span contentEditable suppressContentEditableWarning className="outline-none focus:ring-1 focus:ring-ring rounded px-0.5">{b}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Hard Skills */}
+                {modalCv.selected_hard_skills && Object.keys(modalCv.selected_hard_skills).length > 0 && (
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-semibold text-sm text-foreground">Hard Skills</h4>
+                        <Button variant="ghost" size="sm" className="gap-1 text-xs h-7" onClick={() => {
+                          const parts = Object.entries(modalCv.selected_hard_skills!).map(
+                            ([cat, skills]) => `${cat}: ${(skills as string[]).join(", ")}`
+                          );
+                          copyToClipboard("Software Skills: " + parts.join("; ") + ".", "Hard skills");
+                        }}>
+                          <Copy className="h-3 w-3" /> Copy all
+                        </Button>
+                      </div>
+                      <div className="space-y-2.5">
+                        {Object.entries(modalCv.selected_hard_skills).map(([category, skills]) => (
+                          <div key={category}>
+                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">{category}</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {(skills as string[]).map((skill, i) => (
+                                <span key={i} className="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground">{skill}</span>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Soft Skills */}
+                {modalCv.selected_soft_skills && modalCv.selected_soft_skills.length > 0 && (
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-semibold text-sm text-foreground">Soft Skills</h4>
+                        <Button variant="ghost" size="sm" className="gap-1 text-xs h-7" onClick={() => {
+                          copyToClipboard(modalCv.selected_soft_skills!.join(", "), "Soft skills");
+                        }}>
+                          <Copy className="h-3 w-3" /> Copy all
+                        </Button>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {modalCv.selected_soft_skills.map((skill, i) => (
+                          <span key={i} className="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground">{skill}</span>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Footer link */}
+                <div className="text-center pt-2">
+                  <button
+                    onClick={() => { setKitModalJobId(null); navigate(`/jobs/${kitModalJobId}?tab=cv`); }}
+                    className="text-xs text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    View full details →
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Delete confirmation */}
       <AlertDialog open={!!deleteJobId} onOpenChange={(open) => !open && setDeleteJobId(null)}>
         <AlertDialogContent>
@@ -648,14 +849,14 @@ const JobTracker = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Could not read this job posting</DialogTitle>
-            <DialogDescription>
+            <p className="text-sm text-muted-foreground">
               We could not automatically read this job posting. Would you like to add the details manually?
-            </DialogDescription>
+            </p>
           </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
+          <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={handleRetryParse}>Try again</Button>
             <Button onClick={handleAddManually}>Add manually</Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 
