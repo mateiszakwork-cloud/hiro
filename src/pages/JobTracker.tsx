@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Briefcase, MapPin, Trash2, ExternalLink, Loader2, CalendarIcon, ArrowUp, ArrowDown, ArrowUpDown, Wand2, Check, Copy, ArrowRight } from "lucide-react";
+import { Briefcase, MapPin, Trash2, ExternalLink, Loader2, CalendarIcon, ArrowUp, ArrowDown, ArrowUpDown, Wand2, Check, Copy, ArrowRight, Pencil } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
@@ -716,7 +716,16 @@ const JobTracker = () => {
           {modalJob && (
             <>
               <DialogHeader className="px-6 pt-6 pb-0">
-                <DialogTitle className="text-lg font-bold text-foreground" style={{ fontFamily: 'Sora, sans-serif' }}>{modalJob.job_title || "Job"}</DialogTitle>
+                <DialogTitle className="text-lg font-bold text-foreground flex items-center gap-2" style={{ fontFamily: 'Sora, sans-serif' }}>
+                  {modalJob.job_title || "Job"}
+                  <button
+                    onClick={() => { setKitModalJobId(null); navigate(`/jobs/${modalJob.id}?tab=overview&edit=true`); }}
+                    className="text-muted-foreground hover:text-primary transition-colors"
+                    title="Edit job details"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                </DialogTitle>
                 <p className="text-sm" style={{ color: '#950606' }}>{modalJob.company_name}</p>
                 <button
                   onClick={() => { setKitModalJobId(null); navigate(`/jobs/${kitModalJobId}`); }}

@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, ExternalLink, MapPin, Copy, Check, Trash2, ChevronDown, ChevronUp, FileText, CheckCircle2, XCircle, CalendarIcon, RefreshCw, Lightbulb, History, RotateCcw } from "lucide-react";
+import { ArrowLeft, ExternalLink, MapPin, Copy, Check, Trash2, ChevronDown, ChevronUp, FileText, CheckCircle2, XCircle, CalendarIcon, RefreshCw, Lightbulb, History, RotateCcw, Pencil, X as XIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
@@ -80,6 +80,10 @@ const getScoreColor = (score: number | null) => {
   return "text-red-600 border-red-300 bg-red-50";
 };
 
+const FUNCTION_VALUES = ["Strategy", "Finance", "Marketing", "Product", "Operations", "HR", "Consulting", "Other"];
+const WORK_MODE_VALUES = ["Onsite", "Hybrid", "Remote"];
+const PRIORITY_OPTIONS_EDIT = ["High", "Medium", "Low"];
+
 /* ── Tag list renderer ── */
 const TagList = ({ tags, className = "", soft = false }: { tags: string[] | null; className?: string; soft?: boolean }) => {
   if (!tags?.length) return <span className="text-muted-foreground">–</span>;
@@ -91,6 +95,41 @@ const TagList = ({ tags, className = "", soft = false }: { tags: string[] | null
       {tags.map((t, i) => (
         <span key={i} className={`${base} ${className}`}>{t}</span>
       ))}
+    </div>
+  );
+};
+
+/* ── Editable Tag Input ── */
+const TagInput = ({ tags, onChange, placeholder = "Type and press Enter" }: { tags: string[]; onChange: (t: string[]) => void; placeholder?: string }) => {
+  const [input, setInput] = useState("");
+  const handleKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if ((e.key === "Enter" || e.key === ",") && input.trim()) {
+      e.preventDefault();
+      if (!tags.some(t => t.toLowerCase() === input.trim().toLowerCase())) {
+        onChange([...tags, input.trim()]);
+      }
+      setInput("");
+    } else if (e.key === "Backspace" && !input && tags.length > 0) {
+      onChange(tags.slice(0, -1));
+    }
+  };
+  return (
+    <div className="flex flex-wrap gap-1.5 p-2 border rounded-lg bg-background min-h-[38px] items-center">
+      {tags.map((tag, i) => (
+        <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground">
+          {tag}
+          <button type="button" onClick={() => onChange(tags.filter((_, j) => j !== i))} className="text-muted-foreground hover:text-foreground">
+            <XIcon className="h-3 w-3" />
+          </button>
+        </span>
+      ))}
+      <input
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={handleKey}
+        placeholder={tags.length === 0 ? placeholder : ""}
+        className="flex-1 min-w-[120px] text-sm bg-transparent outline-none"
+      />
     </div>
   );
 };
@@ -260,6 +299,10 @@ const JobDetail = () => {
   const [regenConfirmOpen, setRegenConfirmOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [previewVersion, setPreviewVersion] = useState<any | null>(null);
+
+  // Edit mode state
+  const [isEditing, setIsEditing] = useState(searchParams.get("edit") === "true");
+  const [editData, setEditData] = useState<Partial<Job>>({});
 
   // Bullet toggle state: map of "blockIdx-bulletIdx" -> boolean (true = show tailored)
   const [bulletToggles, setBulletToggles] = useState<Record<string, boolean>>({});
@@ -511,6 +554,41 @@ const JobDetail = () => {
     toast.success("Version restored!");
   };
 
+  const startEdit = () => {
+    if (!job) return;
+    setEditData({
+      job_title: job.job_title, company_name: job.company_name, location: job.location,
+      work_mode: job.work_mode, duration: job.duration, function: job.function,
+      application_deadline: job.application_deadline, status: job.status, priority: job.priority,
+      url: job.url, hard_skills: [...(job.hard_skills || [])], soft_skills: [...(job.soft_skills || [])],
+      skills_nice_to_have: [...(job.skills_nice_to_have || [])],
+      languages_required: [...(job.languages_required || [])],
+      languages_nice_to_have: [...(job.languages_nice_to_have || [])],
+    });
+    setIsEditing(true);
+  };
+
+  const cancelEdit = () => { setIsEditing(false); setEditData({}); };
+
+  const saveEdit = async () => {
+    if (!job) return;
+    const updates: any = { ...editData };
+    const { error } = await supabase.from("jobs").update(updates).eq("id", job.id);
+    if (error) { toast.error("Failed to save changes."); return; }
+    setJob(prev => prev ? { ...prev, ...updates } : prev);
+    setIsEditing(false);
+    setEditData({});
+    toast.success("Job updated successfully");
+  };
+
+  const handleDeadlineInline = async (date: Date | undefined) => {
+    if (!job) return;
+    const deadline = date ? format(date, "yyyy-MM-dd") : null;
+    await supabase.from("jobs").update({ application_deadline: deadline }).eq("id", job.id);
+    setJob(prev => prev ? { ...prev, application_deadline: deadline } : prev);
+    toast.success("Deadline updated");
+  };
+
   const copyToClipboard = async (text: string, label: string) => {
     await navigator.clipboard.writeText(text);
     toast.success(`${label} copied to clipboard`);
@@ -689,64 +767,194 @@ const JobDetail = () => {
         <TabsContent value="overview" className="mt-6">
           <Card>
             <CardContent className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Location</p>
-                  <p className="text-sm text-foreground flex items-center gap-1.5">
-                    {job.location ? <><MapPin className="h-3.5 w-3.5 text-muted-foreground" />{job.location}</> : "–"}
-                  </p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Work Mode</p>
-                  <p className="text-sm text-foreground">{job.work_mode || "–"}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Duration</p>
-                  <p className="text-sm text-foreground">{job.duration || "–"}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Function</p>
-                  <p className="text-sm text-foreground">{job.function || "–"}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Application Deadline</p>
-                  <p className="text-sm text-foreground">{job.application_deadline || "–"}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Match Score</p>
-                  <span className={`inline-flex items-center justify-center h-12 w-12 rounded-full border-2 text-lg font-bold ${getScoreColor(job.match_score)}`}>
-                    {job.match_score ?? "–"}
-                  </span>
-                </div>
-                <div className="space-y-1 col-span-full">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Required Skills</p>
-                  <TagList tags={[...(job.hard_skills || []), ...(job.soft_skills || [])]} />
-                </div>
-                {(job.skills_nice_to_have?.length ?? 0) > 0 && (
-                  <div className="space-y-1 col-span-full">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Nice-to-Have Skills</p>
-                    <TagList tags={job.skills_nice_to_have} soft />
+              <div className="flex justify-end mb-4">
+                {isEditing ? (
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={cancelEdit}>Cancel</Button>
+                    <Button size="sm" onClick={saveEdit} className="gap-1.5" style={{ backgroundColor: '#950606' }}>
+                      <Check className="h-3.5 w-3.5" /> Save
+                    </Button>
                   </div>
-                )}
-                <div className="space-y-1 col-span-full">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Required Languages</p>
-                  <TagList tags={job.languages_required} />
-                </div>
-                {(job.languages_nice_to_have?.length ?? 0) > 0 && (
-                  <div className="space-y-1 col-span-full">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Nice-to-Have Languages</p>
-                    <TagList tags={job.languages_nice_to_have} soft />
-                  </div>
-                )}
-                {job.url && (
-                  <div className="space-y-1 col-span-full">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Job URL</p>
-                    <a href={job.url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1">
-                      {job.url} <ExternalLink className="h-3.5 w-3.5" />
-                    </a>
-                  </div>
+                ) : (
+                  <Button variant="outline" size="sm" onClick={startEdit} className="gap-1.5">
+                    <Pencil className="h-3.5 w-3.5" /> Edit
+                  </Button>
                 )}
               </div>
+
+              {isEditing ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Job Title</p>
+                    <Input value={editData.job_title || ""} onChange={(e) => setEditData(d => ({ ...d, job_title: e.target.value }))} className="h-9" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Company</p>
+                    <Input value={editData.company_name || ""} onChange={(e) => setEditData(d => ({ ...d, company_name: e.target.value }))} className="h-9" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Location</p>
+                    <Input value={editData.location || ""} onChange={(e) => setEditData(d => ({ ...d, location: e.target.value }))} className="h-9" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Work Mode</p>
+                    <Select value={editData.work_mode || ""} onValueChange={(v) => setEditData(d => ({ ...d, work_mode: v }))}>
+                      <SelectTrigger className="h-9"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        {WORK_MODE_VALUES.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Duration</p>
+                    <Input value={editData.duration || ""} onChange={(e) => setEditData(d => ({ ...d, duration: e.target.value }))} className="h-9" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Function</p>
+                    <Select value={editData.function || ""} onValueChange={(v) => setEditData(d => ({ ...d, function: v }))}>
+                      <SelectTrigger className="h-9"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        {FUNCTION_VALUES.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Application Deadline</p>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className={cn("w-full justify-start text-left h-9", !editData.application_deadline && "text-muted-foreground")}>
+                          <CalendarIcon className="h-3.5 w-3.5 mr-2" />
+                          {editData.application_deadline ? format(new Date(editData.application_deadline), "MMM d, yyyy") : "Set deadline"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={editData.application_deadline ? new Date(editData.application_deadline) : undefined}
+                          onSelect={(d) => setEditData(prev => ({ ...prev, application_deadline: d ? format(d, "yyyy-MM-dd") : null }))}
+                          className={cn("p-3 pointer-events-auto")}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Status</p>
+                    <Select value={editData.status || ""} onValueChange={(v) => setEditData(d => ({ ...d, status: v }))}>
+                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {STATUS_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.value}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Priority</p>
+                    <Select value={editData.priority || ""} onValueChange={(v) => setEditData(d => ({ ...d, priority: v }))}>
+                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {PRIORITY_OPTIONS_EDIT.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Job URL</p>
+                    <Input value={editData.url || ""} onChange={(e) => setEditData(d => ({ ...d, url: e.target.value }))} className="h-9" />
+                  </div>
+                  <div className="space-y-1 col-span-full">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Hard Skills</p>
+                    <TagInput tags={editData.hard_skills || []} onChange={(t) => setEditData(d => ({ ...d, hard_skills: t }))} placeholder="Add hard skill..." />
+                  </div>
+                  <div className="space-y-1 col-span-full">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Soft Skills</p>
+                    <TagInput tags={editData.soft_skills || []} onChange={(t) => setEditData(d => ({ ...d, soft_skills: t }))} placeholder="Add soft skill..." />
+                  </div>
+                  <div className="space-y-1 col-span-full">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Nice-to-Have Skills</p>
+                    <TagInput tags={editData.skills_nice_to_have || []} onChange={(t) => setEditData(d => ({ ...d, skills_nice_to_have: t }))} placeholder="Add nice-to-have skill..." />
+                  </div>
+                  <div className="space-y-1 col-span-full">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Required Languages</p>
+                    <TagInput tags={editData.languages_required || []} onChange={(t) => setEditData(d => ({ ...d, languages_required: t }))} placeholder="Add language..." />
+                  </div>
+                  <div className="space-y-1 col-span-full">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Nice-to-Have Languages</p>
+                    <TagInput tags={editData.languages_nice_to_have || []} onChange={(t) => setEditData(d => ({ ...d, languages_nice_to_have: t }))} placeholder="Add language..." />
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Location</p>
+                    <p className="text-sm text-foreground flex items-center gap-1.5">
+                      {job.location ? <><MapPin className="h-3.5 w-3.5 text-muted-foreground" />{job.location}</> : "–"}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Work Mode</p>
+                    <p className="text-sm text-foreground">{job.work_mode || "–"}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Duration</p>
+                    <p className="text-sm text-foreground">{job.duration || "–"}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Function</p>
+                    <p className="text-sm text-foreground">{job.function || "–"}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Application Deadline</p>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button className="text-sm text-foreground flex items-center gap-1.5 hover:text-primary transition-colors">
+                          {job.application_deadline ? format(new Date(job.application_deadline), "MMM d, yyyy") : "–"}
+                          <Pencil className="h-3 w-3 text-muted-foreground" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={job.application_deadline ? new Date(job.application_deadline) : undefined}
+                          onSelect={handleDeadlineInline}
+                          className={cn("p-3 pointer-events-auto")}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Match Score</p>
+                    <span className={`inline-flex items-center justify-center h-12 w-12 rounded-full border-2 text-lg font-bold ${getScoreColor(job.match_score)}`}>
+                      {job.match_score ?? "–"}
+                    </span>
+                  </div>
+                  <div className="space-y-1 col-span-full">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Required Skills</p>
+                    <TagList tags={[...(job.hard_skills || []), ...(job.soft_skills || [])]} />
+                  </div>
+                  {(job.skills_nice_to_have?.length ?? 0) > 0 && (
+                    <div className="space-y-1 col-span-full">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Nice-to-Have Skills</p>
+                      <TagList tags={job.skills_nice_to_have} soft />
+                    </div>
+                  )}
+                  <div className="space-y-1 col-span-full">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Required Languages</p>
+                    <TagList tags={job.languages_required} />
+                  </div>
+                  {(job.languages_nice_to_have?.length ?? 0) > 0 && (
+                    <div className="space-y-1 col-span-full">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Nice-to-Have Languages</p>
+                      <TagList tags={job.languages_nice_to_have} soft />
+                    </div>
+                  )}
+                  {job.url && (
+                    <div className="space-y-1 col-span-full">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Job URL</p>
+                      <a href={job.url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1">
+                        {job.url} <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 
