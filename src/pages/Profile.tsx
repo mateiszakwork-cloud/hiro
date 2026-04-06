@@ -100,6 +100,13 @@ const Profile = () => {
   const [cvError, setCvError] = useState(false);
   const [cvSuccess, setCvSuccess] = useState("");
 
+  // Base CV state
+  const baseCvInputRef = useRef<HTMLInputElement>(null);
+  const [baseCvText, setBaseCvText] = useState<string | null>(null);
+  const [baseCvUploadedAt, setBaseCvUploadedAt] = useState<string | null>(null);
+  const [baseCvUploading, setBaseCvUploading] = useState(false);
+  const [showExtractedText, setShowExtractedText] = useState(false);
+
   useEffect(() => {
     const init = async () => {
       const { data: { session } } = await supabase.auth.getSession();
