@@ -244,8 +244,9 @@ const JobDetail = () => {
   const [notesSaved, setNotesSaved] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout>>();
-
   const [matchLoading, setMatchLoading] = useState(false);
+  const [jobLoading, setJobLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [cvOutput, setCvOutput] = useState<CvOutput | null>(null);
   const [cvLoading, setCvLoading] = useState(false);
   const [cvFetched, setCvFetched] = useState(false);
