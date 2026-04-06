@@ -21,6 +21,7 @@ const Welcome = () => {
   const [parsed, setParsed] = useState<ParsedCVData | null>(null);
   const [summary, setSummary] = useState("");
   const [parseError, setParseError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   if (!isReady) {
     return (
@@ -42,8 +43,6 @@ const Welcome = () => {
       </div>
     );
   }
-
-  const [errorMessage, setErrorMessage] = useState("");
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
