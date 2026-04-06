@@ -580,7 +580,7 @@ const JobDetail = () => {
     // Build a printable HTML document
     const name = userProfile.full_name || "";
     const email = userProfile.email || "";
-    const headline = cvOutput.profile_headline || "";
+    const headline = cvOutput.tailored_summary || cvOutput.profile_headline || "";
 
     const sectionStyle = `style="margin-top:18px;font-size:12px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #950606;padding-bottom:3px;margin-bottom:8px;"`;
     const bodyStyle = `style="font-size:10px;line-height:1.5;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;max-width:700px;margin:0 auto;padding:40px;"`;
