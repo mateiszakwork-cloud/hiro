@@ -474,7 +474,7 @@ const JobDetail = () => {
   };
 
   const updateContact = async (id: string, patch: Partial<Contact>) => {
-    await supabase.from("contacts").update(patch).eq("id", id);
+    await supabase.from("contacts").update(patch as any).eq("id", id);
     setContacts(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c));
   };
 
