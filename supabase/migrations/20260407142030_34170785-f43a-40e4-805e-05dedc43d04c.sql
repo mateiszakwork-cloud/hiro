@@ -1,0 +1,1 @@
+ALTER TABLE public.contacts ADD COLUMN inmail_subject_draft text DEFAULT NULL;

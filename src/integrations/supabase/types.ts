@@ -52,6 +52,7 @@ export type Database = {
           headline: string | null
           id: string
           inmail_draft: string | null
+          inmail_subject_draft: string | null
           is_alumni: boolean
           job_id: string
           linkedin_url: string | null
@@ -66,6 +67,7 @@ export type Database = {
           headline?: string | null
           id?: string
           inmail_draft?: string | null
+          inmail_subject_draft?: string | null
           is_alumni?: boolean
           job_id: string
           linkedin_url?: string | null
@@ -80,6 +82,7 @@ export type Database = {
           headline?: string | null
           id?: string
           inmail_draft?: string | null
+          inmail_subject_draft?: string | null
           is_alumni?: boolean
           job_id?: string
           linkedin_url?: string | null
