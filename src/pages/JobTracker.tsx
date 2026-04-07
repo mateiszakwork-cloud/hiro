@@ -683,6 +683,34 @@ const JobTracker = () => {
                           </Tooltip>
                         </TooltipProvider>
                       </td>
+                      {/* Outreach column */}
+                      <td className="px-3 py-3" onClick={(e) => { e.stopPropagation(); navigate(`/jobs/${job.id}?tab=outreach`); }}>
+                        {(() => {
+                          const o = outreachMap[job.id];
+                          if (!o) return <span className="text-muted-foreground">–</span>;
+                          const dotColor: Record<string, string> = {
+                            "Not contacted": "bg-gray-400",
+                            "Connection sent": "bg-blue-500",
+                            "Connected": "bg-green-500",
+                            "Replied": "bg-amber-500",
+                            "Meeting booked": "bg-[#950606]",
+                          };
+                          return (
+                            <TooltipProvider delayDuration={200}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">
+                                    <Users className="h-3.5 w-3.5" />
+                                    <span className="text-xs font-medium">{o.count}</span>
+                                    <span className={`h-2 w-2 rounded-full ${dotColor[o.maxStatus] || "bg-gray-400"}`} />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>{o.count} contact{o.count !== 1 ? "s" : ""} — most advanced: {o.maxStatus}</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          );
+                        })()}
+                      </td>
                       <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                         <Select value={job.priority} onValueChange={(v) => handlePriorityChange(job.id, v)}>
                           <SelectTrigger className={`h-7 w-auto border-0 gap-1 px-2 rounded-full text-xs font-medium ${getPriorityColor(job.priority)}`}>
