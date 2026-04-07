@@ -448,6 +448,7 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          linkedin_cookie: string | null
           onboarding_complete: boolean
         }
         Insert: {
@@ -457,6 +458,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id: string
+          linkedin_cookie?: string | null
           onboarding_complete?: boolean
         }
         Update: {
@@ -466,6 +468,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          linkedin_cookie?: string | null
           onboarding_complete?: boolean
         }
         Relationships: []

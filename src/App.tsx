@@ -14,6 +14,7 @@ import DashboardLayout from "./components/DashboardLayout";
 import JobTracker from "./pages/JobTracker";
 import JobDetail from "./pages/JobDetail";
 import Profile from "./pages/Profile";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="/dashboard" element={<JobTracker />} />
             <Route path="/jobs/:jobId" element={<JobDetail />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/settings" element={<Settings />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

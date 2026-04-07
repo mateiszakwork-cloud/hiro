@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN linkedin_cookie text DEFAULT NULL;
