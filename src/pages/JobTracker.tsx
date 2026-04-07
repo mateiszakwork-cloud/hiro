@@ -142,6 +142,7 @@ const JobTracker = () => {
   const [cvMap, setCvMap] = useState<Record<string, CvOutput>>({});
   const [generatingKit, setGeneratingKit] = useState<string | null>(null);
   const [kitModalJobId, setKitModalJobId] = useState<string | null>(null);
+  const [outreachMap, setOutreachMap] = useState<Record<string, { count: number; maxStatus: string }>>({});
 
   // Sort & filter state
   const [sortKey, setSortKey] = useState<SortKey>("created_at");
