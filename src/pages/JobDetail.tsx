@@ -56,8 +56,11 @@ type Job = {
 
 type Contact = {
   id: string; linkedin_url: string | null; name: string | null; headline: string | null;
-  current_title: string | null; is_alumni: boolean; connection_note_draft: string | null;
-  inmail_draft: string | null; outreach_status: string;
+  current_title: string | null; current_company: string | null; profile_picture_url: string | null;
+  connection_degree: string | null; is_alumni: boolean; shared_connections_count: number | null;
+  category: string | null; priority_score: number | null;
+  connection_note_draft: string | null; inmail_subject_draft: string | null; inmail_draft: string | null;
+  outreach_status: string; created_at: string; job_id: string; user_id: string;
 };
 
 const STATUS_OPTIONS = [
