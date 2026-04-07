@@ -14,6 +14,7 @@ import DashboardLayout from "./components/DashboardLayout";
 import JobTracker from "./pages/JobTracker";
 import JobDetail from "./pages/JobDetail";
 import Profile from "./pages/Profile";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
