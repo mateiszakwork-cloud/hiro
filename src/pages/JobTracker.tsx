@@ -217,6 +217,23 @@ const JobTracker = () => {
         }
         setCvMap(map);
       }
+      // Fetch outreach summary per job
+      const { data: contactData } = await supabase
+        .from("contacts")
+        .select("job_id, outreach_status")
+        .eq("user_id", session.user.id);
+      if (contactData) {
+        const STATUS_ORDER = ["Not contacted", "Connection sent", "Connected", "Replied", "Meeting booked"];
+        const oMap: Record<string, { count: number; maxStatus: string }> = {};
+        for (const row of contactData) {
+          if (!oMap[row.job_id]) oMap[row.job_id] = { count: 0, maxStatus: "Not contacted" };
+          oMap[row.job_id].count++;
+          const currentIdx = STATUS_ORDER.indexOf(oMap[row.job_id].maxStatus);
+          const newIdx = STATUS_ORDER.indexOf(row.outreach_status);
+          if (newIdx > currentIdx) oMap[row.job_id].maxStatus = row.outreach_status;
+        }
+        setOutreachMap(oMap);
+      }
     };
     init();
   }, []);
