@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Briefcase, MapPin, Trash2, ExternalLink, Loader2, CalendarIcon, ArrowUp, ArrowDown, ArrowUpDown, Wand2, Check, Copy, ArrowRight, Pencil } from "lucide-react";
+import { Briefcase, MapPin, Trash2, ExternalLink, Loader2, CalendarIcon, ArrowUp, ArrowDown, ArrowUpDown, Wand2, Check, Copy, ArrowRight, Pencil, Users } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
@@ -109,6 +109,7 @@ const COLUMNS: { label: string; key: SortKey | null; minWidth: string }[] = [
   { label: "Status", key: "status", minWidth: "95px" },
   { label: "Match", key: "match_score", minWidth: "65px" },
   { label: "Kit", key: null, minWidth: "45px" },
+  { label: "Outreach", key: null, minWidth: "75px" },
   { label: "Priority", key: "priority", minWidth: "75px" },
   { label: "Applied", key: "applied_date", minWidth: "85px" },
 ];
