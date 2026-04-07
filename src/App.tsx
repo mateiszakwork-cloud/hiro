@@ -37,6 +37,7 @@ const App = () => (
             <Route path="/dashboard" element={<JobTracker />} />
             <Route path="/jobs/:jobId" element={<JobDetail />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/settings" element={<Settings />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
