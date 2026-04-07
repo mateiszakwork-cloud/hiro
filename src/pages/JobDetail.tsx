@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import OutreachTab from "@/components/OutreachTab";
 
 type BulletItem = { original: string; tailored: string; use_tailored: boolean };
 type BulletBlock = { company: string; job_title: string; bullets: BulletItem[] | string[] };
@@ -799,7 +800,7 @@ const JobDetail = () => {
       {/* Tabs */}
       <Tabs defaultValue={defaultTab}>
         <TabsList className="w-full justify-start border-b rounded-none bg-transparent p-0 h-auto">
-          {["overview", "outreach", "cv", "interview", "notes"].map(tab => (
+          {["overview", "cv", "interview", "outreach", "notes"].map(tab => (
             <TabsTrigger
               key={tab}
               value={tab}
