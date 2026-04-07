@@ -1091,29 +1091,17 @@ const JobDetail = () => {
         </TabsContent>
 
         {/* Outreach Tab */}
-        <TabsContent value="outreach" className="mt-6 space-y-4">
-          <div className="flex gap-3">
-            <Input
-              value={linkedinUrl}
-              onChange={(e) => setLinkedinUrl(e.target.value)}
-              placeholder="Paste a LinkedIn profile URL"
-              className="flex-1"
-              onKeyDown={(e) => e.key === "Enter" && addContact()}
+        <TabsContent value="outreach" className="mt-6">
+          {job && userId && (
+            <OutreachTab
+              jobId={job.id}
+              userId={userId}
+              companyName={job.company_name}
+              jobTitle={job.job_title}
+              jobFunction={job.function}
+              contacts={contacts as any}
+              setContacts={setContacts as any}
             />
-            <Button onClick={addContact}>Add Contact</Button>
-          </div>
-          {contacts.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">No contacts added yet. Paste a LinkedIn URL above to add one.</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {contacts.map(c => (
-                <ContactCard key={c.id} contact={c} onUpdate={updateContact} onDelete={deleteContact} />
-              ))}
-            </div>
           )}
         </TabsContent>
 
