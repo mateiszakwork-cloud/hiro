@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import OutreachTab from "@/components/OutreachTab";
 
 type BulletItem = { original: string; tailored: string; use_tailored: boolean };
 type BulletBlock = { company: string; job_title: string; bullets: BulletItem[] | string[] };
@@ -56,8 +57,11 @@ type Job = {
 
 type Contact = {
   id: string; linkedin_url: string | null; name: string | null; headline: string | null;
-  current_title: string | null; is_alumni: boolean; connection_note_draft: string | null;
-  inmail_draft: string | null; outreach_status: string;
+  current_title: string | null; current_company: string | null; profile_picture_url: string | null;
+  connection_degree: string | null; is_alumni: boolean; shared_connections_count: number | null;
+  category: string | null; priority_score: number | null;
+  connection_note_draft: string | null; inmail_subject_draft: string | null; inmail_draft: string | null;
+  outreach_status: string; created_at: string; job_id: string; user_id: string;
 };
 
 const STATUS_OPTIONS = [
@@ -471,7 +475,7 @@ const JobDetail = () => {
   };
 
   const updateContact = async (id: string, patch: Partial<Contact>) => {
-    await supabase.from("contacts").update(patch).eq("id", id);
+    await supabase.from("contacts").update(patch as any).eq("id", id);
     setContacts(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c));
   };
 
@@ -796,7 +800,7 @@ const JobDetail = () => {
       {/* Tabs */}
       <Tabs defaultValue={defaultTab}>
         <TabsList className="w-full justify-start border-b rounded-none bg-transparent p-0 h-auto">
-          {["overview", "outreach", "cv", "interview", "notes"].map(tab => (
+          {["overview", "cv", "interview", "outreach", "notes"].map(tab => (
             <TabsTrigger
               key={tab}
               value={tab}
@@ -1087,29 +1091,17 @@ const JobDetail = () => {
         </TabsContent>
 
         {/* Outreach Tab */}
-        <TabsContent value="outreach" className="mt-6 space-y-4">
-          <div className="flex gap-3">
-            <Input
-              value={linkedinUrl}
-              onChange={(e) => setLinkedinUrl(e.target.value)}
-              placeholder="Paste a LinkedIn profile URL"
-              className="flex-1"
-              onKeyDown={(e) => e.key === "Enter" && addContact()}
+        <TabsContent value="outreach" className="mt-6">
+          {job && userId && (
+            <OutreachTab
+              jobId={job.id}
+              userId={userId}
+              companyName={job.company_name}
+              jobTitle={job.job_title}
+              jobFunction={job.function}
+              contacts={contacts as any}
+              setContacts={setContacts as any}
             />
-            <Button onClick={addContact}>Add Contact</Button>
-          </div>
-          {contacts.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">No contacts added yet. Paste a LinkedIn URL above to add one.</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {contacts.map(c => (
-                <ContactCard key={c.id} contact={c} onUpdate={updateContact} onDelete={deleteContact} />
-              ))}
-            </div>
           )}
         </TabsContent>
 

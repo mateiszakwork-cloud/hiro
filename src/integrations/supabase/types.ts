@@ -46,8 +46,10 @@ export type Database = {
       }
       contacts: {
         Row: {
+          category: string | null
           connection_note_draft: string | null
           created_at: string
+          current_company: string | null
           current_title: string | null
           headline: string | null
           id: string
@@ -58,11 +60,16 @@ export type Database = {
           linkedin_url: string | null
           name: string | null
           outreach_status: string
+          priority_score: number | null
+          profile_picture_url: string | null
+          shared_connections_count: number | null
           user_id: string
         }
         Insert: {
+          category?: string | null
           connection_note_draft?: string | null
           created_at?: string
+          current_company?: string | null
           current_title?: string | null
           headline?: string | null
           id?: string
@@ -73,11 +80,16 @@ export type Database = {
           linkedin_url?: string | null
           name?: string | null
           outreach_status?: string
+          priority_score?: number | null
+          profile_picture_url?: string | null
+          shared_connections_count?: number | null
           user_id: string
         }
         Update: {
+          category?: string | null
           connection_note_draft?: string | null
           created_at?: string
+          current_company?: string | null
           current_title?: string | null
           headline?: string | null
           id?: string
@@ -88,6 +100,9 @@ export type Database = {
           linkedin_url?: string | null
           name?: string | null
           outreach_status?: string
+          priority_score?: number | null
+          profile_picture_url?: string | null
+          shared_connections_count?: number | null
           user_id?: string
         }
         Relationships: [
