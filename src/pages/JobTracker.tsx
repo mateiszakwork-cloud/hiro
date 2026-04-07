@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Briefcase, MapPin, Trash2, ExternalLink, Loader2, CalendarIcon, ArrowUp, ArrowDown, ArrowUpDown, Wand2, Check, Copy, ArrowRight, Pencil } from "lucide-react";
+import { Briefcase, MapPin, Trash2, ExternalLink, Loader2, CalendarIcon, ArrowUp, ArrowDown, ArrowUpDown, Wand2, Check, Copy, ArrowRight, Pencil, Users } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
@@ -109,6 +109,7 @@ const COLUMNS: { label: string; key: SortKey | null; minWidth: string }[] = [
   { label: "Status", key: "status", minWidth: "95px" },
   { label: "Match", key: "match_score", minWidth: "65px" },
   { label: "Kit", key: null, minWidth: "45px" },
+  { label: "Outreach", key: null, minWidth: "75px" },
   { label: "Priority", key: "priority", minWidth: "75px" },
   { label: "Applied", key: "applied_date", minWidth: "85px" },
 ];
@@ -141,6 +142,7 @@ const JobTracker = () => {
   const [cvMap, setCvMap] = useState<Record<string, CvOutput>>({});
   const [generatingKit, setGeneratingKit] = useState<string | null>(null);
   const [kitModalJobId, setKitModalJobId] = useState<string | null>(null);
+  const [outreachMap, setOutreachMap] = useState<Record<string, { count: number; maxStatus: string }>>({});
 
   // Sort & filter state
   const [sortKey, setSortKey] = useState<SortKey>("created_at");
@@ -214,6 +216,23 @@ const JobTracker = () => {
           };
         }
         setCvMap(map);
+      }
+      // Fetch outreach summary per job
+      const { data: contactData } = await supabase
+        .from("contacts")
+        .select("job_id, outreach_status")
+        .eq("user_id", session.user.id);
+      if (contactData) {
+        const STATUS_ORDER = ["Not contacted", "Connection sent", "Connected", "Replied", "Meeting booked"];
+        const oMap: Record<string, { count: number; maxStatus: string }> = {};
+        for (const row of contactData) {
+          if (!oMap[row.job_id]) oMap[row.job_id] = { count: 0, maxStatus: "Not contacted" };
+          oMap[row.job_id].count++;
+          const currentIdx = STATUS_ORDER.indexOf(oMap[row.job_id].maxStatus);
+          const newIdx = STATUS_ORDER.indexOf(row.outreach_status);
+          if (newIdx > currentIdx) oMap[row.job_id].maxStatus = row.outreach_status;
+        }
+        setOutreachMap(oMap);
       }
     };
     init();
@@ -663,6 +682,34 @@ const JobTracker = () => {
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
+                      </td>
+                      {/* Outreach column */}
+                      <td className="px-3 py-3" onClick={(e) => { e.stopPropagation(); navigate(`/jobs/${job.id}?tab=outreach`); }}>
+                        {(() => {
+                          const o = outreachMap[job.id];
+                          if (!o) return <span className="text-muted-foreground">–</span>;
+                          const dotColor: Record<string, string> = {
+                            "Not contacted": "bg-gray-400",
+                            "Connection sent": "bg-blue-500",
+                            "Connected": "bg-green-500",
+                            "Replied": "bg-amber-500",
+                            "Meeting booked": "bg-[#950606]",
+                          };
+                          return (
+                            <TooltipProvider delayDuration={200}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">
+                                    <Users className="h-3.5 w-3.5" />
+                                    <span className="text-xs font-medium">{o.count}</span>
+                                    <span className={`h-2 w-2 rounded-full ${dotColor[o.maxStatus] || "bg-gray-400"}`} />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>{o.count} contact{o.count !== 1 ? "s" : ""} — most advanced: {o.maxStatus}</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          );
+                        })()}
                       </td>
                       <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                         <Select value={job.priority} onValueChange={(v) => handlePriorityChange(job.id, v)}>
