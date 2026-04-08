@@ -5,12 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/sonner";
-import { Eye, EyeOff, AlertTriangle, CheckCircle2, Circle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Circle } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 
 const Settings = () => {
   const [cookie, setCookie] = useState("");
   const [savedCookie, setSavedCookie] = useState<string | null>(null);
-  const [showCookie, setShowCookie] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -33,23 +33,28 @@ const Settings = () => {
   }, []);
 
   const handleSave = async () => {
+    const trimmed = cookie.trim();
+    if (trimmed.length < 20) {
+      toast("This does not look like a valid cookie. Make sure you copied the full value.");
+      return;
+    }
     setSaving(true);
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) { setSaving(false); return; }
     const { error } = await supabase
       .from("profiles")
-      .update({ linkedin_cookie: cookie.trim() || null } as any)
+      .update({ linkedin_cookie: trimmed || null } as any)
       .eq("id", session.user.id);
     setSaving(false);
     if (error) {
       toast("Failed to save. Please try again.");
     } else {
-      setSavedCookie(cookie.trim() || null);
+      setSavedCookie(trimmed || null);
       toast("LinkedIn connected");
     }
   };
 
-  const isConnected = !!savedCookie;
+  const isConnected = !!savedCookie && savedCookie.length >= 20;
 
   if (loading) {
     return (
@@ -112,23 +117,17 @@ const Settings = () => {
             <Label htmlFor="li-cookie" className="text-sm font-medium">
               LinkedIn Session Cookie (li_at)
             </Label>
-            <div className="relative">
-              <Input
-                id="li-cookie"
-                type={showCookie ? "text" : "password"}
-                value={cookie}
-                onChange={(e) => setCookie(e.target.value)}
-                placeholder="Paste your li_at cookie value here"
-                className="pr-10"
-              />
-              <button
-                type="button"
-                onClick={() => setShowCookie(!showCookie)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {showCookie ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
+            <Textarea
+              id="li-cookie"
+              rows={4}
+              value={cookie}
+              onChange={(e) => setCookie(e.target.value)}
+              placeholder="e.g. AQEDATzEx4clICv0c0AAABnK... (a long string of letters, numbers and symbols starting with AQED)"
+              className="text-sm"
+            />
+            <p className="text-xs text-muted-foreground">
+              Your li_at cookie is a long string usually starting with AQED. Make sure you copy the entire value.
+            </p>
           </div>
 
           <Button
