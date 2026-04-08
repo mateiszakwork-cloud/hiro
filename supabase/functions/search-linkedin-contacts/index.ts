@@ -423,56 +423,77 @@ serve(async (req) => {
 
     const userSchools: string[] = (eduRes.data ?? []).map((e: any) => e.institution).filter(Boolean);
 
-    // Step 2: Run four searches in parallel
+    // Step 2: Run three targeted searches in parallel
     const searchKeywords = [
       `${job_title ?? ""} ${company_name}`.trim(),
       `${job_function ?? ""} manager lead head director ${company_name}`.trim(),
       `talent acquisition recruiter HR ${company_name}`.trim(),
-      company_name,
     ];
 
     console.log("Running LinkedIn searches for:", searchKeywords.map((k, i) => `Search ${i + 1}: ${k}`));
 
-    const results = await Promise.all(
+    const settled = await Promise.allSettled(
       searchKeywords.map((kw) => searchLinkedIn(cookie, jsessionid, kw))
     );
 
-    // Check for specific errors
-    for (const r of results) {
+    // Process results individually — failures don't block successes
+    const successfulResults: { raw: any }[] = [];
+    let cookieExpired = false;
+    let rateLimited = false;
+
+    for (let i = 0; i < settled.length; i++) {
+      const outcome = settled[i];
+      if (outcome.status === "rejected") {
+        console.log(`Search ${i + 1} threw an exception:`, outcome.reason);
+        continue;
+      }
+      const r = outcome.value;
       if (r.error === "cookie_expired") {
+        console.log(`Search ${i + 1} failed: cookie_expired`);
+        cookieExpired = true;
+        continue;
+      }
+      if (r.error === "rate_limited") {
+        console.log(`Search ${i + 1} failed: rate_limited`);
+        rateLimited = true;
+        continue;
+      }
+      if (r.error) {
+        console.log(`Search ${i + 1} failed: ${r.error}`);
+        continue;
+      }
+      // Success
+      successfulResults.push({ raw: r.raw });
+    }
+
+    // If ALL searches failed, return the most relevant error
+    if (successfulResults.length === 0) {
+      if (cookieExpired) {
         return json({
           success: false,
           step: "cookie_expired",
           message: "Your LinkedIn session has expired. Please update your cookie in Settings.",
         });
       }
-      if (r.error === "rate_limited") {
+      if (rateLimited) {
         return json({
           success: false,
           step: "rate_limited",
           message: "LinkedIn rate limit reached. Please wait a few minutes and try again.",
         });
       }
-      if (r.error === "parse_error") {
-        return json({
-          success: false,
-          step: "parse_error",
-          message: "LinkedIn returned an unexpected response. This may be a temporary issue, please try again.",
-        });
-      }
-      if (r.error?.startsWith("linkedin_error_")) {
-        const statusCode = r.error.replace("linkedin_error_", "");
-        return json({
-          success: false,
-          step: "linkedin_error",
-          message: `LinkedIn search returned status ${statusCode}. Please try again.`,
-        });
-      }
+      return json({
+        success: false,
+        step: "all_searches_failed",
+        message: "All LinkedIn searches failed. Please try again.",
+      });
     }
 
-    // Step 3: Parse and combine
+    console.log(`${successfulResults.length} of ${searchKeywords.length} searches succeeded`);
+
+    // Step 3: Parse and combine successful results
     let allContacts: Contact[] = [];
-    for (const r of results) {
+    for (const r of successfulResults) {
       allContacts = allContacts.concat(extractProfiles(r.raw));
     }
     allContacts = deduplicate(allContacts);
