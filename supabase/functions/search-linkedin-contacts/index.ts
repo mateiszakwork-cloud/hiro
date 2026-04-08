@@ -13,8 +13,8 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
-const LINKEDIN_SEARCH_URL =
-  "https://www.linkedin.com/voyager/api/search/blended";
+const LINKEDIN_GRAPHQL_URL = "https://www.linkedin.com/voyager/api/graphql";
+const LINKEDIN_DASH_URL = "https://www.linkedin.com/voyager/api/search/dash/clusters";
 
 function buildHeaders(cookie: string, jsessionid: string) {
   const headers: Record<string, string> = {
@@ -46,49 +46,44 @@ async function searchLinkedIn(
   jsessionid: string,
   keywords: string
 ): Promise<{ raw: any; status: number; error?: string }> {
-  const url = new URL(LINKEDIN_SEARCH_URL);
-  url.searchParams.set("keywords", keywords);
-  url.searchParams.set("origin", "SWITCH_SEARCH_VERTICAL");
-  url.searchParams.set("q", "all");
-  url.searchParams.set("start", "0");
-  url.searchParams.set("count", "10");
-
   const headers = buildHeaders(cookie, jsessionid);
+  const encodedKeywords = encodeURIComponent(keywords);
 
-  // Log outgoing request details
-  console.log(`[LinkedIn Request] URL: ${url.toString()}`);
-  console.log(`[LinkedIn Request] Cookie li_at length: ${cookie.length}, first 10 chars: ${cookie.substring(0, 10)}...`);
-  console.log(`[LinkedIn Request] Headers (excluding cookie):`, JSON.stringify(
-    Object.fromEntries(Object.entries(headers).filter(([k]) => k !== "Cookie")),
-    null, 2
-  ));
+  // --- Attempt 1: GraphQL endpoint ---
+  const graphqlUrl = `${LINKEDIN_GRAPHQL_URL}?variables=(start:0,origin:SWITCH_SEARCH_VERTICAL,query:(keywords:${encodedKeywords},flagshipSearchIntent:SEARCH_SRP,queryParameters:List((key:resultType,value:List(PEOPLE))),includeFiltersInResponse:false))&queryId=voyagerSearchDashClusters.b0928897b71bd00a5a7291755dcd64f0`;
 
-  const res = await fetch(url.toString(), { headers });
+  console.log(`[LinkedIn Attempt 1] URL: ${graphqlUrl}`);
+  let res = await fetch(graphqlUrl, { headers });
+  let responseBody = await res.text();
+  console.log(`[LinkedIn Attempt 1] Status: ${res.status}`);
+  console.log(`[LinkedIn Attempt 1] Body (first 200): ${responseBody.substring(0, 200)}`);
 
-  // Log response details
-  const responseBody = await res.text();
-  console.log(`[LinkedIn Response] Status: ${res.status}`);
-  console.log(`[LinkedIn Response] Headers:`, JSON.stringify(Object.fromEntries(res.headers.entries()), null, 2));
-  console.log(`[LinkedIn Response] Body (first 500 chars): ${responseBody.substring(0, 500)}`);
+  // If 404, try fallback
+  if (res.status === 404) {
+    const dashUrl = `${LINKEDIN_DASH_URL}?decorationId=com.linkedin.voyager.dash.deco.search.SearchClusterCollection-175&origin=SWITCH_SEARCH_VERTICAL&q=all&query=(keywords:${encodedKeywords},flagshipSearchIntent:SEARCH_SRP,queryParameters:(resultType:List(PEOPLE)))&start=0&count=10`;
+
+    console.log(`[LinkedIn Attempt 2 Fallback] URL: ${dashUrl}`);
+    res = await fetch(dashUrl, { headers });
+    responseBody = await res.text();
+    console.log(`[LinkedIn Attempt 2 Fallback] Status: ${res.status}`);
+    console.log(`[LinkedIn Attempt 2 Fallback] Body (first 200): ${responseBody.substring(0, 200)}`);
+  }
 
   if (res.status === 401 || res.status === 403) {
     return { raw: null, status: res.status, error: "cookie_expired" };
   }
-
   if (res.status === 429) {
     return { raw: null, status: res.status, error: "rate_limited" };
   }
-
   if (res.status !== 200) {
     return { raw: null, status: res.status, error: `linkedin_error_${res.status}` };
   }
 
-  // Try to parse JSON
   try {
     const data = JSON.parse(responseBody);
     return { raw: data, status: res.status };
   } catch {
-    console.log(`[LinkedIn Response] Failed to parse JSON`);
+    console.log(`[LinkedIn] Failed to parse JSON`);
     return { raw: null, status: res.status, error: "parse_error" };
   }
 }
