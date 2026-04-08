@@ -17,31 +17,79 @@ const LINKEDIN_SEARCH_URL =
   "https://www.linkedin.com/voyager/api/search/blended";
 
 function buildHeaders(cookie: string) {
-  return {
+  const headers: Record<string, string> = {
     Cookie: `li_at=${cookie}`,
     "User-Agent":
       "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "X-Li-Lang": "en_US",
-    "X-Restli-Protocol-Version": "2.0.0",
-    Accept: "application/json",
+    "x-li-lang": "en_US",
+    "x-restli-protocol-version": "2.0.0",
+    "x-li-track": JSON.stringify({
+      clientVersion: "1.13.1",
+      mpVersion: "1.13.1",
+      osName: "web",
+      timezoneOffset: 1,
+      timezone: "Europe/Lisbon",
+      deviceFormFactor: "DESKTOP",
+      mpName: "voyager-web",
+      displayDensity: 1,
+      displayWidth: 1920,
+      displayHeight: 1080,
+    }),
+    Accept: "application/vnd.linkedin.normalized+json+2.1",
+    "csrf-token": "ajax:1234567890",
   };
+  return headers;
 }
 
 async function searchLinkedIn(
   cookie: string,
   keywords: string
-): Promise<{ raw: any; status: number }> {
+): Promise<{ raw: any; status: number; error?: string }> {
   const url = new URL(LINKEDIN_SEARCH_URL);
   url.searchParams.set("keywords", keywords);
-  url.searchParams.set("origin", "GLOBAL_SEARCH_HEADER");
+  url.searchParams.set("origin", "SWITCH_SEARCH_VERTICAL");
+  url.searchParams.set("q", "all");
+  url.searchParams.set("start", "0");
   url.searchParams.set("count", "10");
 
-  const res = await fetch(url.toString(), { headers: buildHeaders(cookie) });
+  const headers = buildHeaders(cookie);
+
+  // Log outgoing request details
+  console.log(`[LinkedIn Request] URL: ${url.toString()}`);
+  console.log(`[LinkedIn Request] Cookie li_at length: ${cookie.length}, first 10 chars: ${cookie.substring(0, 10)}...`);
+  console.log(`[LinkedIn Request] Headers (excluding cookie):`, JSON.stringify(
+    Object.fromEntries(Object.entries(headers).filter(([k]) => k !== "Cookie")),
+    null, 2
+  ));
+
+  const res = await fetch(url.toString(), { headers });
+
+  // Log response details
+  const responseBody = await res.text();
+  console.log(`[LinkedIn Response] Status: ${res.status}`);
+  console.log(`[LinkedIn Response] Headers:`, JSON.stringify(Object.fromEntries(res.headers.entries()), null, 2));
+  console.log(`[LinkedIn Response] Body (first 500 chars): ${responseBody.substring(0, 500)}`);
+
   if (res.status === 401 || res.status === 403) {
-    return { raw: null, status: res.status };
+    return { raw: null, status: res.status, error: "cookie_expired" };
   }
-  const data = await res.json();
-  return { raw: data, status: res.status };
+
+  if (res.status === 429) {
+    return { raw: null, status: res.status, error: "rate_limited" };
+  }
+
+  if (res.status !== 200) {
+    return { raw: null, status: res.status, error: `linkedin_error_${res.status}` };
+  }
+
+  // Try to parse JSON
+  try {
+    const data = JSON.parse(responseBody);
+    return { raw: data, status: res.status };
+  } catch {
+    console.log(`[LinkedIn Response] Failed to parse JSON`);
+    return { raw: null, status: res.status, error: "parse_error" };
+  }
 }
 
 interface Contact {
