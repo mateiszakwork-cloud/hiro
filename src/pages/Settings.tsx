@@ -10,7 +10,9 @@ import { Textarea } from "@/components/ui/textarea";
 
 const Settings = () => {
   const [cookie, setCookie] = useState("");
+  const [jsessionid, setJsessionid] = useState("");
   const [savedCookie, setSavedCookie] = useState<string | null>(null);
+  const [savedJsessionid, setSavedJsessionid] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -20,41 +22,69 @@ const Settings = () => {
       if (!session) return;
       const { data } = await supabase
         .from("profiles")
-        .select("linkedin_cookie")
+        .select("linkedin_cookie, linkedin_jsessionid")
         .eq("id", session.user.id)
         .single();
       if (data?.linkedin_cookie) {
         setCookie(data.linkedin_cookie);
         setSavedCookie(data.linkedin_cookie);
       }
+      if ((data as any)?.linkedin_jsessionid) {
+        setJsessionid((data as any).linkedin_jsessionid);
+        setSavedJsessionid((data as any).linkedin_jsessionid);
+      }
       setLoading(false);
     };
     load();
   }, []);
 
+  const isLiAtValid = (v: string) => v.trim().length >= 50;
+  const isJsessionValid = (v: string) => v.trim().startsWith("ajax:");
+
   const handleSave = async () => {
-    const trimmed = cookie.trim();
-    if (trimmed.length < 20) {
-      toast("This does not look like a valid cookie. Make sure you copied the full value.");
+    const trimmedCookie = cookie.trim();
+    const trimmedSession = jsessionid.trim();
+
+    if (trimmedCookie && !isLiAtValid(trimmedCookie)) {
+      toast("The li_at cookie looks too short. Make sure you copied the full value.");
       return;
     }
+    if (trimmedSession && !isJsessionValid(trimmedSession)) {
+      toast("The JSESSIONID should start with 'ajax:'. Please check the value.");
+      return;
+    }
+    if (!trimmedCookie && !trimmedSession) {
+      toast("Please paste at least one cookie value.");
+      return;
+    }
+
     setSaving(true);
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) { setSaving(false); return; }
     const { error } = await supabase
       .from("profiles")
-      .update({ linkedin_cookie: trimmed || null } as any)
+      .update({ linkedin_cookie: trimmedCookie || null, linkedin_jsessionid: trimmedSession || null } as any)
       .eq("id", session.user.id);
     setSaving(false);
     if (error) {
       toast("Failed to save. Please try again.");
     } else {
-      setSavedCookie(trimmed || null);
+      setSavedCookie(trimmedCookie || null);
+      setSavedJsessionid(trimmedSession || null);
       toast("LinkedIn connected");
     }
   };
 
-  const isConnected = !!savedCookie && savedCookie.length >= 20;
+  const cookieValid = !!savedCookie && isLiAtValid(savedCookie);
+  const sessionValid = !!savedJsessionid && isJsessionValid(savedJsessionid);
+  const isFullyConnected = cookieValid && sessionValid;
+  const isPartial = (cookieValid && !sessionValid) || (!cookieValid && sessionValid);
+
+  const missingField = cookieValid && !sessionValid
+    ? "JSESSIONID"
+    : !cookieValid && sessionValid
+      ? "li_at cookie"
+      : null;
 
   if (loading) {
     return (
@@ -86,10 +116,15 @@ const Settings = () => {
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0 mt-1">
-              {isConnected ? (
+              {isFullyConnected ? (
                 <>
                   <CheckCircle2 className="h-4 w-4 text-green-600" />
                   <span className="text-sm font-medium text-green-700">LinkedIn connected</span>
+                </>
+              ) : isPartial ? (
+                <>
+                  <AlertTriangle className="h-4 w-4" style={{ color: "#D97706" }} />
+                  <span className="text-sm font-medium" style={{ color: "#D97706" }}>Partially configured</span>
                 </>
               ) : (
                 <>
@@ -100,39 +135,71 @@ const Settings = () => {
             </div>
           </div>
 
+          {isPartial && missingField && (
+            <div className="flex gap-3 items-start rounded-lg p-3" style={{ backgroundColor: "#FFFBEB" }}>
+              <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" style={{ color: "#D97706" }} />
+              <p className="text-sm" style={{ color: "#92400E" }}>
+                Please also add your {missingField} to enable LinkedIn search.
+              </p>
+            </div>
+          )}
+
           {/* Instructions */}
           <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-            <p className="text-sm font-medium text-foreground mb-3">How to find your LinkedIn session cookie:</p>
+            <p className="text-sm font-medium text-foreground mb-3">How to find your LinkedIn session cookies:</p>
             <ol className="text-sm text-muted-foreground space-y-1.5 list-decimal list-inside">
-              <li>Open <strong>linkedin.com</strong> in Chrome and make sure you're logged in</li>
-              <li>Right-click anywhere on the page and click <strong>Inspect</strong></li>
-              <li>Go to the <strong>Application</strong> tab in DevTools</li>
-              <li>In the left sidebar, expand <strong>Cookies → https://www.linkedin.com</strong></li>
-              <li>Find the cookie named <strong>li_at</strong> and copy its <strong>Value</strong></li>
+              <li>Open <strong>linkedin.com</strong> in Chrome and make sure you are logged in</li>
+              <li>Right click anywhere on the page and click <strong>Inspect</strong> (or press F12)</li>
+              <li>In the DevTools panel that opens, click the <strong>Application</strong> tab at the top</li>
+              <li>In the left sidebar, click <strong>Cookies</strong>, then click <strong>https://www.linkedin.com</strong></li>
+              <li>Find the cookie named <strong>li_at</strong> in the list. Click on it and copy the entire <strong>Value</strong> — it is a long string starting with AQED</li>
+              <li>In the same list, find the cookie named <strong>JSESSIONID</strong>. Copy its entire <strong>Value</strong> — it starts with <strong>ajax:</strong> followed by numbers and letters</li>
             </ol>
           </div>
 
-          {/* Input */}
+          {/* Tip */}
+          <div className="bg-muted/30 rounded-lg p-3">
+            <p className="text-sm text-muted-foreground">
+              💡 Tip: The cookie list can be long. Use Ctrl+F (or Cmd+F on Mac) to search for 'li_at' and 'JSESSIONID' to find them quickly.
+            </p>
+          </div>
+
+          {/* li_at Input */}
           <div className="space-y-2">
             <Label htmlFor="li-cookie" className="text-sm font-medium">
-              LinkedIn Session Cookie (li_at)
+              li_at Cookie
             </Label>
             <Textarea
               id="li-cookie"
               rows={4}
               value={cookie}
               onChange={(e) => setCookie(e.target.value)}
-              placeholder="e.g. AQEDATzEx4clICv0c0AAABnK... (a long string of letters, numbers and symbols starting with AQED)"
+              placeholder="Paste your li_at value here — starts with AQED..."
+              className="text-sm"
+            />
+          </div>
+
+          {/* JSESSIONID Input */}
+          <div className="space-y-2">
+            <Label htmlFor="jsessionid" className="text-sm font-medium">
+              JSESSIONID Cookie
+            </Label>
+            <Input
+              id="jsessionid"
+              type="text"
+              value={jsessionid}
+              onChange={(e) => setJsessionid(e.target.value)}
+              placeholder="Paste your JSESSIONID value here — starts with ajax:..."
               className="text-sm"
             />
             <p className="text-xs text-muted-foreground">
-              Your li_at cookie is a long string usually starting with AQED. Make sure you copy the entire value.
+              This is required for LinkedIn to accept Hiro's requests. Without it, searches will fail.
             </p>
           </div>
 
           <Button
             onClick={handleSave}
-            disabled={saving || !cookie.trim()}
+            disabled={saving || (!cookie.trim() && !jsessionid.trim())}
             className="text-white"
             style={{ backgroundColor: "#950606" }}
           >

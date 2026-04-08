@@ -16,9 +16,9 @@ const json = (body: unknown, status = 200) =>
 const LINKEDIN_SEARCH_URL =
   "https://www.linkedin.com/voyager/api/search/blended";
 
-function buildHeaders(cookie: string) {
+function buildHeaders(cookie: string, jsessionid: string) {
   const headers: Record<string, string> = {
-    Cookie: `li_at=${cookie}`,
+    Cookie: `li_at=${cookie}; JSESSIONID=${jsessionid}`,
     "User-Agent":
       "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "x-li-lang": "en_US",
@@ -36,7 +36,7 @@ function buildHeaders(cookie: string) {
       displayHeight: 1080,
     }),
     Accept: "application/vnd.linkedin.normalized+json+2.1",
-    "csrf-token": "ajax:1234567890",
+    "csrf-token": jsessionid,
   };
   return headers;
 }
