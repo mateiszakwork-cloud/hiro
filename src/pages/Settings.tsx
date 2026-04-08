@@ -34,18 +34,23 @@ const Settings = () => {
   }, []);
 
   const handleSave = async () => {
+    const trimmed = cookie.trim();
+    if (trimmed.length < 20) {
+      toast("This does not look like a valid cookie. Make sure you copied the full value.");
+      return;
+    }
     setSaving(true);
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) { setSaving(false); return; }
     const { error } = await supabase
       .from("profiles")
-      .update({ linkedin_cookie: cookie.trim() || null } as any)
+      .update({ linkedin_cookie: trimmed || null } as any)
       .eq("id", session.user.id);
     setSaving(false);
     if (error) {
       toast("Failed to save. Please try again.");
     } else {
-      setSavedCookie(cookie.trim() || null);
+      setSavedCookie(trimmed || null);
       toast("LinkedIn connected");
     }
   };
