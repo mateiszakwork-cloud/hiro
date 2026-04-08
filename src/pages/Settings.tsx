@@ -55,7 +55,7 @@ const Settings = () => {
     }
   };
 
-  const isConnected = !!savedCookie;
+  const isConnected = !!savedCookie && savedCookie.length >= 20;
 
   if (loading) {
     return (
