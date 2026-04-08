@@ -11,7 +11,6 @@ import { Textarea } from "@/components/ui/textarea";
 const Settings = () => {
   const [cookie, setCookie] = useState("");
   const [savedCookie, setSavedCookie] = useState<string | null>(null);
-  const [showCookie, setShowCookie] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
