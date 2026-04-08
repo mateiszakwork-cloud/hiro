@@ -280,6 +280,14 @@ const JobDetail = () => {
   const { jobId } = useParams<{ jobId: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+
+  // Guard against invalid jobId
+  useEffect(() => {
+    if (!jobId || jobId === "undefined" || jobId === "null") {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [jobId, navigate]);
+
   const defaultTab = searchParams.get("tab") || "overview";
   const [job, setJob] = useState<Job | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
