@@ -326,12 +326,13 @@ const OutreachTab = ({
     setCookieExpired(false);
     try {
       const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
-      if (!token) { toast.error("Session expired."); setSearching(false); return; }
+      const session = sessionData?.session;
+      const token = session?.access_token;
+      if (!session) { toast.error("Session expired."); setSearching(false); return; }
 
       const { data, error } = await supabase.functions.invoke("search-linkedin-contacts", {
-        body: { company_name: companyName, job_title: jobTitle, job_function: jobFunction, job_id: jobId },
-        headers: { Authorization: `Bearer ${token}` },
+        body: { company_name: companyName, job_title: jobTitle, job_function: jobFunction, job_id: jobId, user_id: session.user.id },
+        ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
       });
 
       if (error || !data?.success) {
