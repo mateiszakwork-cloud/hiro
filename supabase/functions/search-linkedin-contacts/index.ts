@@ -16,9 +16,9 @@ const json = (body: unknown, status = 200) =>
 const LINKEDIN_SEARCH_URL =
   "https://www.linkedin.com/voyager/api/search/blended";
 
-function buildHeaders(cookie: string) {
+function buildHeaders(cookie: string, jsessionid: string) {
   const headers: Record<string, string> = {
-    Cookie: `li_at=${cookie}`,
+    Cookie: `li_at=${cookie}; JSESSIONID=${jsessionid}`,
     "User-Agent":
       "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "x-li-lang": "en_US",
@@ -36,13 +36,14 @@ function buildHeaders(cookie: string) {
       displayHeight: 1080,
     }),
     Accept: "application/vnd.linkedin.normalized+json+2.1",
-    "csrf-token": "ajax:1234567890",
+    "csrf-token": jsessionid,
   };
   return headers;
 }
 
 async function searchLinkedIn(
   cookie: string,
+  jsessionid: string,
   keywords: string
 ): Promise<{ raw: any; status: number; error?: string }> {
   const url = new URL(LINKEDIN_SEARCH_URL);
@@ -52,7 +53,7 @@ async function searchLinkedIn(
   url.searchParams.set("start", "0");
   url.searchParams.set("count", "10");
 
-  const headers = buildHeaders(cookie);
+  const headers = buildHeaders(cookie, jsessionid);
 
   // Log outgoing request details
   console.log(`[LinkedIn Request] URL: ${url.toString()}`);
@@ -401,9 +402,9 @@ serve(async (req) => {
       return json({ success: false, step: "validation", message: "Company name is required." });
     }
 
-    // Step 1: Fetch cookie and education
+    // Step 1: Fetch cookie, jsessionid, and education
     const [profileRes, eduRes] = await Promise.all([
-      supabase.from("profiles").select("linkedin_cookie").eq("id", userId).single(),
+      supabase.from("profiles").select("linkedin_cookie, linkedin_jsessionid").eq("id", userId).single(),
       supabase.from("education").select("institution").eq("user_id", userId),
     ]);
 
@@ -413,6 +414,15 @@ serve(async (req) => {
         success: false,
         step: "no_cookie",
         message: "Please add your LinkedIn session cookie in Settings first.",
+      });
+    }
+
+    const jsessionid = profileRes.data?.linkedin_jsessionid;
+    if (!jsessionid) {
+      return json({
+        success: false,
+        step: "no_jsessionid",
+        message: "Please add your JSESSIONID cookie in Settings to enable LinkedIn search.",
       });
     }
 
@@ -429,7 +439,7 @@ serve(async (req) => {
     console.log("Running LinkedIn searches for:", searchKeywords.map((k, i) => `Search ${i + 1}: ${k}`));
 
     const results = await Promise.all(
-      searchKeywords.map((kw) => searchLinkedIn(cookie, kw))
+      searchKeywords.map((kw) => searchLinkedIn(cookie, jsessionid, kw))
     );
 
     // Check for specific errors
