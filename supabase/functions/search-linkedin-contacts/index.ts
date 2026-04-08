@@ -103,85 +103,57 @@ interface Contact {
   priority_score: number;
 }
 
-function extractProfiles(data: any): Contact[] {
-  const contacts: Contact[] = [];
-  if (!data || !data.elements) return contacts;
+function extractProfiles(responseData: any): Contact[] {
+  const profiles: Contact[] = [];
+  try {
+    // Navigate the GraphQL response structure
+    const searchData = responseData?.data?.data?.searchDashClustersByAll || responseData?.data?.searchDashClustersByAll || responseData;
+    const elements = searchData?.elements || [];
+    console.log('Elements found:', elements.length);
+    for (const cluster of elements) {
+      const items = cluster?.items || [];
+      for (const itemWrapper of items) {
+        const entity = itemWrapper?.item?.entityResult;
+        if (!entity) continue;
+        const navigationUrl = entity?.navigationUrl || '';
+        if (!navigationUrl.includes('linkedin.com/in/')) continue;
+        const fullName = entity?.title?.text || '';
+        const subtitle = entity?.primarySubtitle?.text || '';
+        const location = entity?.secondarySubtitle?.text || '';
+        if (!fullName) continue;
 
-  for (const element of data.elements) {
-    const entities = element?.elements ?? [];
-    for (const entity of entities) {
-      try {
-        const title = entity?.title?.text ?? "";
-        const headline = entity?.headline?.text ?? "";
-        const subline = entity?.subline?.text ?? "";
-        const image =
-          entity?.image?.attributes?.[0]?.detailData?.nonEntityProfilePicture
-            ?.vectorImage?.rootUrl ?? "";
-        const navUrl = entity?.navigationUrl ?? "";
-
-        // Extract connection degree
-        let degree = "3rd";
-        const badges = entity?.badgeText?.text ?? entity?.memberBadges?.text ?? "";
-        if (
-          badges.includes("1st") ||
-          headline.includes("1st") ||
-          subline.includes("1st")
-        )
-          degree = "1st";
-        else if (
-          badges.includes("2nd") ||
-          headline.includes("2nd") ||
-          subline.includes("2nd")
-        )
-          degree = "2nd";
-
-        // Extract shared connections
-        const sharedText = entity?.socialProofText ?? "";
-        const sharedMatch = sharedText.match?.(/(\d+)\s*(shared|mutual)/i);
-        const sharedCount = sharedMatch ? parseInt(sharedMatch[1], 10) : 0;
-
-        // Parse profile URL
-        let profileUrl = "";
-        if (navUrl.includes("linkedin.com/in/")) {
-          profileUrl = navUrl.split("?")[0];
-        } else if (entity?.publicIdentifier) {
-          profileUrl = `https://www.linkedin.com/in/${entity.publicIdentifier}`;
+        let currentTitle = subtitle;
+        let currentCompany = '';
+        if (subtitle.includes(' at ')) {
+          const parts = subtitle.split(' at ');
+          currentTitle = parts[0].trim();
+          currentCompany = parts.slice(1).join(' at ').trim();
+        } else if (subtitle.includes(' @ ')) {
+          const parts = subtitle.split(' @ ');
+          currentTitle = parts[0].trim();
+          currentCompany = parts.slice(1).join(' @ ').trim();
         }
 
-        if (!title || !profileUrl) continue;
-
-        // Try to split "Title at Company"
-        let currentTitle = headline;
-        let currentCompany = "";
-        if (headline.includes(" at ")) {
-          const parts = headline.split(" at ");
-          currentTitle = parts[0].trim();
-          currentCompany = parts.slice(1).join(" at ").trim();
-        } else if (headline.includes(" @ ")) {
-          const parts = headline.split(" @ ");
-          currentTitle = parts[0].trim();
-          currentCompany = parts.slice(1).join(" @ ").trim();
-        }
-
-        contacts.push({
-          full_name: title,
-          headline,
+        profiles.push({
+          full_name: fullName,
+          headline: subtitle,
           current_title: currentTitle,
           current_company: currentCompany,
-          profile_url: profileUrl,
-          connection_degree: degree,
-          profile_picture_url: image,
-          shared_connections_count: sharedCount,
+          profile_url: navigationUrl.split('?')[0],
+          connection_degree: '3rd',
+          profile_picture_url: '',
+          shared_connections_count: 0,
           is_alumni: false,
-          category: "",
+          category: '',
           priority_score: 0,
         });
-      } catch {
-        // skip malformed entries
       }
     }
+  } catch (e) {
+    console.log('Extraction error:', (e as Error).message);
   }
-  return contacts;
+  console.log('Extracted profiles count:', profiles.length);
+  return profiles;
 }
 
 function deduplicate(contacts: Contact[]): Contact[] {
