@@ -432,13 +432,35 @@ serve(async (req) => {
       searchKeywords.map((kw) => searchLinkedIn(cookie, kw))
     );
 
-    // Check for auth failures
+    // Check for specific errors
     for (const r of results) {
-      if (r.status === 401 || r.status === 403) {
+      if (r.error === "cookie_expired") {
         return json({
           success: false,
           step: "cookie_expired",
           message: "Your LinkedIn session has expired. Please update your cookie in Settings.",
+        });
+      }
+      if (r.error === "rate_limited") {
+        return json({
+          success: false,
+          step: "rate_limited",
+          message: "LinkedIn rate limit reached. Please wait a few minutes and try again.",
+        });
+      }
+      if (r.error === "parse_error") {
+        return json({
+          success: false,
+          step: "parse_error",
+          message: "LinkedIn returned an unexpected response. This may be a temporary issue, please try again.",
+        });
+      }
+      if (r.error?.startsWith("linkedin_error_")) {
+        const statusCode = r.error.replace("linkedin_error_", "");
+        return json({
+          success: false,
+          step: "linkedin_error",
+          message: `LinkedIn search returned status ${statusCode}. Please try again.`,
         });
       }
     }
