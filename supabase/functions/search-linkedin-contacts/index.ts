@@ -81,6 +81,7 @@ async function searchLinkedIn(
 
   try {
     const data = JSON.parse(responseBody);
+    console.log('RAW RESPONSE SAMPLE:', JSON.stringify(data).substring(0, 2000));
     return { raw: data, status: res.status };
   } catch {
     console.log(`[LinkedIn] Failed to parse JSON`);
