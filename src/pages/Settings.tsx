@@ -117,23 +117,17 @@ const Settings = () => {
             <Label htmlFor="li-cookie" className="text-sm font-medium">
               LinkedIn Session Cookie (li_at)
             </Label>
-            <div className="relative">
-              <Input
-                id="li-cookie"
-                type={showCookie ? "text" : "password"}
-                value={cookie}
-                onChange={(e) => setCookie(e.target.value)}
-                placeholder="Paste your li_at cookie value here"
-                className="pr-10"
-              />
-              <button
-                type="button"
-                onClick={() => setShowCookie(!showCookie)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {showCookie ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
+            <Textarea
+              id="li-cookie"
+              rows={4}
+              value={cookie}
+              onChange={(e) => setCookie(e.target.value)}
+              placeholder="e.g. AQEDATzEx4clICv0c0AAABnK... (a long string of letters, numbers and symbols starting with AQED)"
+              className="text-sm"
+            />
+            <p className="text-xs text-muted-foreground">
+              Your li_at cookie is a long string usually starting with AQED. Make sure you copy the entire value.
+            </p>
           </div>
 
           <Button
