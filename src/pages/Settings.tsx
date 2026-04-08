@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/sonner";
-import { Eye, EyeOff, AlertTriangle, CheckCircle2, Circle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Circle } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 
 const Settings = () => {
   const [cookie, setCookie] = useState("");
