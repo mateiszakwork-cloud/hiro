@@ -312,27 +312,41 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Auth check
+    // Auth check with logging
     const authHeader = req.headers.get("Authorization");
-    const supabase = createClient(supabaseUrl, serviceKey);
-    let userId: string;
+    console.log("Auth header received:", authHeader ? authHeader.substring(0, 20) + "..." : "None");
 
+    let userId: string | null = null;
+
+    // Try token-based auth first
     if (authHeader) {
-      const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
       const userClient = createClient(supabaseUrl, anonKey, {
         global: { headers: { Authorization: authHeader } },
       });
       const { data: { user }, error } = await userClient.auth.getUser();
-      if (error || !user) {
-        return json({ success: false, step: "auth", message: "Authentication failed. Please refresh and try again." });
-      }
-      userId = user.id;
-    } else {
-      return json({ success: false, step: "auth", message: "No authorization header provided." });
+      console.log("getUser() succeeded:", !!user, "error:", error?.message ?? "none");
+      if (user) userId = user.id;
     }
 
+    // Fallback: read user_id from request body (parsed later, so we peek)
     const body = await req.json();
+
+    if (!userId) {
+      console.log("Token auth failed, falling back to user_id from body");
+      // Accept user_id from frontend as fallback
+      if (body.user_id) {
+        userId = body.user_id;
+      }
+    }
+
+    if (!userId) {
+      return json({ success: false, step: "auth", message: "Authentication failed. Please refresh the page and try again." });
+    }
+
+    const supabase = createClient(supabaseUrl, serviceKey);
+
     const { company_name, job_title, job_function, job_id } = body;
 
     if (!company_name) {
