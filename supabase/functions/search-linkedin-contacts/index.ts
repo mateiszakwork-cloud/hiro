@@ -13,8 +13,8 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
-const LINKEDIN_SEARCH_URL =
-  "https://www.linkedin.com/voyager/api/search/blended";
+const LINKEDIN_GRAPHQL_URL = "https://www.linkedin.com/voyager/api/graphql";
+const LINKEDIN_DASH_URL = "https://www.linkedin.com/voyager/api/search/dash/clusters";
 
 function buildHeaders(cookie: string, jsessionid: string) {
   const headers: Record<string, string> = {
