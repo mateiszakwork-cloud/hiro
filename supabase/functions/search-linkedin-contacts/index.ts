@@ -439,7 +439,7 @@ serve(async (req) => {
     console.log("Running LinkedIn searches for:", searchKeywords.map((k, i) => `Search ${i + 1}: ${k}`));
 
     const results = await Promise.all(
-      searchKeywords.map((kw) => searchLinkedIn(cookie, kw))
+      searchKeywords.map((kw) => searchLinkedIn(cookie, jsessionid, kw))
     );
 
     // Check for specific errors
