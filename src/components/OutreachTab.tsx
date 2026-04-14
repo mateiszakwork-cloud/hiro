@@ -381,7 +381,7 @@ const OutreachTab = ({
         else {
           toast.error("LinkedIn search failed — please try again.");
         }
-        else { toast.error(data?.message || "Search failed."); }
+        
         return;
       }
 
