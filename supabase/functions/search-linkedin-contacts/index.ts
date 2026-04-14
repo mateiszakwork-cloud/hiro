@@ -121,59 +121,61 @@ interface Contact {
 
 function extractProfiles(responseData: any): Contact[] {
   const profiles: Contact[] = [];
+  const seen = new Set<string>();
+
   try {
-    const included = responseData?.included || responseData?.data?.included || [];
-    
-    // Filter to entries that have actual profile data (firstName exists)
-    const profileEntries = included.filter((entry: any) => entry.firstName != null);
-    console.log(`Included entries total: ${included.length} | Entries with firstName: ${profileEntries.length}`);
+    const jsonStr = JSON.stringify(responseData);
+    const regex = /"navigationUrl":"(https:\/\/www\.linkedin\.com\/in\/[^"]+)"/g;
+    const urlMatches = [...jsonStr.matchAll(regex)];
+    console.log('Profile URLs found:', urlMatches.length);
 
-    for (const entry of profileEntries) {
-      const firstName = entry.firstName || "";
-      const lastName = entry.lastName || "";
-      const fullName = `${firstName} ${lastName}`.trim();
-      const headline = entry.headline || "";
-      
-      let publicIdentifier = entry.publicIdentifier;
-      if (!publicIdentifier && entry.entityUrn) {
-        const match = entry.entityUrn.match(/fsd_profile:([^,)]+)/);
-        if (match) publicIdentifier = match[1];
-      }
-      
-      if (!fullName || !publicIdentifier) continue;
+    for (const match of urlMatches) {
+      const url = match[1];
+      if (seen.has(url)) continue;
+      seen.add(url);
 
-      const profileUrl = `https://linkedin.com/in/${publicIdentifier}`;
+      const urlIndex = jsonStr.indexOf(match[0]);
+      const surrounding = jsonStr.substring(Math.max(0, urlIndex - 500), urlIndex + 200);
 
-      let currentTitle = headline;
-      let currentCompany = "";
-      if (headline.includes(" at ")) {
-        const parts = headline.split(" at ");
+      const titleMatch = surrounding.match(/"title":\{"text":"([^"]+)"/);
+      const subtitleMatch = surrounding.match(/"primarySubtitle":\{"text":"([^"]+)"/);
+
+      const fullName = titleMatch ? titleMatch[1] : '';
+      const subtitle = subtitleMatch ? subtitleMatch[1] : '';
+
+      if (!fullName || fullName.length < 2) continue;
+
+      let currentTitle = subtitle;
+      let currentCompany = '';
+      if (subtitle.includes(' at ')) {
+        const parts = subtitle.split(' at ');
         currentTitle = parts[0].trim();
-        currentCompany = parts.slice(1).join(" at ").trim();
-      } else if (headline.includes(" @ ")) {
-        const parts = headline.split(" @ ");
+        currentCompany = parts.slice(1).join(' at ').trim();
+      } else if (subtitle.includes(' @ ')) {
+        const parts = subtitle.split(' @ ');
         currentTitle = parts[0].trim();
-        currentCompany = parts.slice(1).join(" @ ").trim();
+        currentCompany = parts.slice(1).join(' @ ').trim();
       }
 
       profiles.push({
         full_name: fullName,
-        headline,
+        headline: subtitle,
         current_title: currentTitle,
         current_company: currentCompany,
-        profile_url: profileUrl,
-        connection_degree: "3rd",
-        profile_picture_url: "",
+        profile_url: url,
+        connection_degree: '3rd+',
+        profile_picture_url: '',
         shared_connections_count: 0,
         is_alumni: false,
-        category: "",
+        category: '',
         priority_score: 0,
       });
     }
   } catch (e) {
-    console.log("Extraction error:", (e as Error).message);
+    console.log('Extraction error:', (e as Error).message);
   }
-  console.log("Extracted profiles count:", profiles.length);
+
+  console.log('Extracted profiles count:', profiles.length);
   return profiles;
 }
 
