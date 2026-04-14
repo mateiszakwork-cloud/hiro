@@ -136,8 +136,10 @@ function extractProfiles(responseData: any): Contact[] {
 
         const profile = included.find(
           (inc: any) =>
-            inc?.$type?.includes('fsd_profile') &&
-            (inc?.$id === profileUrn || inc?.entityUrn === profileUrn)
+            inc?.$id === profileUrn ||
+            inc?.entityUrn === profileUrn ||
+            (inc?.$type?.includes('fsd_profile') &&
+              (inc?.$id === profileUrn || inc?.entityUrn === profileUrn))
         );
 
         if (!loggedLookup) {
