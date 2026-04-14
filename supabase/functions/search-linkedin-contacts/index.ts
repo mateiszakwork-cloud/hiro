@@ -122,114 +122,53 @@ interface Contact {
 function extractProfiles(responseData: any): Contact[] {
   const profiles: Contact[] = [];
   try {
-    const searchData = responseData?.data?.data?.searchDashClustersByAll ||
-      responseData?.data?.searchDashClustersByAll || responseData;
-    const elements = searchData?.elements || [];
-    const included = responseData?.included || responseData?.data?.included ||
-      [];
-    console.log(
-      "Elements found:",
-      elements.length,
-      "| Included entries:",
-      included.length,
-    );
+    const included = responseData?.included || responseData?.data?.included || [];
+    
+    // Filter to entries that have actual profile data (firstName exists)
+    const profileEntries = included.filter((entry: any) => entry.firstName != null);
+    console.log(`Included entries total: ${included.length} | Entries with firstName: ${profileEntries.length}`);
 
-    if (elements.length > 0) {
-      console.log(
-        "RAW ELEMENT SAMPLE:",
-        JSON.stringify(elements[0]).substring(0, 1500),
-      );
-    }
-    if (included.length > 0) {
-      const firstIncluded = included[0];
-      const urnLikeValues = Object.entries(firstIncluded)
-        .filter(([key]) => {
-          const lowerKey = key.toLowerCase();
-          return lowerKey.includes("urn") || key === "$id" ||
-            key === "entityUrn";
-        })
-        .map(([key, value]) => [key, value]);
-      console.log("First included entry keys:", Object.keys(firstIncluded));
-      console.log("First included URN-like values:", urnLikeValues);
-    }
-
-    let loggedLookup = false;
-
-    for (const cluster of elements) {
-      const items = cluster?.items || [];
-      for (const itemWrapper of items) {
-        const item = itemWrapper?.item;
-        if (!item) continue;
-
-        if (!loggedLookup) {
-          console.log("First item keys:", Object.keys(item));
-        }
-
-        const entityResultUrn = item["*entityResult"];
-        if (!entityResultUrn) continue;
-
-        const innerUrnMatch = entityResultUrn.match(
-          /\((urn:li:fsd_profile:[^,]+),/,
-        );
-        const profileUrn = innerUrnMatch?.[1];
-        if (!profileUrn) continue;
-
-        const profile = included.find((entry: any) =>
-          entry?.entityUrn === profileUrn
-        ) ||
-          included.find((entry: any) => entry?.$id === profileUrn) ||
-          included.find((entry: any) => entry?.trackingUrn === profileUrn) ||
-          included.find((entry: any) => entry?.objectUrn === profileUrn);
-
-        if (!loggedLookup) {
-          console.log(
-            "First extracted inner URN:",
-            profileUrn,
-            "| Matching included entry keys:",
-            profile ? Object.keys(profile).slice(0, 10) : "no match",
-          );
-          loggedLookup = true;
-        }
-
-        if (!profile) continue;
-
-        const firstName = profile.firstName || "";
-        const lastName = profile.lastName || "";
-        const fullName = `${firstName} ${lastName}`.trim();
-        const headline = profile.headline || "";
-        const publicIdentifier = profile.publicIdentifier || "";
-        const profileUrl = publicIdentifier
-          ? `https://www.linkedin.com/in/${publicIdentifier}`
-          : "";
-
-        if (!fullName || !publicIdentifier) continue;
-
-        let currentTitle = headline;
-        let currentCompany = "";
-        if (headline.includes(" at ")) {
-          const parts = headline.split(" at ");
-          currentTitle = parts[0].trim();
-          currentCompany = parts.slice(1).join(" at ").trim();
-        } else if (headline.includes(" @ ")) {
-          const parts = headline.split(" @ ");
-          currentTitle = parts[0].trim();
-          currentCompany = parts.slice(1).join(" @ ").trim();
-        }
-
-        profiles.push({
-          full_name: fullName,
-          headline,
-          current_title: currentTitle,
-          current_company: currentCompany,
-          profile_url: profileUrl,
-          connection_degree: "3rd",
-          profile_picture_url: "",
-          shared_connections_count: 0,
-          is_alumni: false,
-          category: "",
-          priority_score: 0,
-        });
+    for (const entry of profileEntries) {
+      const firstName = entry.firstName || "";
+      const lastName = entry.lastName || "";
+      const fullName = `${firstName} ${lastName}`.trim();
+      const headline = entry.headline || "";
+      
+      let publicIdentifier = entry.publicIdentifier;
+      if (!publicIdentifier && entry.entityUrn) {
+        const match = entry.entityUrn.match(/fsd_profile:([^,)]+)/);
+        if (match) publicIdentifier = match[1];
       }
+      
+      if (!fullName || !publicIdentifier) continue;
+
+      const profileUrl = `https://linkedin.com/in/${publicIdentifier}`;
+
+      let currentTitle = headline;
+      let currentCompany = "";
+      if (headline.includes(" at ")) {
+        const parts = headline.split(" at ");
+        currentTitle = parts[0].trim();
+        currentCompany = parts.slice(1).join(" at ").trim();
+      } else if (headline.includes(" @ ")) {
+        const parts = headline.split(" @ ");
+        currentTitle = parts[0].trim();
+        currentCompany = parts.slice(1).join(" @ ").trim();
+      }
+
+      profiles.push({
+        full_name: fullName,
+        headline,
+        current_title: currentTitle,
+        current_company: currentCompany,
+        profile_url: profileUrl,
+        connection_degree: "3rd",
+        profile_picture_url: "",
+        shared_connections_count: 0,
+        is_alumni: false,
+        category: "",
+        priority_score: 0,
+      });
     }
   } catch (e) {
     console.log("Extraction error:", (e as Error).message);
