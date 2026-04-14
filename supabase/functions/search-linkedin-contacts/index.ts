@@ -14,7 +14,8 @@ const json = (body: unknown, status = 200) =>
   });
 
 const LINKEDIN_GRAPHQL_URL = "https://www.linkedin.com/voyager/api/graphql";
-const LINKEDIN_DASH_URL = "https://www.linkedin.com/voyager/api/search/dash/clusters";
+const LINKEDIN_DASH_URL =
+  "https://www.linkedin.com/voyager/api/search/dash/clusters";
 
 function buildHeaders(cookie: string, jsessionid: string) {
   const headers: Record<string, string> = {
@@ -44,29 +45,37 @@ function buildHeaders(cookie: string, jsessionid: string) {
 async function searchLinkedIn(
   cookie: string,
   jsessionid: string,
-  keywords: string
+  keywords: string,
 ): Promise<{ raw: any; status: number; error?: string }> {
   const headers = buildHeaders(cookie, jsessionid);
   const encodedKeywords = encodeURIComponent(keywords);
 
   // --- Attempt 1: GraphQL endpoint ---
-  const graphqlUrl = `${LINKEDIN_GRAPHQL_URL}?variables=(start:0,origin:SWITCH_SEARCH_VERTICAL,query:(keywords:${encodedKeywords},flagshipSearchIntent:SEARCH_SRP,queryParameters:List((key:resultType,value:List(PEOPLE))),includeFiltersInResponse:false))&queryId=voyagerSearchDashClusters.b0928897b71bd00a5a7291755dcd64f0`;
+  const graphqlUrl =
+    `${LINKEDIN_GRAPHQL_URL}?variables=(start:0,origin:SWITCH_SEARCH_VERTICAL,query:(keywords:${encodedKeywords},flagshipSearchIntent:SEARCH_SRP,queryParameters:List((key:resultType,value:List(PEOPLE))),includeFiltersInResponse:false))&queryId=voyagerSearchDashClusters.b0928897b71bd00a5a7291755dcd64f0`;
 
   console.log(`[LinkedIn Attempt 1] URL: ${graphqlUrl}`);
   let res = await fetch(graphqlUrl, { headers });
   let responseBody = await res.text();
   console.log(`[LinkedIn Attempt 1] Status: ${res.status}`);
-  console.log(`[LinkedIn Attempt 1] Body (first 200): ${responseBody.substring(0, 200)}`);
+  console.log(
+    `[LinkedIn Attempt 1] Body (first 200): ${responseBody.substring(0, 200)}`,
+  );
 
   // If 404, try fallback
   if (res.status === 404) {
-    const dashUrl = `${LINKEDIN_DASH_URL}?decorationId=com.linkedin.voyager.dash.deco.search.SearchClusterCollection-175&origin=SWITCH_SEARCH_VERTICAL&q=all&query=(keywords:${encodedKeywords},flagshipSearchIntent:SEARCH_SRP,queryParameters:(resultType:List(PEOPLE)))&start=0&count=10`;
+    const dashUrl =
+      `${LINKEDIN_DASH_URL}?decorationId=com.linkedin.voyager.dash.deco.search.SearchClusterCollection-175&origin=SWITCH_SEARCH_VERTICAL&q=all&query=(keywords:${encodedKeywords},flagshipSearchIntent:SEARCH_SRP,queryParameters:(resultType:List(PEOPLE)))&start=0&count=10`;
 
     console.log(`[LinkedIn Attempt 2 Fallback] URL: ${dashUrl}`);
     res = await fetch(dashUrl, { headers });
     responseBody = await res.text();
     console.log(`[LinkedIn Attempt 2 Fallback] Status: ${res.status}`);
-    console.log(`[LinkedIn Attempt 2 Fallback] Body (first 200): ${responseBody.substring(0, 200)}`);
+    console.log(
+      `[LinkedIn Attempt 2 Fallback] Body (first 200): ${
+        responseBody.substring(0, 200)
+      }`,
+    );
   }
 
   if (res.status === 401 || res.status === 403) {
@@ -76,12 +85,19 @@ async function searchLinkedIn(
     return { raw: null, status: res.status, error: "rate_limited" };
   }
   if (res.status !== 200) {
-    return { raw: null, status: res.status, error: `linkedin_error_${res.status}` };
+    return {
+      raw: null,
+      status: res.status,
+      error: `linkedin_error_${res.status}`,
+    };
   }
 
   try {
     const data = JSON.parse(responseBody);
-    console.log('RAW RESPONSE SAMPLE:', JSON.stringify(data).substring(0, 2000));
+    console.log(
+      "RAW RESPONSE SAMPLE:",
+      JSON.stringify(data).substring(0, 2000),
+    );
     return { raw: data, status: res.status };
   } catch {
     console.log(`[LinkedIn] Failed to parse JSON`);
@@ -106,24 +122,35 @@ interface Contact {
 function extractProfiles(responseData: any): Contact[] {
   const profiles: Contact[] = [];
   try {
-    const searchData = responseData?.data?.data?.searchDashClustersByAll || responseData?.data?.searchDashClustersByAll || responseData;
+    const searchData = responseData?.data?.data?.searchDashClustersByAll ||
+      responseData?.data?.searchDashClustersByAll || responseData;
     const elements = searchData?.elements || [];
-    const included = responseData?.included || responseData?.data?.included || [];
-    console.log('Elements found:', elements.length, '| Included entries:', included.length);
+    const included = responseData?.included || responseData?.data?.included ||
+      [];
+    console.log(
+      "Elements found:",
+      elements.length,
+      "| Included entries:",
+      included.length,
+    );
 
     if (elements.length > 0) {
-      console.log('RAW ELEMENT SAMPLE:', JSON.stringify(elements[0]).substring(0, 1500));
+      console.log(
+        "RAW ELEMENT SAMPLE:",
+        JSON.stringify(elements[0]).substring(0, 1500),
+      );
     }
     if (included.length > 0) {
       const firstIncluded = included[0];
       const urnLikeValues = Object.entries(firstIncluded)
         .filter(([key]) => {
           const lowerKey = key.toLowerCase();
-          return lowerKey.includes('urn') || key === '$id' || key === 'entityUrn';
+          return lowerKey.includes("urn") || key === "$id" ||
+            key === "entityUrn";
         })
         .map(([key, value]) => [key, value]);
-      console.log('First included entry keys:', Object.keys(firstIncluded));
-      console.log('First included URN-like values:', urnLikeValues);
+      console.log("First included entry keys:", Object.keys(firstIncluded));
+      console.log("First included URN-like values:", urnLikeValues);
     }
 
     let loggedLookup = false;
@@ -135,53 +162,58 @@ function extractProfiles(responseData: any): Contact[] {
         if (!item) continue;
 
         if (!loggedLookup) {
-          console.log('First item keys:', Object.keys(item));
+          console.log("First item keys:", Object.keys(item));
         }
 
-        const entityResultUrn = item['*entityResult'];
+        const entityResultUrn = item["*entityResult"];
         if (!entityResultUrn) continue;
 
-        const innerUrnMatch = entityResultUrn.match(/\((urn:li:fsd_profile:[^,]+),/);
+        const innerUrnMatch = entityResultUrn.match(
+          /\((urn:li:fsd_profile:[^,]+),/,
+        );
         const profileUrn = innerUrnMatch?.[1];
         if (!profileUrn) continue;
 
-        const profile =
-          included.find((entry: any) => entry?.entityUrn === profileUrn) ||
+        const profile = included.find((entry: any) =>
+          entry?.entityUrn === profileUrn
+        ) ||
           included.find((entry: any) => entry?.$id === profileUrn) ||
           included.find((entry: any) => entry?.trackingUrn === profileUrn) ||
           included.find((entry: any) => entry?.objectUrn === profileUrn);
 
         if (!loggedLookup) {
           console.log(
-            'First extracted inner URN:',
+            "First extracted inner URN:",
             profileUrn,
-            '| Matching included entry keys:',
-            profile ? Object.keys(profile).slice(0, 10) : 'no match'
+            "| Matching included entry keys:",
+            profile ? Object.keys(profile).slice(0, 10) : "no match",
           );
           loggedLookup = true;
         }
 
         if (!profile) continue;
 
-        const firstName = profile.firstName || '';
-        const lastName = profile.lastName || '';
+        const firstName = profile.firstName || "";
+        const lastName = profile.lastName || "";
         const fullName = `${firstName} ${lastName}`.trim();
-        const headline = profile.headline || '';
-        const publicIdentifier = profile.publicIdentifier || '';
-        const profileUrl = publicIdentifier ? `https://www.linkedin.com/in/${publicIdentifier}` : '';
+        const headline = profile.headline || "";
+        const publicIdentifier = profile.publicIdentifier || "";
+        const profileUrl = publicIdentifier
+          ? `https://www.linkedin.com/in/${publicIdentifier}`
+          : "";
 
         if (!fullName || !publicIdentifier) continue;
 
         let currentTitle = headline;
-        let currentCompany = '';
-        if (headline.includes(' at ')) {
-          const parts = headline.split(' at ');
+        let currentCompany = "";
+        if (headline.includes(" at ")) {
+          const parts = headline.split(" at ");
           currentTitle = parts[0].trim();
-          currentCompany = parts.slice(1).join(' at ').trim();
-        } else if (headline.includes(' @ ')) {
-          const parts = headline.split(' @ ');
+          currentCompany = parts.slice(1).join(" at ").trim();
+        } else if (headline.includes(" @ ")) {
+          const parts = headline.split(" @ ");
           currentTitle = parts[0].trim();
-          currentCompany = parts.slice(1).join(' @ ').trim();
+          currentCompany = parts.slice(1).join(" @ ").trim();
         }
 
         profiles.push({
@@ -190,19 +222,19 @@ function extractProfiles(responseData: any): Contact[] {
           current_title: currentTitle,
           current_company: currentCompany,
           profile_url: profileUrl,
-          connection_degree: '3rd',
-          profile_picture_url: '',
+          connection_degree: "3rd",
+          profile_picture_url: "",
           shared_connections_count: 0,
           is_alumni: false,
-          category: '',
+          category: "",
           priority_score: 0,
         });
       }
     }
   } catch (e) {
-    console.log('Extraction error:', (e as Error).message);
+    console.log("Extraction error:", (e as Error).message);
   }
-  console.log('Extracted profiles count:', profiles.length);
+  console.log("Extracted profiles count:", profiles.length);
   return profiles;
 }
 
@@ -232,7 +264,7 @@ function scoreContacts(
   contacts: Contact[],
   jobTitle: string,
   jobFunction: string,
-  userSchools: string[]
+  userSchools: string[],
 ): Contact[] {
   const hmRegex = /manager|lead|head|director|vp|vice president/i;
   const hrRegex = /recruiter|talent|hr\b|people/i;
@@ -246,7 +278,10 @@ function scoreContacts(
     if (titleMatchesKeywords(c.current_title, jobTitle)) score += 5;
 
     // +4 hiring manager in relevant function
-    if (hmRegex.test(t) && titleMatchesKeywords(c.current_title + " " + c.headline, jobFunction)) score += 4;
+    if (
+      hmRegex.test(t) &&
+      titleMatchesKeywords(c.current_title + " " + c.headline, jobFunction)
+    ) score += 4;
 
     // +3 HR/recruiter
     if (hrRegex.test(t)) score += 3;
@@ -274,7 +309,11 @@ function scoreContacts(
   return contacts;
 }
 
-function categorize(contacts: Contact[], jobTitle: string, jobFunction: string): Contact[] {
+function categorize(
+  contacts: Contact[],
+  jobTitle: string,
+  jobFunction: string,
+): Contact[] {
   const hmRegex = /manager|lead|head|director|vp|vice president/i;
   const hrRegex = /recruiter|talent|hr\b|people/i;
 
@@ -327,7 +366,8 @@ function categorize(contacts: Contact[], jobTitle: string, jobFunction: string):
       assigned = true;
     } else if (
       counts["Your Network"] < limits["Your Network"] &&
-      (c.connection_degree === "1st" || c.connection_degree === "2nd" || c.is_alumni)
+      (c.connection_degree === "1st" || c.connection_degree === "2nd" ||
+        c.is_alumni)
     ) {
       c.category = "Your Network";
       counts["Your Network"]++;
@@ -383,7 +423,10 @@ serve(async (req) => {
 
     // Auth check with logging
     const authHeader = req.headers.get("Authorization");
-    console.log("Auth header received:", authHeader ? authHeader.substring(0, 20) + "..." : "None");
+    console.log(
+      "Auth header received:",
+      authHeader ? authHeader.substring(0, 20) + "..." : "None",
+    );
 
     let userId: string | null = null;
 
@@ -393,7 +436,12 @@ serve(async (req) => {
         global: { headers: { Authorization: authHeader } },
       });
       const { data: { user }, error } = await userClient.auth.getUser();
-      console.log("getUser() succeeded:", !!user, "error:", error?.message ?? "none");
+      console.log(
+        "getUser() succeeded:",
+        !!user,
+        "error:",
+        error?.message ?? "none",
+      );
       if (user) userId = user.id;
     }
 
@@ -409,7 +457,12 @@ serve(async (req) => {
     }
 
     if (!userId) {
-      return json({ success: false, step: "auth", message: "Authentication failed. Please refresh the page and try again." });
+      return json({
+        success: false,
+        step: "auth",
+        message:
+          "Authentication failed. Please refresh the page and try again.",
+      });
     }
 
     const supabase = createClient(supabaseUrl, serviceKey);
@@ -417,12 +470,17 @@ serve(async (req) => {
     const { company_name, job_title, job_function, job_id } = body;
 
     if (!company_name) {
-      return json({ success: false, step: "validation", message: "Company name is required." });
+      return json({
+        success: false,
+        step: "validation",
+        message: "Company name is required.",
+      });
     }
 
     // Step 1: Fetch cookie, jsessionid, and education
     const [profileRes, eduRes] = await Promise.all([
-      supabase.from("profiles").select("linkedin_cookie, linkedin_jsessionid").eq("id", userId).single(),
+      supabase.from("profiles").select("linkedin_cookie, linkedin_jsessionid")
+        .eq("id", userId).single(),
       supabase.from("education").select("institution").eq("user_id", userId),
     ]);
 
@@ -440,11 +498,14 @@ serve(async (req) => {
       return json({
         success: false,
         step: "no_jsessionid",
-        message: "Please add your JSESSIONID cookie in Settings to enable LinkedIn search.",
+        message:
+          "Please add your JSESSIONID cookie in Settings to enable LinkedIn search.",
       });
     }
 
-    const userSchools: string[] = (eduRes.data ?? []).map((e: any) => e.institution).filter(Boolean);
+    const userSchools: string[] = (eduRes.data ?? []).map((e: any) =>
+      e.institution
+    ).filter(Boolean);
 
     // Step 2: Run three targeted searches in parallel
     const searchKeywords = [
@@ -453,10 +514,13 @@ serve(async (req) => {
       `talent acquisition recruiter HR ${company_name}`.trim(),
     ];
 
-    console.log("Running LinkedIn searches for:", searchKeywords.map((k, i) => `Search ${i + 1}: ${k}`));
+    console.log(
+      "Running LinkedIn searches for:",
+      searchKeywords.map((k, i) => `Search ${i + 1}: ${k}`),
+    );
 
     const settled = await Promise.allSettled(
-      searchKeywords.map((kw) => searchLinkedIn(cookie, jsessionid, kw))
+      searchKeywords.map((kw) => searchLinkedIn(cookie, jsessionid, kw)),
     );
 
     // Process results individually — failures don't block successes
@@ -495,14 +559,16 @@ serve(async (req) => {
         return json({
           success: false,
           step: "cookie_expired",
-          message: "Your LinkedIn session has expired. Please update your cookie in Settings.",
+          message:
+            "Your LinkedIn session has expired. Please update your cookie in Settings.",
         });
       }
       if (rateLimited) {
         return json({
           success: false,
           step: "rate_limited",
-          message: "LinkedIn rate limit reached. Please wait a few minutes and try again.",
+          message:
+            "LinkedIn rate limit reached. Please wait a few minutes and try again.",
         });
       }
       return json({
@@ -512,7 +578,9 @@ serve(async (req) => {
       });
     }
 
-    console.log(`${successfulResults.length} of ${searchKeywords.length} searches succeeded`);
+    console.log(
+      `${successfulResults.length} of ${searchKeywords.length} searches succeeded`,
+    );
 
     // Step 3: Parse and combine successful results
     let allContacts: Contact[] = [];
@@ -521,13 +589,24 @@ serve(async (req) => {
     }
     allContacts = deduplicate(allContacts);
 
-    console.log(`Found ${allContacts.length} unique profiles after deduplication`);
+    console.log(
+      `Found ${allContacts.length} unique profiles after deduplication`,
+    );
 
     // Step 4: Score
-    scoreContacts(allContacts, job_title ?? "", job_function ?? "", userSchools);
+    scoreContacts(
+      allContacts,
+      job_title ?? "",
+      job_function ?? "",
+      userSchools,
+    );
 
     // Step 5 & 6: Categorize and take top 6
-    const topContacts = categorize(allContacts, job_title ?? "", job_function ?? "");
+    const topContacts = categorize(
+      allContacts,
+      job_title ?? "",
+      job_function ?? "",
+    );
 
     console.log(`Returning ${topContacts.length} categorized contacts`);
 
