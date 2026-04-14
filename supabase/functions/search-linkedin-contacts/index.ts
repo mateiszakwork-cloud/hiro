@@ -134,13 +134,14 @@ function extractProfiles(responseData: any): Contact[] {
         const profileUrn = innerUrnMatch?.[1];
         if (!profileUrn) continue;
 
-        const profile = included.find(
-          (inc: any) =>
-            inc?.$id === profileUrn ||
-            inc?.entityUrn === profileUrn ||
-            (inc?.$type?.includes('fsd_profile') &&
-              (inc?.$id === profileUrn || inc?.entityUrn === profileUrn))
-        );
+        const profile = included.find((inc: any) => {
+          const matchesUrn = inc?.$id === profileUrn || inc?.entityUrn === profileUrn;
+          const looksLikeProfile = inc?.$type?.includes('fsd_profile') ||
+            typeof inc?.firstName === 'string' ||
+            typeof inc?.lastName === 'string' ||
+            typeof inc?.publicIdentifier === 'string';
+          return matchesUrn && looksLikeProfile;
+        });
 
         if (!loggedLookup) {
           console.log(
