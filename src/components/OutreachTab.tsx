@@ -61,6 +61,9 @@ const OUTREACH_STATUSES = [
 
 const CATEGORIES = ["In the Role", "Hiring Manager", "HR and Recruiter", "Your Network"];
 
+/* ── Module-level search results cache (survives tab switches) ── */
+const searchResultsCache: Record<string, SearchResult[]> = {};
+
 const getStatusStyle = (status: string) =>
   OUTREACH_STATUSES.find((s) => s.value === status)?.color || "bg-gray-100 text-gray-600";
 
