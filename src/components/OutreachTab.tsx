@@ -508,13 +508,24 @@ const OutreachTab = ({
             </div>
           )}
 
+          {rateLimitUntil && countdown > 0 && (
+            <div className="flex items-center gap-3 rounded-lg p-4 bg-amber-50 border border-amber-200">
+              <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
+              <div className="text-sm text-amber-800">
+                LinkedIn rate limit reached — please wait {countdown}s before searching again.
+              </div>
+            </div>
+          )}
+
           <Button
             onClick={handleSearch}
-            disabled={searching}
+            disabled={searching || (!!rateLimitUntil && countdown > 0)}
             className="gap-2 bg-[#950606] hover:bg-[#7a0505] text-white"
           >
             {searching ? (
               <><Loader2 className="h-4 w-4 animate-spin" /> Searching…</>
+            ) : rateLimitUntil && countdown > 0 ? (
+              <>Wait {countdown}s</>
             ) : (
               <><Search className="h-4 w-4" /> Search LinkedIn</>
             )}
