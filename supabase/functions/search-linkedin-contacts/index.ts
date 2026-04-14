@@ -616,10 +616,11 @@ serve(async (req) => {
       `${successfulResults.length} of ${searchKeywords.length} searches succeeded`,
     );
 
-    // Step 3: Parse and combine successful results
+    // Step 3: Parse and combine successful results (with individual profile lookups)
     let allContacts: Contact[] = [];
     for (const r of successfulResults) {
-      allContacts = allContacts.concat(extractProfiles(r.raw));
+      const contacts = await extractProfiles(r.raw, cookie, jsessionid, 5);
+      allContacts = allContacts.concat(contacts);
     }
     allContacts = deduplicate(allContacts);
 
