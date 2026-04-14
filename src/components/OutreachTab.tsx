@@ -321,6 +321,7 @@ const OutreachTab = ({
   }, [contacts]);
 
   const handleSearch = async () => {
+    console.log('Search LinkedIn clicked');
     setSearching(true);
     setNoCookie(false);
     setCookieExpired(false);
