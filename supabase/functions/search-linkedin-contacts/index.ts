@@ -119,63 +119,156 @@ interface Contact {
   priority_score: number;
 }
 
-function extractProfiles(responseData: any): Contact[] {
-  const profiles: Contact[] = [];
+function extractProfileUrls(responseData: any): string[] {
+  const urls: string[] = [];
   const seen = new Set<string>();
 
   try {
     const jsonStr = JSON.stringify(responseData);
     const regex = /"navigationUrl":"(https:\/\/www\.linkedin\.com\/in\/[^"]+)"/g;
     const urlMatches = [...jsonStr.matchAll(regex)];
-    console.log('Profile URLs found:', urlMatches.length);
+    console.log('Profile URLs found in search:', urlMatches.length);
 
     for (const match of urlMatches) {
-      const url = match[1];
-      if (seen.has(url)) continue;
-      seen.add(url);
-
-      const urlIndex = jsonStr.indexOf(match[0]);
-      const surrounding = jsonStr.substring(Math.max(0, urlIndex - 500), urlIndex + 200);
-
-      const titleMatch = surrounding.match(/"title":\{"text":"([^"]+)"/);
-      const subtitleMatch = surrounding.match(/"primarySubtitle":\{"text":"([^"]+)"/);
-
-      const fullName = titleMatch ? titleMatch[1] : '';
-      const subtitle = subtitleMatch ? subtitleMatch[1] : '';
-
-      if (!fullName || fullName.length < 2) continue;
-
-      let currentTitle = subtitle;
-      let currentCompany = '';
-      if (subtitle.includes(' at ')) {
-        const parts = subtitle.split(' at ');
-        currentTitle = parts[0].trim();
-        currentCompany = parts.slice(1).join(' at ').trim();
-      } else if (subtitle.includes(' @ ')) {
-        const parts = subtitle.split(' @ ');
-        currentTitle = parts[0].trim();
-        currentCompany = parts.slice(1).join(' @ ').trim();
-      }
-
-      profiles.push({
-        full_name: fullName,
-        headline: subtitle,
-        current_title: currentTitle,
-        current_company: currentCompany,
-        profile_url: url,
-        connection_degree: '3rd+',
-        profile_picture_url: '',
-        shared_connections_count: 0,
-        is_alumni: false,
-        category: '',
-        priority_score: 0,
-      });
+      // Clean the URL — remove query params
+      const rawUrl = match[1];
+      const cleanUrl = rawUrl.split('?')[0].replace(/\/+$/, '');
+      if (seen.has(cleanUrl)) continue;
+      seen.add(cleanUrl);
+      urls.push(cleanUrl);
     }
   } catch (e) {
-    console.log('Extraction error:', (e as Error).message);
+    console.log('URL extraction error:', (e as Error).message);
   }
 
-  console.log('Extracted profiles count:', profiles.length);
+  console.log('Unique profile URLs extracted:', urls.length);
+  return urls;
+}
+
+const LINKEDIN_PROFILE_API = "https://www.linkedin.com/voyager/api/identity/dash/profiles";
+
+async function lookupProfile(
+  publicIdentifier: string,
+  cookie: string,
+  jsessionid: string,
+  isFirst: boolean,
+): Promise<Contact | null> {
+  try {
+    const headers = buildHeaders(cookie, jsessionid);
+    const url = `${LINKEDIN_PROFILE_API}?q=memberIdentity&memberIdentity=${encodeURIComponent(publicIdentifier)}&decorationId=com.linkedin.voyager.dash.deco.identity.profile.FullProfileWithEntities-88`;
+
+    const res = await fetch(url, { headers });
+    if (res.status !== 200) {
+      console.log(`Profile lookup ${publicIdentifier}: status ${res.status}`);
+      return null;
+    }
+
+    const data = await res.json();
+
+    if (isFirst) {
+      console.log('First profile lookup response keys:', Object.keys(data));
+      // Log keys of first element if present
+      if (data.elements && data.elements.length > 0) {
+        console.log('First element keys:', Object.keys(data.elements[0]));
+      }
+      if (data.included && data.included.length > 0) {
+        console.log('First included keys:', Object.keys(data.included[0]));
+      }
+    }
+
+    // Try to find profile data in elements or top-level
+    let firstName = '';
+    let lastName = '';
+    let headline = '';
+
+    // Check elements array first
+    if (data.elements && data.elements.length > 0) {
+      const el = data.elements[0];
+      firstName = el.firstName || '';
+      lastName = el.lastName || '';
+      headline = el.headline || '';
+    }
+
+    // Fallback: scan included array for profile with firstName
+    if (!firstName && data.included) {
+      const profileEntry = data.included.find((entry: any) => entry.firstName);
+      if (profileEntry) {
+        firstName = profileEntry.firstName || '';
+        lastName = profileEntry.lastName || '';
+        headline = profileEntry.headline || '';
+      }
+    }
+
+    // Fallback: top-level fields
+    if (!firstName) {
+      firstName = data.firstName || '';
+      lastName = data.lastName || '';
+      headline = data.headline || '';
+    }
+
+    const fullName = `${firstName} ${lastName}`.trim();
+    if (!fullName || fullName.length < 2) {
+      console.log(`Profile lookup ${publicIdentifier}: no name found`);
+      return null;
+    }
+
+    let currentTitle = headline;
+    let currentCompany = '';
+    if (headline.includes(' at ')) {
+      const parts = headline.split(' at ');
+      currentTitle = parts[0].trim();
+      currentCompany = parts.slice(1).join(' at ').trim();
+    } else if (headline.includes(' @ ')) {
+      const parts = headline.split(' @ ');
+      currentTitle = parts[0].trim();
+      currentCompany = parts.slice(1).join(' @ ').trim();
+    }
+
+    return {
+      full_name: fullName,
+      headline,
+      current_title: currentTitle,
+      current_company: currentCompany,
+      profile_url: `https://www.linkedin.com/in/${publicIdentifier}`,
+      connection_degree: '3rd+',
+      profile_picture_url: '',
+      shared_connections_count: 0,
+      is_alumni: false,
+      category: '',
+      priority_score: 0,
+    };
+  } catch (e) {
+    console.log(`Profile lookup ${publicIdentifier} error:`, (e as Error).message);
+    return null;
+  }
+}
+
+async function extractProfiles(
+  responseData: any,
+  cookie: string,
+  jsessionid: string,
+  maxLookups: number = 5,
+): Promise<Contact[]> {
+  const urls = extractProfileUrls(responseData);
+
+  // Extract public identifiers from URLs and limit
+  const identifiers = urls
+    .map((u) => {
+      const parts = u.split('/in/');
+      return parts.length > 1 ? parts[1] : null;
+    })
+    .filter(Boolean)
+    .slice(0, maxLookups) as string[];
+
+  console.log(`Looking up ${identifiers.length} profiles:`, identifiers);
+
+  // Run lookups in parallel
+  const results = await Promise.all(
+    identifiers.map((id, i) => lookupProfile(id, cookie, jsessionid, i === 0)),
+  );
+
+  const profiles = results.filter(Boolean) as Contact[];
+  console.log(`Profile lookups returned ${profiles.length} contacts`);
   return profiles;
 }
 
@@ -523,10 +616,11 @@ serve(async (req) => {
       `${successfulResults.length} of ${searchKeywords.length} searches succeeded`,
     );
 
-    // Step 3: Parse and combine successful results
+    // Step 3: Parse and combine successful results (with individual profile lookups)
     let allContacts: Contact[] = [];
     for (const r of successfulResults) {
-      allContacts = allContacts.concat(extractProfiles(r.raw));
+      const contacts = await extractProfiles(r.raw, cookie, jsessionid, 5);
+      allContacts = allContacts.concat(contacts);
     }
     allContacts = deduplicate(allContacts);
 
