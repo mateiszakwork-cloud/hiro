@@ -348,8 +348,14 @@ const OutreachTab = ({
     }
   }, [rateLimitUntil]);
 
+  // Track which contacts are already added by profile_url
+  useEffect(() => {
+    setAddedUrls(new Set(contacts.map((c) => c.linkedin_url).filter(Boolean) as string[]));
+  }, [contacts]);
+
   const handleSearch = async () => {
     console.log('Search LinkedIn clicked');
+    if (rateLimitUntil && Date.now() < rateLimitUntil) return;
     setSearching(true);
     setNoCookie(false);
     setCookieExpired(false);
@@ -367,13 +373,22 @@ const OutreachTab = ({
       if (error || !data?.success) {
         if (data?.step === "no_cookie") { setNoCookie(true); }
         else if (data?.step === "cookie_expired") { setCookieExpired(true); toast.error(data.message); }
+        else if (data?.step === "rate_limited" || data?.step === "all_searches_failed") {
+          const until = Date.now() + 120_000;
+          setRateLimitUntil(until);
+          toast.error("LinkedIn rate limit reached — please wait 2 minutes before searching again.");
+        }
         else { toast.error(data?.message || "Search failed."); }
         return;
       }
 
-      setSearchResults(data.contacts || []);
+      const results = data.contacts || [];
+      setSearchResults(results);
       setSearched(true);
-      if ((data.contacts || []).length === 0) toast("No contacts found. Try a different company name.");
+      // Cache results
+      const cacheKey = companyName || "";
+      searchResultsCache[cacheKey] = results;
+      if (results.length === 0) toast("No contacts found. Try a different company name.");
     } catch {
       toast.error("Search failed.");
     } finally {
