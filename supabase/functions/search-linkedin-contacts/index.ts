@@ -106,40 +106,106 @@ interface Contact {
 function extractProfiles(responseData: any): Contact[] {
   const profiles: Contact[] = [];
   try {
-    // Navigate the GraphQL response structure
     const searchData = responseData?.data?.data?.searchDashClustersByAll || responseData?.data?.searchDashClustersByAll || responseData;
     const elements = searchData?.elements || [];
-    console.log('Elements found:', elements.length);
+    const included = responseData?.included || responseData?.data?.included || [];
+    console.log('Elements found:', elements.length, '| Included entries:', included.length);
+
+    if (elements.length > 0) {
+      console.log('RAW ELEMENT SAMPLE:', JSON.stringify(elements[0]).substring(0, 1500));
+    }
+
     for (const cluster of elements) {
       const items = cluster?.items || [];
       for (const itemWrapper of items) {
-        const entity = itemWrapper?.item?.entityResult;
-        if (!entity) continue;
-        const navigationUrl = entity?.navigationUrl || '';
-        if (!navigationUrl.includes('linkedin.com/in/')) continue;
-        const fullName = entity?.title?.text || '';
-        const subtitle = entity?.primarySubtitle?.text || '';
-        const location = entity?.secondarySubtitle?.text || '';
-        if (!fullName) continue;
+        const item = itemWrapper?.item;
+        if (!item) continue;
 
-        let currentTitle = subtitle;
+        if (profiles.length === 0 && item) {
+          console.log('First item keys:', Object.keys(item));
+        }
+
+        const entityResultUrn = item['*entityResult'];
+        if (!entityResultUrn) continue;
+
+        // Extract profile URN from: urn:li:fsd_entityResultViewModel:(urn:li:fsd_profile:ABC123,SEARCH_SRP,DEFAULT)
+        const profileUrnMatch = entityResultUrn.match(/urn:li:fsd_profile:([^,)]+)/);
+        if (!profileUrnMatch || !profileUrnMatch[1]) continue;
+        const profileId = profileUrnMatch[1];
+
+        // Look up in included array
+        const profile = included.find((inc: any) =>
+          inc?.entityUrn === `urn:li:fsd_profile:${profileId}` ||
+          inc?.$id === `urn:li:fsd_profile:${profileId}` ||
+          inc?.['*target'] === `urn:li:fsd_profile:${profileId}` ||
+          (inc?.entityUrn && inc.entityUrn.includes(profileId))
+        );
+
+        if (!profile) {
+          // Try finding in included by matching the full entityResult URN
+          const entityProfile = included.find((inc: any) =>
+            inc?.$id === entityResultUrn || inc?.entityUrn === entityResultUrn
+          );
+          if (entityProfile) {
+            const title = entityProfile?.title?.text || '';
+            const subtitle = entityProfile?.primarySubtitle?.text || '';
+            const navUrl = entityProfile?.navigationUrl || '';
+            if (title && navUrl.includes('linkedin.com/in/')) {
+              let currentTitle = subtitle;
+              let currentCompany = '';
+              if (subtitle.includes(' at ')) {
+                const parts = subtitle.split(' at ');
+                currentTitle = parts[0].trim();
+                currentCompany = parts.slice(1).join(' at ').trim();
+              }
+              profiles.push({
+                full_name: title,
+                headline: subtitle,
+                current_title: currentTitle,
+                current_company: currentCompany,
+                profile_url: navUrl.split('?')[0],
+                connection_degree: '3rd',
+                profile_picture_url: '',
+                shared_connections_count: 0,
+                is_alumni: false,
+                category: '',
+                priority_score: 0,
+              });
+            }
+          }
+          if (profiles.length <= 2) {
+            console.log(`Profile not found in included for URN ${profileId}. Included sample $id:`, included.slice(0, 3).map((i: any) => i?.$id || i?.entityUrn || 'no-id'));
+          }
+          continue;
+        }
+
+        const firstName = profile.firstName || '';
+        const lastName = profile.lastName || '';
+        const fullName = `${firstName} ${lastName}`.trim();
+        const headline = profile.headline || '';
+        const publicIdentifier = profile.publicIdentifier || '';
+        const profileUrl = publicIdentifier ? `https://linkedin.com/in/${publicIdentifier}` : '';
+
+        if (!fullName || !publicIdentifier) continue;
+
+        let currentTitle = headline;
         let currentCompany = '';
-        if (subtitle.includes(' at ')) {
-          const parts = subtitle.split(' at ');
+        if (headline.includes(' at ')) {
+          const parts = headline.split(' at ');
           currentTitle = parts[0].trim();
           currentCompany = parts.slice(1).join(' at ').trim();
-        } else if (subtitle.includes(' @ ')) {
-          const parts = subtitle.split(' @ ');
+        } else if (headline.includes(' @ ')) {
+          const parts = headline.split(' @ ');
           currentTitle = parts[0].trim();
           currentCompany = parts.slice(1).join(' @ ').trim();
         }
 
         profiles.push({
           full_name: fullName,
-          headline: subtitle,
+          headline: headline,
           current_title: currentTitle,
           current_company: currentCompany,
-          profile_url: navigationUrl.split('?')[0],
+          profile_url: profileUrl,
           connection_degree: '3rd',
           profile_picture_url: '',
           shared_connections_count: 0,
