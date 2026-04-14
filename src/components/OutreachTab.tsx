@@ -317,11 +317,36 @@ const OutreachTab = ({
     "HR and Recruiter": true,
     "Your Network": true,
   });
+  const [rateLimitUntil, setRateLimitUntil] = useState<number | null>(null);
+  const [countdown, setCountdown] = useState(0);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Track which contacts are already added by profile_url
+  // Restore from cache on mount (no auto-search)
   useEffect(() => {
-    setAddedUrls(new Set(contacts.map((c) => c.linkedin_url).filter(Boolean) as string[]));
-  }, [contacts]);
+    const cacheKey = companyName || "";
+    const cached = searchResultsCache[cacheKey];
+    if (cached && cached.length > 0) {
+      setSearchResults(cached);
+      setSearched(true);
+    }
+  }, [companyName]);
+
+  // Countdown timer for rate limit
+  useEffect(() => {
+    if (rateLimitUntil) {
+      const tick = () => {
+        const remaining = Math.max(0, Math.ceil((rateLimitUntil - Date.now()) / 1000));
+        setCountdown(remaining);
+        if (remaining <= 0) {
+          setRateLimitUntil(null);
+          if (countdownRef.current) clearInterval(countdownRef.current);
+        }
+      };
+      tick();
+      countdownRef.current = setInterval(tick, 1000);
+      return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
+    }
+  }, [rateLimitUntil]);
 
   const handleSearch = async () => {
     console.log('Search LinkedIn clicked');
