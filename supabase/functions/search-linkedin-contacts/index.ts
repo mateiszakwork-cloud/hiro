@@ -148,9 +148,7 @@ function extractProfiles(responseData: any): Contact[] {
             'First extracted inner URN:',
             profileUrn,
             '| Matching included entry keys:',
-            profile ? Object.keys(profile).slice(0, 10) : 'no match',
-            '| Included sample ids:',
-            included.slice(0, 5).map((inc: any) => inc?.$id || inc?.entityUrn || 'no-id')
+            profile ? Object.keys(profile).slice(0, 10) : 'no match'
           );
           loggedLookup = true;
         }
