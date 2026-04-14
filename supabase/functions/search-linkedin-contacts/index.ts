@@ -55,7 +55,10 @@ async function searchLinkedIn(
     `${LINKEDIN_GRAPHQL_URL}?variables=(start:0,origin:SWITCH_SEARCH_VERTICAL,query:(keywords:${encodedKeywords},flagshipSearchIntent:SEARCH_SRP,queryParameters:List((key:resultType,value:List(PEOPLE))),includeFiltersInResponse:false))&queryId=voyagerSearchDashClusters.b0928897b71bd00a5a7291755dcd64f0`;
 
   console.log(`[LinkedIn Attempt 1] URL: ${graphqlUrl}`);
-  let res = await fetch(graphqlUrl, { headers });
+  let res = await fetch(graphqlUrl, { headers, redirect: 'manual' });
+  if (res.status >= 300 && res.status < 400 || res.type === 'opaqueredirect') {
+    return { raw: null, status: res.status, error: "LinkedIn redirected — session may be expired or IP blocked" };
+  }
   let responseBody = await res.text();
   console.log(`[LinkedIn Attempt 1] Status: ${res.status}`);
   console.log(
@@ -68,7 +71,10 @@ async function searchLinkedIn(
       `${LINKEDIN_DASH_URL}?decorationId=com.linkedin.voyager.dash.deco.search.SearchClusterCollection-175&origin=SWITCH_SEARCH_VERTICAL&q=all&query=(keywords:${encodedKeywords},flagshipSearchIntent:SEARCH_SRP,queryParameters:(resultType:List(PEOPLE)))&start=0&count=10`;
 
     console.log(`[LinkedIn Attempt 2 Fallback] URL: ${dashUrl}`);
-    res = await fetch(dashUrl, { headers });
+    res = await fetch(dashUrl, { headers, redirect: 'manual' });
+    if (res.status >= 300 && res.status < 400 || res.type === 'opaqueredirect') {
+      return { raw: null, status: res.status, error: "LinkedIn redirected — session may be expired or IP blocked" };
+    }
     responseBody = await res.text();
     console.log(`[LinkedIn Attempt 2 Fallback] Status: ${res.status}`);
     console.log(
@@ -157,7 +163,11 @@ async function lookupProfile(
     const headers = buildHeaders(cookie, jsessionid);
     const url = `${LINKEDIN_PROFILE_API}?q=memberIdentity&memberIdentity=${encodeURIComponent(publicIdentifier)}&decorationId=com.linkedin.voyager.dash.deco.identity.profile.FullProfileWithEntities-88`;
 
-    const res = await fetch(url, { headers });
+    const res = await fetch(url, { headers, redirect: 'manual' });
+    if (res.status >= 300 && res.status < 400 || res.type === 'opaqueredirect') {
+      console.log(`Profile lookup ${publicIdentifier}: LinkedIn redirected — session may be expired`);
+      return null;
+    }
     if (res.status !== 200) {
       console.log(`Profile lookup ${publicIdentifier}: status ${res.status}`);
       return null;

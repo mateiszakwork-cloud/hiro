@@ -373,10 +373,13 @@ const OutreachTab = ({
       if (error || !data?.success) {
         if (data?.step === "no_cookie") { setNoCookie(true); }
         else if (data?.step === "cookie_expired") { setCookieExpired(true); toast.error(data.message); }
-        else if (data?.step === "rate_limited" || data?.step === "all_searches_failed") {
+        else if (data?.step === "rate_limited") {
           const until = Date.now() + 120_000;
           setRateLimitUntil(until);
           toast.error("LinkedIn rate limit reached — please wait 2 minutes before searching again.");
+        }
+        else {
+          toast.error("LinkedIn search failed — please try again.");
         }
         else { toast.error(data?.message || "Search failed."); }
         return;
