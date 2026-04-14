@@ -135,7 +135,11 @@ function extractProfiles(responseData: any): Contact[] {
         if (!profileUrn) continue;
 
         const profile = included.find((inc: any) => {
-          const matchesUrn = inc?.$id === profileUrn || inc?.entityUrn === profileUrn;
+          const matchesUrn =
+            inc?.$id === profileUrn ||
+            inc?.entityUrn === profileUrn ||
+            inc?.trackingUrn === profileUrn ||
+            inc?.objectUrn === profileUrn;
           const looksLikeProfile = inc?.$type?.includes('fsd_profile') ||
             typeof inc?.firstName === 'string' ||
             typeof inc?.lastName === 'string' ||
