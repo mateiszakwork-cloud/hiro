@@ -114,6 +114,17 @@ function extractProfiles(responseData: any): Contact[] {
     if (elements.length > 0) {
       console.log('RAW ELEMENT SAMPLE:', JSON.stringify(elements[0]).substring(0, 1500));
     }
+    if (included.length > 0) {
+      const firstIncluded = included[0];
+      const urnLikeValues = Object.entries(firstIncluded)
+        .filter(([key]) => {
+          const lowerKey = key.toLowerCase();
+          return lowerKey.includes('urn') || key === '$id' || key === 'entityUrn';
+        })
+        .map(([key, value]) => [key, value]);
+      console.log('First included entry keys:', Object.keys(firstIncluded));
+      console.log('First included URN-like values:', urnLikeValues);
+    }
 
     let loggedLookup = false;
 
@@ -134,18 +145,11 @@ function extractProfiles(responseData: any): Contact[] {
         const profileUrn = innerUrnMatch?.[1];
         if (!profileUrn) continue;
 
-        const profile = included.find((inc: any) => {
-          const matchesUrn =
-            inc?.$id === profileUrn ||
-            inc?.entityUrn === profileUrn ||
-            inc?.trackingUrn === profileUrn ||
-            inc?.objectUrn === profileUrn;
-          const looksLikeProfile = inc?.$type?.includes('fsd_profile') ||
-            typeof inc?.firstName === 'string' ||
-            typeof inc?.lastName === 'string' ||
-            typeof inc?.publicIdentifier === 'string';
-          return matchesUrn && looksLikeProfile;
-        });
+        const profile =
+          included.find((entry: any) => entry?.entityUrn === profileUrn) ||
+          included.find((entry: any) => entry?.$id === profileUrn) ||
+          included.find((entry: any) => entry?.trackingUrn === profileUrn) ||
+          included.find((entry: any) => entry?.objectUrn === profileUrn);
 
         if (!loggedLookup) {
           console.log(
