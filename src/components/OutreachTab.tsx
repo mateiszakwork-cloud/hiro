@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -60,6 +60,9 @@ const OUTREACH_STATUSES = [
 ];
 
 const CATEGORIES = ["In the Role", "Hiring Manager", "HR and Recruiter", "Your Network"];
+
+/* ── Module-level search results cache (survives tab switches) ── */
+const searchResultsCache: Record<string, SearchResult[]> = {};
 
 const getStatusStyle = (status: string) =>
   OUTREACH_STATUSES.find((s) => s.value === status)?.color || "bg-gray-100 text-gray-600";
@@ -314,6 +317,36 @@ const OutreachTab = ({
     "HR and Recruiter": true,
     "Your Network": true,
   });
+  const [rateLimitUntil, setRateLimitUntil] = useState<number | null>(null);
+  const [countdown, setCountdown] = useState(0);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Restore from cache on mount (no auto-search)
+  useEffect(() => {
+    const cacheKey = companyName || "";
+    const cached = searchResultsCache[cacheKey];
+    if (cached && cached.length > 0) {
+      setSearchResults(cached);
+      setSearched(true);
+    }
+  }, [companyName]);
+
+  // Countdown timer for rate limit
+  useEffect(() => {
+    if (rateLimitUntil) {
+      const tick = () => {
+        const remaining = Math.max(0, Math.ceil((rateLimitUntil - Date.now()) / 1000));
+        setCountdown(remaining);
+        if (remaining <= 0) {
+          setRateLimitUntil(null);
+          if (countdownRef.current) clearInterval(countdownRef.current);
+        }
+      };
+      tick();
+      countdownRef.current = setInterval(tick, 1000);
+      return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
+    }
+  }, [rateLimitUntil]);
 
   // Track which contacts are already added by profile_url
   useEffect(() => {
@@ -322,6 +355,7 @@ const OutreachTab = ({
 
   const handleSearch = async () => {
     console.log('Search LinkedIn clicked');
+    if (rateLimitUntil && Date.now() < rateLimitUntil) return;
     setSearching(true);
     setNoCookie(false);
     setCookieExpired(false);
@@ -339,13 +373,22 @@ const OutreachTab = ({
       if (error || !data?.success) {
         if (data?.step === "no_cookie") { setNoCookie(true); }
         else if (data?.step === "cookie_expired") { setCookieExpired(true); toast.error(data.message); }
+        else if (data?.step === "rate_limited" || data?.step === "all_searches_failed") {
+          const until = Date.now() + 120_000;
+          setRateLimitUntil(until);
+          toast.error("LinkedIn rate limit reached — please wait 2 minutes before searching again.");
+        }
         else { toast.error(data?.message || "Search failed."); }
         return;
       }
 
-      setSearchResults(data.contacts || []);
+      const results = data.contacts || [];
+      setSearchResults(results);
       setSearched(true);
-      if ((data.contacts || []).length === 0) toast("No contacts found. Try a different company name.");
+      // Cache results
+      const cacheKey = companyName || "";
+      searchResultsCache[cacheKey] = results;
+      if (results.length === 0) toast("No contacts found. Try a different company name.");
     } catch {
       toast.error("Search failed.");
     } finally {
@@ -465,13 +508,24 @@ const OutreachTab = ({
             </div>
           )}
 
+          {rateLimitUntil && countdown > 0 && (
+            <div className="flex items-center gap-3 rounded-lg p-4 bg-amber-50 border border-amber-200">
+              <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
+              <div className="text-sm text-amber-800">
+                LinkedIn rate limit reached — please wait {countdown}s before searching again.
+              </div>
+            </div>
+          )}
+
           <Button
             onClick={handleSearch}
-            disabled={searching}
+            disabled={searching || (!!rateLimitUntil && countdown > 0)}
             className="gap-2 bg-[#950606] hover:bg-[#7a0505] text-white"
           >
             {searching ? (
               <><Loader2 className="h-4 w-4 animate-spin" /> Searching…</>
+            ) : rateLimitUntil && countdown > 0 ? (
+              <>Wait {countdown}s</>
             ) : (
               <><Search className="h-4 w-4" /> Search LinkedIn</>
             )}
