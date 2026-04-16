@@ -5,15 +5,30 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/sonner";
-import { AlertTriangle, CheckCircle2, Circle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Circle, Loader2, XCircle } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+
+const formatUpdatedAt = (iso: string | null) => {
+  if (!iso) return null;
+  const d = new Date(iso);
+  const date = d.toLocaleDateString("en-US", { month: "long", day: "numeric" });
+  let hour = d.getHours();
+  const ampm = hour >= 12 ? "pm" : "am";
+  hour = hour % 12 || 12;
+  const min = d.getMinutes();
+  const time = min === 0 ? `${hour}${ampm}` : `${hour}:${min.toString().padStart(2, "0")}${ampm}`;
+  return `${date} at ${time}`;
+};
 
 const Settings = () => {
   const [cookie, setCookie] = useState("");
   const [jsessionid, setJsessionid] = useState("");
   const [savedCookie, setSavedCookie] = useState<string | null>(null);
   const [savedJsessionid, setSavedJsessionid] = useState<string | null>(null);
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -22,7 +37,7 @@ const Settings = () => {
       if (!session) return;
       const { data } = await supabase
         .from("profiles")
-        .select("linkedin_cookie, linkedin_jsessionid")
+        .select("linkedin_cookie, linkedin_jsessionid, linkedin_updated_at")
         .eq("id", session.user.id)
         .single();
       if (data?.linkedin_cookie) {
@@ -32,6 +47,9 @@ const Settings = () => {
       if ((data as any)?.linkedin_jsessionid) {
         setJsessionid((data as any).linkedin_jsessionid);
         setSavedJsessionid((data as any).linkedin_jsessionid);
+      }
+      if ((data as any)?.linkedin_updated_at) {
+        setUpdatedAt((data as any).linkedin_updated_at);
       }
       setLoading(false);
     };
@@ -61,9 +79,14 @@ const Settings = () => {
     setSaving(true);
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) { setSaving(false); return; }
+    const now = new Date().toISOString();
     const { error } = await supabase
       .from("profiles")
-      .update({ linkedin_cookie: trimmedCookie || null, linkedin_jsessionid: trimmedSession || null } as any)
+      .update({
+        linkedin_cookie: trimmedCookie || null,
+        linkedin_jsessionid: trimmedSession || null,
+        linkedin_updated_at: now,
+      } as any)
       .eq("id", session.user.id);
     setSaving(false);
     if (error) {
@@ -71,7 +94,32 @@ const Settings = () => {
     } else {
       setSavedCookie(trimmedCookie || null);
       setSavedJsessionid(trimmedSession || null);
+      setUpdatedAt(now);
+      setTestResult(null);
       toast("LinkedIn connected");
+    }
+  };
+
+  const handleTest = async () => {
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const session = sessionData?.session;
+      if (!session) { setTesting(false); return; }
+      const { data, error } = await supabase.functions.invoke("test-linkedin-connection", {
+        body: { user_id: session.user.id },
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (error || !data?.success) {
+        setTestResult({ ok: false, message: "Connection failed - please refresh your cookies" });
+      } else {
+        setTestResult({ ok: true, message: "Connection working" });
+      }
+    } catch {
+      setTestResult({ ok: false, message: "Connection failed - please refresh your cookies" });
+    } finally {
+      setTesting(false);
     }
   };
 
@@ -115,22 +163,29 @@ const Settings = () => {
                 Hiro uses your LinkedIn session to search for contacts at target companies, see your connection degrees, and identify alumni from your own schools.
               </p>
             </div>
-            <div className="flex items-center gap-2 shrink-0 mt-1">
-              {isFullyConnected ? (
-                <>
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
-                  <span className="text-sm font-medium text-green-700">LinkedIn connected</span>
-                </>
-              ) : isPartial ? (
-                <>
-                  <AlertTriangle className="h-4 w-4" style={{ color: "#D97706" }} />
-                  <span className="text-sm font-medium" style={{ color: "#D97706" }}>Partially configured</span>
-                </>
-              ) : (
-                <>
-                  <Circle className="h-4 w-4 text-gray-400" />
-                  <span className="text-sm text-muted-foreground">Not connected</span>
-                </>
+            <div className="flex flex-col items-end gap-1 shrink-0 mt-1">
+              <div className="flex items-center gap-2">
+                {isFullyConnected ? (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    <span className="text-sm font-medium text-green-700">LinkedIn connected</span>
+                  </>
+                ) : isPartial ? (
+                  <>
+                    <AlertTriangle className="h-4 w-4" style={{ color: "#D97706" }} />
+                    <span className="text-sm font-medium" style={{ color: "#D97706" }}>Partially configured</span>
+                  </>
+                ) : (
+                  <>
+                    <Circle className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm text-muted-foreground">Not connected</span>
+                  </>
+                )}
+              </div>
+              {isFullyConnected && updatedAt && (
+                <span className="text-[11px] text-muted-foreground">
+                  Last updated: {formatUpdatedAt(updatedAt)}
+                </span>
               )}
             </div>
           </div>
@@ -197,14 +252,33 @@ const Settings = () => {
             </p>
           </div>
 
-          <Button
-            onClick={handleSave}
-            disabled={saving || (!cookie.trim() && !jsessionid.trim())}
-            className="text-white"
-            style={{ backgroundColor: "#950606" }}
-          >
-            {saving ? "Saving…" : "Save"}
-          </Button>
+          <div className="flex items-center gap-3 flex-wrap">
+            <Button
+              onClick={handleSave}
+              disabled={saving || (!cookie.trim() && !jsessionid.trim())}
+              className="text-white"
+              style={{ backgroundColor: "#950606" }}
+            >
+              {saving ? "Saving…" : "Save"}
+            </Button>
+            <Button
+              onClick={handleTest}
+              disabled={testing || !isFullyConnected}
+              variant="outline"
+            >
+              {testing ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Testing…</>
+              ) : (
+                "Test LinkedIn Connection"
+              )}
+            </Button>
+            {testResult && (
+              <span className={`flex items-center gap-1.5 text-sm font-medium ${testResult.ok ? "text-green-700" : "text-red-600"}`}>
+                {testResult.ok ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                {testResult.message}
+              </span>
+            )}
+          </div>
 
           {/* Warning */}
           <div className="flex gap-3 items-start rounded-lg p-4" style={{ backgroundColor: "#FFFBEB" }}>

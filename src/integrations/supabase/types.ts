@@ -468,6 +468,7 @@ export type Database = {
           id: string
           linkedin_cookie: string | null
           linkedin_jsessionid: string | null
+          linkedin_updated_at: string | null
           onboarding_complete: boolean
         }
         Insert: {
@@ -479,6 +480,7 @@ export type Database = {
           id: string
           linkedin_cookie?: string | null
           linkedin_jsessionid?: string | null
+          linkedin_updated_at?: string | null
           onboarding_complete?: boolean
         }
         Update: {
@@ -490,6 +492,7 @@ export type Database = {
           id?: string
           linkedin_cookie?: string | null
           linkedin_jsessionid?: string | null
+          linkedin_updated_at?: string | null
           onboarding_complete?: boolean
         }
         Relationships: []
