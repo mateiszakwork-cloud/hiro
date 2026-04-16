@@ -1,16 +1,17 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import {
-  Search, Users, ChevronDown, ChevronUp, Check, X as XIcon, Trash2, Copy,
-  Pencil, Loader2, AlertTriangle, Plus, ExternalLink, Settings
+  Search, Users, ChevronDown, Check, X as XIcon, Trash2, Copy,
+  Loader2, AlertTriangle, Plus,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -41,6 +42,7 @@ type SearchResult = {
   full_name: string;
   headline: string;
   current_title: string;
+  current_company?: string;
   profile_url: string;
   connection_degree: string;
   profile_picture_url: string;
@@ -59,9 +61,14 @@ const OUTREACH_STATUSES = [
   { value: "Meeting booked", color: "bg-[#950606]/10 text-[#950606]" },
 ];
 
-const CATEGORIES = ["In the Role", "Hiring Manager", "HR and Recruiter", "Your Network"];
+const CATEGORY_STYLES: Record<string, string> = {
+  "In the Role": "bg-blue-100 text-blue-700",
+  "Hiring Manager": "bg-purple-100 text-purple-700",
+  "HR and Recruiter": "bg-teal-100 text-teal-700",
+  "Your Network": "bg-green-100 text-green-700",
+};
 
-/* ── Module-level search results cache (survives tab switches) ── */
+/* ── Module-level cache (survives tab switches) ── */
 const searchResultsCache: Record<string, SearchResult[]> = {};
 
 const getStatusStyle = (status: string) =>
@@ -91,17 +98,13 @@ const Avatar = ({ url, name }: { url: string | null; name: string | null }) => (
 
 /* ── Status Dropdown ── */
 const StatusPill = ({
-  status,
-  onChange,
-}: {
-  status: string;
-  onChange: (v: string) => void;
-}) => {
+  status, onChange,
+}: { status: string; onChange: (v: string) => void }) => {
   const [open, setOpen] = useState(false);
   return (
     <div className="relative">
       <button
-        onClick={() => setOpen(!open)}
+        onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
         className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium whitespace-nowrap ${getStatusStyle(status)}`}
       >
         {status}
@@ -127,23 +130,19 @@ const StatusPill = ({
   );
 };
 
-/* ── Expandable message cell ── */
+/* ── Inline expandable message cell ── */
 const MessageCell = ({
-  type,
-  contactId,
-  jobId,
-  draft,
-  subjectDraft,
-  onGenerated,
+  type, contactId, jobId, draft, subjectDraft, expanded, onToggleExpand, onGenerated,
 }: {
   type: "connection_note" | "inmail";
   contactId: string;
   jobId: string;
   draft: string | null;
   subjectDraft?: string | null;
+  expanded: boolean;
+  onToggleExpand: () => void;
   onGenerated: (patch: Partial<OutreachContact>) => void;
 }) => {
-  const [expanded, setExpanded] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [text, setText] = useState(draft || "");
   const [subject, setSubject] = useState(subjectDraft || "");
@@ -152,7 +151,8 @@ const MessageCell = ({
   useEffect(() => { setText(draft || ""); }, [draft]);
   useEffect(() => { setSubject(subjectDraft || ""); }, [subjectDraft]);
 
-  const generate = async () => {
+  const generate = async (e?: React.MouseEvent) => {
+    e?.stopPropagation();
     setGenerating(true);
     try {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -183,29 +183,28 @@ const MessageCell = ({
     }
   };
 
-  const save = async () => {
+  const handleSaveText = async (newText: string) => {
+    setText(newText);
     const patch: any = {};
-    if (type === "connection_note") patch.connection_note_draft = text;
-    else { patch.inmail_draft = text; patch.inmail_subject_draft = subject; }
+    if (type === "connection_note") patch.connection_note_draft = newText;
+    else patch.inmail_draft = newText;
     await supabase.from("contacts").update(patch).eq("id", contactId);
     onGenerated(patch);
-    toast.success("Saved");
   };
 
-  const handleCopy = async () => {
+  const handleSaveSubject = async (newSubject: string) => {
+    setSubject(newSubject);
+    await supabase.from("contacts").update({ inmail_subject_draft: newSubject }).eq("id", contactId);
+    onGenerated({ inmail_subject_draft: newSubject });
+  };
+
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
     const copyText = type === "inmail" && subject ? `Subject: ${subject}\n\n${text}` : text;
     await navigator.clipboard.writeText(copyText);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-
-  if (!draft && !generating) {
-    return (
-      <button onClick={generate} className="text-xs text-gray-400 hover:text-gray-600 border border-dashed border-gray-300 rounded px-2.5 py-1.5 hover:border-gray-400 transition-colors">
-        Generate
-      </button>
-    );
-  }
 
   if (generating) {
     return (
@@ -216,81 +215,67 @@ const MessageCell = ({
     );
   }
 
-  if (!expanded) {
+  if (!draft) {
     return (
-      <button onClick={() => setExpanded(true)} className="text-left text-[13px] text-gray-600 hover:text-gray-900 transition-colors max-w-[200px]">
-        <span className="line-clamp-1">{text.slice(0, 60)}{text.length > 60 ? "…" : ""}</span>
-        <span className="text-[10px] text-gray-400 block mt-0.5">Click to expand</span>
+      <button
+        onClick={generate}
+        className="text-xs text-gray-500 bg-gray-100 hover:bg-gray-200 rounded px-2.5 py-1 transition-colors"
+      >
+        Draft
       </button>
     );
   }
 
-  const charCount = text.length;
-  const isOverLimit = type === "connection_note" && charCount > 300;
-  const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => setExpanded(false)}>
+    <div>
       <div
-        className="bg-white rounded-xl shadow-2xl w-full max-w-md p-5 space-y-3"
-        onClick={(e) => e.stopPropagation()}
+        className="flex items-center gap-1.5 cursor-pointer group"
+        onClick={(e) => { e.stopPropagation(); onToggleExpand(); }}
       >
-        <div className="flex items-center justify-between">
-          <h4 className="text-sm font-semibold text-gray-800">
-            {type === "connection_note" ? "Connection Note" : "InMail"}
-          </h4>
-          <button onClick={() => setExpanded(false)} className="text-gray-400 hover:text-gray-600">
-            <XIcon className="h-4 w-4" />
-          </button>
-        </div>
-        {type === "inmail" && (
-          <div className="space-y-1">
-            <label className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">Subject</label>
+        <span className="text-[12px] text-gray-700 truncate max-w-[160px]">
+          {text.slice(0, 40)}{text.length > 40 ? "…" : ""}
+        </span>
+        <button onClick={handleCopy} className="text-gray-400 hover:text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity">
+          {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+        </button>
+      </div>
+      {expanded && (
+        <div className="mt-2 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+          {type === "inmail" && (
             <Input
               value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              className="text-[13px]"
-              placeholder="InMail subject line"
+              onChange={(e) => handleSaveSubject(e.target.value)}
+              placeholder="Subject line"
+              className="text-[12px] h-7"
             />
-          </div>
-        )}
-        <Textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          rows={type === "connection_note" ? 4 : 6}
-          className="text-[13px] resize-none focus:ring-1 focus:ring-[#950606] focus:border-[#950606]"
-        />
-        <div className="flex items-center justify-between">
-          <span className={`text-[11px] ${isOverLimit ? "text-red-600 font-medium" : "text-gray-400"}`}>
-            {type === "connection_note" ? `${charCount}/300 chars` : `${wordCount} words`}
-          </span>
-          <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={handleCopy}>
-              {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-              {copied ? "Copied" : "Copy"}
-            </Button>
-            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={generate} disabled={generating}>
+          )}
+          <Textarea
+            value={text}
+            onChange={(e) => handleSaveText(e.target.value)}
+            rows={type === "connection_note" ? 3 : 5}
+            className="text-[12px] resize-none"
+            maxLength={type === "connection_note" ? 300 : undefined}
+          />
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-gray-400">
+              {type === "connection_note" ? `${text.length}/300` : `${text.length} chars`}
+            </span>
+            <button
+              onClick={generate}
+              className="text-[10px] text-gray-500 hover:text-gray-800 underline"
+            >
               Regenerate
-            </Button>
-            <Button size="sm" className="h-7 text-xs bg-[#950606] hover:bg-[#7a0505] text-white" onClick={save}>
-              Save
-            </Button>
+            </button>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
 
 /* ── Main Component ── */
 const OutreachTab = ({
-  jobId,
-  userId,
-  companyName,
-  jobTitle,
-  jobFunction,
-  contacts,
-  setContacts,
+  jobId, userId, companyName, jobTitle, jobFunction, contacts, setContacts,
 }: {
   jobId: string;
   userId: string;
@@ -301,37 +286,24 @@ const OutreachTab = ({
   setContacts: React.Dispatch<React.SetStateAction<OutreachContact[]>>;
 }) => {
   const navigate = useNavigate();
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [searched, setSearched] = useState(false);
-  const [addedUrls, setAddedUrls] = useState<Set<string>>(new Set());
-  const [dismissedUrls, setDismissedUrls] = useState<Set<string>>(new Set());
   const [noCookie, setNoCookie] = useState(false);
   const [cookieExpired, setCookieExpired] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [manualOpen, setManualOpen] = useState(false);
   const [manualUrl, setManualUrl] = useState("");
-  const [sectionsOpen, setSectionsOpen] = useState<Record<string, boolean>>({
-    "In the Role": true,
-    "Hiring Manager": true,
-    "HR and Recruiter": true,
-    "Your Network": true,
-  });
   const [rateLimitUntil, setRateLimitUntil] = useState<number | null>(null);
   const [countdown, setCountdown] = useState(0);
+  const [expandedCell, setExpandedCell] = useState<string | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Restore from cache on mount (no auto-search)
+  // Restore cache marker
   useEffect(() => {
     const cacheKey = companyName || "";
-    const cached = searchResultsCache[cacheKey];
-    if (cached && cached.length > 0) {
-      setSearchResults(cached);
-      setSearched(true);
-    }
+    if (searchResultsCache[cacheKey]?.length) setSearched(true);
   }, [companyName]);
 
-  // Countdown timer for rate limit
   useEffect(() => {
     if (rateLimitUntil) {
       const tick = () => {
@@ -348,13 +320,35 @@ const OutreachTab = ({
     }
   }, [rateLimitUntil]);
 
-  // Track which contacts are already added by profile_url
-  useEffect(() => {
-    setAddedUrls(new Set(contacts.map((c) => c.linkedin_url).filter(Boolean) as string[]));
-  }, [contacts]);
+  const upsertSearchResults = async (results: SearchResult[]) => {
+    if (!results.length) return;
+    const existingUrls = new Set(contacts.map((c) => c.linkedin_url).filter(Boolean));
+    const fresh = results.filter((r) => !existingUrls.has(r.profile_url));
+    if (!fresh.length) return;
+
+    const rows = fresh.map((r) => ({
+      job_id: jobId,
+      user_id: userId,
+      linkedin_url: r.profile_url,
+      name: r.full_name,
+      headline: r.headline,
+      current_title: r.current_title,
+      current_company: r.current_company || null,
+      profile_picture_url: r.profile_picture_url,
+      is_alumni: r.is_alumni,
+      shared_connections_count: r.shared_connections_count || null,
+      category: r.category,
+      priority_score: r.priority_score,
+      outreach_status: "Not contacted",
+    }));
+
+    const { data, error } = await supabase.from("contacts").insert(rows as any).select("*");
+    if (!error && data) {
+      setContacts((prev) => [...prev, ...(data as any)]);
+    }
+  };
 
   const handleSearch = async () => {
-    console.log('Search LinkedIn clicked');
     if (rateLimitUntil && Date.now() < rateLimitUntil) return;
     setSearching(true);
     setNoCookie(false);
@@ -371,59 +365,26 @@ const OutreachTab = ({
       });
 
       if (error || !data?.success) {
-        if (data?.step === "no_cookie") { setNoCookie(true); }
+        if (data?.step === "no_cookie") setNoCookie(true);
         else if (data?.step === "cookie_expired") { setCookieExpired(true); toast.error(data.message); }
         else if (data?.step === "rate_limited") {
-          const until = Date.now() + 120_000;
-          setRateLimitUntil(until);
+          setRateLimitUntil(Date.now() + 120_000);
           toast.error("LinkedIn rate limit reached — please wait 2 minutes before searching again.");
-        }
-        else {
+        } else {
           toast.error("LinkedIn search failed — please try again.");
         }
-        
         return;
       }
 
-      const results = data.contacts || [];
-      setSearchResults(results);
+      const results: SearchResult[] = data.contacts || [];
       setSearched(true);
-      // Cache results
-      const cacheKey = companyName || "";
-      searchResultsCache[cacheKey] = results;
-      if (results.length === 0) toast("No contacts found. Try a different company name.");
+      searchResultsCache[companyName || ""] = results;
+      await upsertSearchResults(results);
+      if (results.length === 0) toast(`No contacts found for ${companyName || "this company"}.`);
     } catch {
-      toast.error("Search failed.");
+      toast.error("LinkedIn search failed — please try again.");
     } finally {
       setSearching(false);
-    }
-  };
-
-  const handleAddContact = async (result: SearchResult) => {
-    const { data, error } = await supabase
-      .from("contacts")
-      .insert({
-        job_id: jobId,
-        user_id: userId,
-        linkedin_url: result.profile_url,
-        name: result.full_name,
-        headline: result.headline,
-        current_title: result.current_title,
-        profile_picture_url: result.profile_picture_url,
-        connection_degree: result.connection_degree,
-        is_alumni: result.is_alumni,
-        shared_connections_count: result.shared_connections_count || null,
-        category: result.category,
-        priority_score: result.priority_score,
-        outreach_status: "Not contacted",
-      } as any)
-      .select("*")
-      .single();
-
-    if (!error && data) {
-      setContacts((prev) => [...prev, data as any]);
-      setAddedUrls((prev) => new Set(prev).add(result.profile_url));
-      toast.success(`${result.full_name} added`);
     }
   };
 
@@ -461,339 +422,248 @@ const OutreachTab = ({
     toast.success("Contact removed");
   };
 
-  // Group search results by category
-  const grouped = CATEGORIES.reduce((acc, cat) => {
-    acc[cat] = searchResults.filter(
-      (r) => r.category === cat && !dismissedUrls.has(r.profile_url)
-    );
-    return acc;
-  }, {} as Record<string, SearchResult[]>);
+  const isLocked = !!rateLimitUntil && countdown > 0;
 
   return (
-    <div className="space-y-8">
-      {/* ── SECTION 1: Find Contacts ── */}
-      <Card className="border-0 shadow-md">
-        <CardContent className="p-6 space-y-5">
-          <div className="flex items-start justify-between">
-            <div>
-              <h3 className="font-semibold text-foreground text-base" style={{ fontFamily: "Sora, sans-serif" }}>
-                Find Contacts
-              </h3>
-              <p className="text-sm text-muted-foreground mt-1 max-w-lg">
-                Hiro searches LinkedIn as you, using your network and alumni connections to find the most relevant people at{" "}
-                <strong>{companyName || "this company"}</strong>.
-              </p>
-            </div>
-          </div>
-
-          {noCookie && (
-            <div className="flex items-center gap-3 rounded-lg p-4 bg-amber-50 border border-amber-200">
-              <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
-              <div className="text-sm text-amber-800">
-                Connect your LinkedIn in{" "}
-                <button onClick={() => navigate("/settings")} className="underline font-medium hover:text-amber-900">
-                  Settings
-                </button>{" "}
-                first.
-              </div>
-            </div>
-          )}
-
-          {cookieExpired && (
-            <div className="flex items-center gap-3 rounded-lg p-4 bg-amber-50 border border-amber-200">
-              <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
-              <div className="text-sm text-amber-800">
-                Your LinkedIn session has expired. Update your cookie in{" "}
-                <button onClick={() => navigate("/settings")} className="underline font-medium hover:text-amber-900">
-                  Settings
-                </button>.
-              </div>
-            </div>
-          )}
-
-          {rateLimitUntil && countdown > 0 && (
-            <div className="flex items-center gap-3 rounded-lg p-4 bg-amber-50 border border-amber-200">
-              <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
-              <div className="text-sm text-amber-800">
-                LinkedIn rate limit reached — please wait {countdown}s before searching again.
-              </div>
-            </div>
-          )}
-
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-semibold text-foreground" style={{ fontFamily: "Sora, sans-serif" }}>
+            Outreach
+          </h2>
+        </div>
+        <div className="flex flex-col items-end gap-1">
           <Button
             onClick={handleSearch}
-            disabled={searching || (!!rateLimitUntil && countdown > 0)}
+            disabled={searching || isLocked}
             className="gap-2 bg-[#950606] hover:bg-[#7a0505] text-white"
           >
             {searching ? (
               <><Loader2 className="h-4 w-4 animate-spin" /> Searching…</>
-            ) : rateLimitUntil && countdown > 0 ? (
+            ) : isLocked ? (
               <>Wait {countdown}s</>
             ) : (
               <><Search className="h-4 w-4" /> Search LinkedIn</>
             )}
           </Button>
-
-          {/* Loading skeleton */}
-          {searching && (
-            <div className="space-y-4 pt-2">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <Skeleton className="h-8 w-8 rounded-full" />
-                  <div className="space-y-1.5 flex-1">
-                    <Skeleton className="h-4 w-48" />
-                    <Skeleton className="h-3 w-32" />
-                  </div>
-                </div>
-              ))}
-              <p className="text-xs text-muted-foreground text-center animate-pulse">
-                Searching LinkedIn as you…
-              </p>
-            </div>
-          )}
-
-          {/* Search results */}
-          {searched && !searching && searchResults.length > 0 && (
-            <div className="space-y-3 pt-2">
-              {CATEGORIES.map((cat) => {
-                const items = grouped[cat];
-                if (!items || items.length === 0) return null;
-                const isOpen = sectionsOpen[cat] ?? true;
-                return (
-                  <Collapsible key={cat} open={isOpen} onOpenChange={(o) => setSectionsOpen((p) => ({ ...p, [cat]: o }))}>
-                    <CollapsibleTrigger className="flex items-center gap-2 w-full text-left py-1.5">
-                      {isOpen ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
-                      <span className="text-xs font-semibold text-foreground uppercase tracking-wide">{cat}</span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium">{items.length}</span>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="space-y-1 mt-1">
-                      {items.map((r) => {
-                        const isAdded = addedUrls.has(r.profile_url);
-                        return (
-                          <div
-                            key={r.profile_url}
-                            className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors"
-                          >
-                            <Avatar url={r.profile_picture_url} name={r.full_name} />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-[13px] font-medium text-foreground truncate">{r.full_name}</p>
-                              <p className="text-[11px] text-muted-foreground truncate">{r.current_title}</p>
-                            </div>
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${getDegreeBadge(r.connection_degree)}`}>
-                              {r.connection_degree}
-                            </span>
-                            {r.is_alumni && (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#950606]/10 text-[#950606]">
-                                Alumni
-                              </span>
-                            )}
-                            {r.shared_connections_count > 0 && (
-                              <span className="text-[10px] text-gray-400">{r.shared_connections_count} shared</span>
-                            )}
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              {isAdded ? (
-                                <span className="text-green-600">
-                                  <Check className="h-4 w-4" />
-                                </span>
-                              ) : (
-                                <>
-                                  <Button
-                                    size="sm"
-                                    className="h-7 text-xs bg-[#950606] hover:bg-[#7a0505] text-white px-3"
-                                    onClick={() => handleAddContact(r)}
-                                  >
-                                    Add
-                                  </Button>
-                                  <button
-                                    onClick={() => setDismissedUrls((p) => new Set(p).add(r.profile_url))}
-                                    className="text-gray-400 hover:text-gray-600"
-                                  >
-                                    <XIcon className="h-4 w-4" />
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </CollapsibleContent>
-                  </Collapsible>
-                );
-              })}
-            </div>
-          )}
-
-          {searched && !searching && searchResults.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              No contacts found at {companyName || "this company"}.
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* ── SECTION 2: Outreach Tracker ── */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <h3 className="font-semibold text-base text-foreground" style={{ fontFamily: "Sora, sans-serif" }}>
-            Outreach Tracker
-          </h3>
-          <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium">
-            {contacts.length}
-          </span>
+          <p className="text-[11px] text-gray-400 max-w-[260px] text-right">
+            Hiro searches LinkedIn as you to find the right people to reach out to.
+          </p>
         </div>
+      </div>
 
-        {contacts.length === 0 ? (
-          <Card className="border-0 shadow-sm">
-            <CardContent className="py-16 text-center">
-              <Users className="h-10 w-10 text-gray-300 mx-auto mb-3" />
-              <p className="text-sm font-medium text-foreground">No contacts yet</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Click Search LinkedIn above to find the right people at{" "}
-                <strong>{companyName || "this company"}</strong>.
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="bg-white rounded-lg shadow-sm border overflow-x-auto">
-            <table className="w-full" style={{ minWidth: 1050 }}>
-              <thead>
-                <tr className="border-b">
-                  {["Person", "Role", "Category", "Connection", "Status", "Connection Note", "InMail", ""].map((h, i) => (
-                    <th
-                      key={i}
-                      className="text-left px-3 py-2.5 text-[11px] font-medium text-gray-400 uppercase tracking-wider"
-                      style={h === "Connection Note" || h === "InMail" ? { minWidth: 200 } : undefined}
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {contacts.map((c) => (
-                  <tr key={c.id} className="border-b border-gray-100 hover:bg-[#FFF5F5] transition-colors">
-                    {/* Person */}
-                    <td className="px-3 py-3">
-                      <div className="flex items-center gap-2.5">
-                        <Avatar url={c.profile_picture_url} name={c.name} />
-                        <div className="min-w-0">
-                          {c.linkedin_url ? (
-                            <a
-                              href={c.linkedin_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-[13px] font-semibold text-foreground hover:text-[#950606] transition-colors truncate block"
-                            >
-                              {c.name || "Unknown"}
-                            </a>
-                          ) : (
-                            <span className="text-[13px] font-semibold text-foreground truncate block">
-                              {c.name || "Unknown"}
-                            </span>
-                          )}
-                          <p className="text-[11px] text-gray-400 truncate">{c.current_title || "–"}</p>
-                        </div>
+      {/* Alerts */}
+      {noCookie && (
+        <div className="flex items-center gap-3 rounded-lg p-3 bg-amber-50 border border-amber-200">
+          <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+          <div className="text-sm text-amber-800">
+            Connect your LinkedIn in{" "}
+            <button onClick={() => navigate("/settings")} className="underline font-medium">Settings</button> first.
+          </div>
+        </div>
+      )}
+      {cookieExpired && (
+        <div className="flex items-center gap-3 rounded-lg p-3 bg-amber-50 border border-amber-200">
+          <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+          <div className="text-sm text-amber-800">
+            Your LinkedIn session has expired. Update it in{" "}
+            <button onClick={() => navigate("/settings")} className="underline font-medium">Settings</button>.
+          </div>
+        </div>
+      )}
+      {isLocked && (
+        <div className="flex items-center gap-3 rounded-lg p-3 bg-amber-50 border border-amber-200">
+          <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+          <div className="text-sm text-amber-800">
+            LinkedIn rate limit reached — please wait {countdown}s before searching again.
+          </div>
+        </div>
+      )}
+
+      {/* Loading skeleton */}
+      {searching && (
+        <div className="space-y-3 py-2">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex items-center gap-3">
+              <Skeleton className="h-8 w-8 rounded-full" />
+              <div className="space-y-1.5 flex-1">
+                <Skeleton className="h-4 w-48" />
+                <Skeleton className="h-3 w-32" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Empty states */}
+      {!searching && contacts.length === 0 && !searched && (
+        <div className="border rounded-lg bg-white py-16 text-center">
+          <Users className="h-10 w-10 text-gray-300 mx-auto mb-3" />
+          <p className="text-sm font-medium text-foreground">No contacts yet</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Click Search LinkedIn to find people at <strong>{companyName || "this company"}</strong>.
+          </p>
+        </div>
+      )}
+
+      {!searching && contacts.length === 0 && searched && (
+        <div className="border rounded-lg bg-white py-12 text-center px-6">
+          <p className="text-sm font-medium text-foreground">
+            No contacts found for {companyName || "this company"}.
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Try searching manually by pasting a LinkedIn URL below.
+          </p>
+        </div>
+      )}
+
+      {/* Unified table */}
+      {contacts.length > 0 && (
+        <div className="bg-white rounded-lg shadow-sm border overflow-x-auto">
+          <table className="w-full" style={{ minWidth: 1100 }}>
+            <thead>
+              <tr className="border-b bg-gray-50/50">
+                {["Person", "Category", "Company", "Connection", "Status", "Connection Note", "InMail", ""].map((h, i) => (
+                  <th
+                    key={i}
+                    className="text-left px-3 py-2.5 text-[11px] font-medium text-gray-400 uppercase tracking-wider"
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {contacts.map((c) => (
+                <tr key={c.id} className="border-b border-gray-100 hover:bg-[#FFF5F5]/30 transition-colors align-top">
+                  {/* Person */}
+                  <td className="px-3 py-3">
+                    <div className="flex items-center gap-2.5">
+                      <Avatar url={c.profile_picture_url} name={c.name} />
+                      <div className="min-w-0">
+                        {c.linkedin_url ? (
+                          <a
+                            href={c.linkedin_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[14px] font-bold text-foreground hover:text-[#950606] transition-colors truncate block"
+                          >
+                            {c.name || "Unknown"}
+                          </a>
+                        ) : (
+                          <span className="text-[14px] font-bold text-foreground truncate block">
+                            {c.name || "Unknown"}
+                          </span>
+                        )}
+                        <p className="text-[12px] text-gray-500 truncate">{c.current_title || "–"}</p>
                       </div>
-                    </td>
-                    {/* Role */}
-                    <td className="px-3 py-3">
-                      <span className="text-[13px] text-gray-600 truncate block max-w-[140px]" title={c.current_title || ""}>
-                        {c.current_title || "–"}
+                    </div>
+                  </td>
+                  {/* Category */}
+                  <td className="px-3 py-3">
+                    {c.category && (
+                      <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-medium whitespace-nowrap ${CATEGORY_STYLES[c.category] || "bg-gray-100 text-gray-500"}`}>
+                        {c.category}
                       </span>
-                    </td>
-                    {/* Category */}
-                    <td className="px-3 py-3">
-                      {c.category && (
-                        <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-500 whitespace-nowrap">
-                          {c.category}
+                    )}
+                  </td>
+                  {/* Company */}
+                  <td className="px-3 py-3">
+                    <span className="text-[13px] text-gray-700">{c.current_company || "–"}</span>
+                  </td>
+                  {/* Connection */}
+                  <td className="px-3 py-3">
+                    <div className="flex items-center gap-1.5">
+                      {c.connection_degree && (
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${getDegreeBadge(c.connection_degree)}`}>
+                          {c.connection_degree}
                         </span>
                       )}
-                    </td>
-                    {/* Connection */}
-                    <td className="px-3 py-3">
-                      <div className="flex items-center gap-1.5">
-                        {c.connection_degree && (
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${getDegreeBadge(c.connection_degree)}`}>
-                            {c.connection_degree}
-                          </span>
-                        )}
-                        {c.is_alumni && (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#950606]/10 text-[#950606]">
-                            Alumni
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    {/* Status */}
-                    <td className="px-3 py-3">
-                      <StatusPill
-                        status={c.outreach_status}
-                        onChange={(v) => updateContact(c.id, { outreach_status: v })}
-                      />
-                    </td>
-                    {/* Connection Note */}
-                    <td className="px-3 py-3" style={{ minWidth: 200 }}>
-                      <MessageCell
-                        type="connection_note"
-                        contactId={c.id}
-                        jobId={jobId}
-                        draft={c.connection_note_draft}
-                        onGenerated={(patch) => updateContact(c.id, patch)}
-                      />
-                    </td>
-                    {/* InMail */}
-                    <td className="px-3 py-3" style={{ minWidth: 200 }}>
-                      <MessageCell
-                        type="inmail"
-                        contactId={c.id}
-                        jobId={jobId}
-                        draft={c.inmail_draft}
-                        subjectDraft={c.inmail_subject_draft}
-                        onGenerated={(patch) => updateContact(c.id, patch)}
-                      />
-                    </td>
-                    {/* Actions */}
-                    <td className="px-3 py-3">
-                      <button
-                        onClick={() => setDeleteId(c.id)}
-                        className="text-gray-400 hover:text-red-600 transition-colors"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                      {c.is_alumni && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#950606]/10 text-[#950606]">
+                          Alumni
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  {/* Status */}
+                  <td className="px-3 py-3">
+                    <StatusPill
+                      status={c.outreach_status}
+                      onChange={(v) => updateContact(c.id, { outreach_status: v })}
+                    />
+                  </td>
+                  {/* Connection Note */}
+                  <td className="px-3 py-3" style={{ minWidth: 220 }}>
+                    <MessageCell
+                      type="connection_note"
+                      contactId={c.id}
+                      jobId={jobId}
+                      draft={c.connection_note_draft}
+                      expanded={expandedCell === `${c.id}-note`}
+                      onToggleExpand={() =>
+                        setExpandedCell(expandedCell === `${c.id}-note` ? null : `${c.id}-note`)
+                      }
+                      onGenerated={(patch) => updateContact(c.id, patch)}
+                    />
+                  </td>
+                  {/* InMail */}
+                  <td className="px-3 py-3" style={{ minWidth: 220 }}>
+                    <MessageCell
+                      type="inmail"
+                      contactId={c.id}
+                      jobId={jobId}
+                      draft={c.inmail_draft}
+                      subjectDraft={c.inmail_subject_draft}
+                      expanded={expandedCell === `${c.id}-inmail`}
+                      onToggleExpand={() =>
+                        setExpandedCell(expandedCell === `${c.id}-inmail` ? null : `${c.id}-inmail`)
+                      }
+                      onGenerated={(patch) => updateContact(c.id, patch)}
+                    />
+                  </td>
+                  {/* Actions */}
+                  <td className="px-3 py-3">
+                    <button
+                      onClick={() => setDeleteId(c.id)}
+                      className="text-gray-400 hover:text-red-600 transition-colors"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
-        {/* Manual add */}
-        {!manualOpen ? (
-          <button
-            onClick={() => setManualOpen(true)}
-            className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1 transition-colors"
-          >
-            <Plus className="h-3 w-3" /> Add contact manually
+      {/* Manual add */}
+      {!manualOpen ? (
+        <button
+          onClick={() => setManualOpen(true)}
+          className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1 transition-colors"
+        >
+          <Plus className="h-3 w-3" /> Add contact manually
+        </button>
+      ) : (
+        <div className="flex items-center gap-2">
+          <Input
+            value={manualUrl}
+            onChange={(e) => setManualUrl(e.target.value)}
+            placeholder="Paste LinkedIn profile URL"
+            className="flex-1 text-sm"
+            onKeyDown={(e) => e.key === "Enter" && handleManualAdd()}
+          />
+          <Button size="sm" onClick={handleManualAdd} className="bg-[#950606] hover:bg-[#7a0505] text-white">
+            Add
+          </Button>
+          <button onClick={() => { setManualOpen(false); setManualUrl(""); }} className="text-gray-400 hover:text-gray-600">
+            <XIcon className="h-4 w-4" />
           </button>
-        ) : (
-          <div className="flex items-center gap-2">
-            <Input
-              value={manualUrl}
-              onChange={(e) => setManualUrl(e.target.value)}
-              placeholder="Paste LinkedIn profile URL"
-              className="flex-1 text-sm"
-              onKeyDown={(e) => e.key === "Enter" && handleManualAdd()}
-            />
-            <Button size="sm" onClick={handleManualAdd} className="bg-[#950606] hover:bg-[#7a0505] text-white">
-              Add
-            </Button>
-            <button onClick={() => { setManualOpen(false); setManualUrl(""); }} className="text-gray-400 hover:text-gray-600">
-              <XIcon className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Delete confirmation */}
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>

@@ -312,32 +312,32 @@ function scoreContacts(
 ): Contact[] {
   const hmRegex = /manager|lead|head|director|vp|vice president/i;
   const hrRegex = /recruiter|talent|hr\b|people/i;
-  const internRegex = /intern\b/i;
+  const internRegex = /intern\b|graduate|junior|trainee|associate/i;
 
   for (const c of contacts) {
     let score = 0;
     const t = c.current_title.toLowerCase();
 
-    // +5 title matches job_title
-    if (titleMatchesKeywords(c.current_title, jobTitle)) score += 5;
+    // +5 intern / recent joiner
+    if (internRegex.test(t)) score += 5;
 
-    // +4 hiring manager in relevant function
-    if (
-      hmRegex.test(t) &&
-      titleMatchesKeywords(c.current_title + " " + c.headline, jobFunction)
-    ) score += 4;
-
-    // +3 HR/recruiter
-    if (hrRegex.test(t)) score += 3;
-
-    // +3 intern
-    if (internRegex.test(t)) score += 3;
-
-    // connection degree
+    // +4 1st-degree connection (+2 for 2nd)
     if (c.connection_degree === "1st") score += 4;
     else if (c.connection_degree === "2nd") score += 2;
 
-    // alumni check
+    // +3 hiring manager in relevant function
+    if (
+      hmRegex.test(t) &&
+      titleMatchesKeywords(c.current_title + " " + c.headline, jobFunction)
+    ) score += 3;
+
+    // +2 HR / recruiter
+    if (hrRegex.test(t)) score += 2;
+
+    // small bonus when title matches job title
+    if (titleMatchesKeywords(c.current_title, jobTitle)) score += 2;
+
+    // +3 alumni
     const isAlumni = userSchools.some((school) =>
       c.headline.toLowerCase().includes(school.toLowerCase()) ||
       c.current_title.toLowerCase().includes(school.toLowerCase())
@@ -552,8 +552,11 @@ serve(async (req) => {
     ).filter(Boolean);
 
     // Step 2: Run three targeted searches in parallel
+    // Search 1: interns and recent joiners first
+    // Search 2: hiring manager
+    // Search 3: HR / recruiter
     const searchKeywords = [
-      `${job_title ?? ""} ${company_name}`.trim(),
+      `${company_name} intern ${job_function ?? ""}`.trim(),
       `${job_function ?? ""} manager lead head director ${company_name}`.trim(),
       `talent acquisition recruiter HR ${company_name}`.trim(),
     ];
