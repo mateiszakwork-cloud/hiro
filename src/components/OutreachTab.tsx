@@ -354,6 +354,7 @@ const OutreachTab = ({
     setSearching(true);
     setNoCookie(false);
     setCookieExpired(false);
+    setSessionBlocked(false);
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const session = sessionData?.session;
@@ -371,6 +372,8 @@ const OutreachTab = ({
         else if (data?.step === "rate_limited") {
           setRateLimitUntil(Date.now() + 120_000);
           toast.error("LinkedIn rate limit reached — please wait 2 minutes before searching again.");
+        } else if (data?.step === "all_searches_failed") {
+          setSessionBlocked(true);
         } else {
           toast.error("LinkedIn search failed — please try again.");
         }
