@@ -290,6 +290,7 @@ const OutreachTab = ({
   const [searched, setSearched] = useState(false);
   const [noCookie, setNoCookie] = useState(false);
   const [cookieExpired, setCookieExpired] = useState(false);
+  const [sessionBlocked, setSessionBlocked] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [manualOpen, setManualOpen] = useState(false);
   const [manualUrl, setManualUrl] = useState("");
