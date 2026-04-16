@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS linkedin_updated_at TIMESTAMP WITH TIME ZONE;
