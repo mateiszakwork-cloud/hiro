@@ -444,7 +444,7 @@ const OutreachTab = ({
             ) : isLocked ? (
               <>Wait {countdown}s</>
             ) : (
-              <><Search className="h-4 w-4" /> Search LinkedIn</>
+              <><Search className="h-4 w-4" /> {contacts.length > 0 ? "Search for more contacts" : "Search LinkedIn"}</>
             )}
           </Button>
           <p className="text-[11px] text-gray-400 max-w-[260px] text-right">
