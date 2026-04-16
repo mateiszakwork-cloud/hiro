@@ -552,8 +552,11 @@ serve(async (req) => {
     ).filter(Boolean);
 
     // Step 2: Run three targeted searches in parallel
+    // Search 1: interns and recent joiners first
+    // Search 2: hiring manager
+    // Search 3: HR / recruiter
     const searchKeywords = [
-      `${job_title ?? ""} ${company_name}`.trim(),
+      `${company_name} intern ${job_function ?? ""}`.trim(),
       `${job_function ?? ""} manager lead head director ${company_name}`.trim(),
       `talent acquisition recruiter HR ${company_name}`.trim(),
     ];
