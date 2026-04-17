@@ -616,24 +616,31 @@ serve(async (req) => {
         if (!openaiKey) {
           console.log("OPENAI_API_KEY not set — skipping AI classification");
         } else {
-          const systemPrompt = `You are an expert recruiter assistant. You will receive a list of LinkedIn profiles and the details of a job being applied for. Classify each profile into exactly one category based on their current role and its relevance to the job.
+          const systemPrompt = `You are an expert recruiter assistant helping a job applicant identify who to reach out to at a target company. You will receive a list of LinkedIn profiles and details about the job being applied for. Classify each profile into exactly one category.
 
-Categories:
-- In the Role: currently doing the same or very similar work to the job being applied for, would be a peer of the applicant
-- Hiring Manager: senior person in the same function who would likely manage or oversee this role (Lead, Manager, Head, Director, VP level in the relevant function)
-- HR and Recruiter: works in talent acquisition, recruiting, HR, people operations, or similar
-- Your Network: does not fit the above three but is still at the company and potentially useful to contact
+Category definitions:
+- In the Role: this person currently does the same or very similar work to the job being applied for. They would be a peer or colleague of the applicant if hired. Use the job function and title as reference.
+- Hiring Manager: this person is senior in the same function and would likely manage or oversee someone in this role. Signals include: Manager, Lead, Senior Manager, Head of, Director, VP, Principal in the relevant function.
+- HR and Recruiter: this person works in talent acquisition, recruiting, HR business partnering, people operations, or similar. Signals include: Recruiter, Talent Acquisition, HR, People Partner, Talent Partner, TA.
+- Your Network: does not clearly fit the above three but is still at the company and may be worth contacting.
 
-Return ONLY a valid JSON array where each element has: profile_url (string, the exact URL provided), category (one of the four category names exactly as written above), confidence (integer 0-100).
+Return ONLY a valid JSON array. Each element must have exactly these keys:
+- profile_url: the exact URL string provided, unchanged
+- category: exactly one of the four category names as written above
+- confidence: integer 0 to 100 representing how confident you are in this classification
+- reasoning: one short sentence explaining the classification
 
-Job being applied for: ${job_title ?? ""} at ${company_name} in the ${job_function ?? ""} function.`;
+Be decisive. Every profile must have a category. When in doubt between In the Role and Hiring Manager, use seniority signals in the title to decide.`;
 
-          const userPayload = allContacts.map((c) => ({
+          const profilesPayload = allContacts.map((c) => ({
             profile_url: c.profile_url,
             full_name: c.full_name,
             current_title: c.current_title,
             headline: c.headline,
           }));
+
+          const userMessage = `Job being applied for: ${job_title ?? ""} at ${company_name}, function: ${job_function ?? ""}
+Profiles to classify: ${JSON.stringify(profilesPayload)}`;
 
           const aiRes = await fetch("https://api.openai.com/v1/chat/completions", {
             method: "POST",
@@ -647,7 +654,7 @@ Job being applied for: ${job_title ?? ""} at ${company_name} in the ${job_functi
               response_format: { type: "json_object" },
               messages: [
                 { role: "system", content: systemPrompt },
-                { role: "user", content: JSON.stringify({ profiles: userPayload }) },
+                { role: "user", content: userMessage },
               ],
             }),
           });
@@ -685,14 +692,24 @@ Job being applied for: ${job_title ?? ""} at ${company_name} in the ${job_functi
                 const url = String(item.profile_url || "");
                 let cat = String(item.category || "");
                 const conf = Number(item.confidence ?? 0);
-                if (!validCats.has(cat) || conf < 40) cat = "Your Network";
+                if (!validCats.has(cat)) cat = "Your Network";
+                if (conf < 35) cat = "Your Network";
                 if (url) byUrl.set(url, { category: cat, confidence: conf });
               }
+              const breakdown: Record<string, number> = {
+                "In the Role": 0,
+                "Hiring Manager": 0,
+                "HR and Recruiter": 0,
+                "Your Network": 0,
+              };
               for (const c of allContacts) {
                 const m = byUrl.get(c.profile_url);
                 c.category = m ? m.category : "Your Network";
+                breakdown[c.category] = (breakdown[c.category] ?? 0) + 1;
               }
-              console.log(`AI classified ${byUrl.size} profiles`);
+              console.log(
+                `AI classified ${byUrl.size} profiles: ${Object.entries(breakdown).map(([k, v]) => `${k}=${v}`).join(", ")}`,
+              );
             } else {
               console.error("AI classification: no array in response");
             }
