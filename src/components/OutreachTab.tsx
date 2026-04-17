@@ -153,6 +153,7 @@ const MessageCell = ({
 
   const generate = async (e?: React.MouseEvent) => {
     e?.stopPropagation();
+    console.log('Draft button clicked for contact:', contactId);
     setGenerating(true);
     try {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -160,21 +161,23 @@ const MessageCell = ({
       if (!token) { toast.error("Session expired."); setGenerating(false); return; }
 
       const { data, error } = await supabase.functions.invoke("draft-outreach-messages", {
-        body: { contact_id: contactId, job_id: jobId, message_type: type },
+        body: { contact_id: contactId, job_id: jobId, message_type: "both" },
         headers: { Authorization: `Bearer ${token}` },
       });
       if (error || !data?.success) {
         toast.error(data?.error || "Failed to generate message.");
         return;
       }
-      if (type === "connection_note") {
-        setText(data.connection_note || "");
-        onGenerated({ connection_note_draft: data.connection_note });
-      } else {
+      const patch: Partial<OutreachContact> = {};
+      if (data.connection_note !== undefined) patch.connection_note_draft = data.connection_note;
+      if (data.inmail !== undefined) patch.inmail_draft = data.inmail;
+      if (data.inmail_subject !== undefined) patch.inmail_subject_draft = data.inmail_subject;
+      if (type === "connection_note") setText(data.connection_note || "");
+      else {
         setText(data.inmail || "");
         setSubject(data.inmail_subject || "");
-        onGenerated({ inmail_draft: data.inmail, inmail_subject_draft: data.inmail_subject });
       }
+      onGenerated(patch);
       toast.success("Message generated!");
     } catch {
       toast.error("Failed to generate.");
