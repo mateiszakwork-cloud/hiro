@@ -107,6 +107,7 @@ const COLUMNS: { label: string; key: SortKey | null; minWidth: string }[] = [
   { label: "Function", key: "function", minWidth: "90px" },
   { label: "Location", key: "location", minWidth: "110px" },
   { label: "Duration", key: "duration", minWidth: "80px" },
+  { label: "Deadline", key: "application_deadline", minWidth: "100px" },
   { label: "Status", key: "status", minWidth: "95px" },
   { label: "Match", key: "match_score", minWidth: "65px" },
   { label: "Kit", key: null, minWidth: "45px" },
