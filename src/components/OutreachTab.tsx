@@ -466,18 +466,17 @@ const OutreachTab = ({
       {sessionBlocked && (
         <div className="flex items-start gap-3 rounded-lg p-4 bg-amber-50 border border-amber-200">
           <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-          <div className="text-sm text-amber-900 space-y-1.5">
-            <p className="font-semibold">LinkedIn session expired or temporarily blocked.</p>
-            <p>Please:</p>
-            <ol className="list-decimal list-inside space-y-0.5 ml-1">
-              <li>Go to linkedin.com in Chrome</li>
-              <li>Open DevTools → Application → Cookies</li>
-              <li>Copy the fresh <code className="bg-amber-100 px-1 rounded text-[11px]">li_at</code> and <code className="bg-amber-100 px-1 rounded text-[11px]">JSESSIONID</code> values</li>
-              <li>
-                Update them in{" "}
-                <button onClick={() => navigate("/settings")} className="underline font-semibold">Settings</button>
-              </li>
-            </ol>
+          <div className="text-sm text-amber-900 space-y-2 flex-1">
+            <p className="font-semibold">LinkedIn temporarily blocked.</p>
+            <p>Please wait 10 minutes and try again.</p>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => { setSessionBlocked(false); handleSearch(); }}
+              className="mt-1 border-amber-300 text-amber-900 hover:bg-amber-100"
+            >
+              Retry
+            </Button>
           </div>
         </div>
       )}
