@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Briefcase, MapPin, Trash2, ExternalLink, Loader2, CalendarIcon, ArrowUp, ArrowDown, ArrowUpDown, Wand2, Check, Copy, ArrowRight, Pencil, Users } from "lucide-react";
+import { Briefcase, MapPin, Trash2, ExternalLink, Loader2, CalendarIcon, ArrowUp, ArrowDown, ArrowUpDown, Wand2, Check, Copy, ArrowRight, Pencil, Users, AlertCircle, X } from "lucide-react";
+import { computeDeadlineState, DeadlineBadge } from "@/lib/deadlineUtils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
@@ -23,7 +24,7 @@ type Job = {
   id: string; url: string | null; company_name: string | null; job_title: string | null;
   function: string | null; location: string | null; work_mode: string | null;
   duration: string | null; status: string; match_score: number | null; created_at: string;
-  priority: string; applied_date: string | null;
+  priority: string; applied_date: string | null; application_deadline: string | null;
 };
 
 type CvOutput = {
@@ -96,7 +97,7 @@ const isValidUrl = (str: string): boolean => {
   }
 };
 
-type SortKey = "company_name" | "job_title" | "function" | "location" | "duration" | "status" | "match_score" | "priority" | "created_at" | "applied_date";
+type SortKey = "company_name" | "job_title" | "function" | "location" | "duration" | "status" | "match_score" | "priority" | "created_at" | "applied_date" | "application_deadline";
 type SortDir = "asc" | "desc";
 
 const COLUMNS: { label: string; key: SortKey | null; minWidth: string }[] = [
@@ -106,6 +107,7 @@ const COLUMNS: { label: string; key: SortKey | null; minWidth: string }[] = [
   { label: "Function", key: "function", minWidth: "90px" },
   { label: "Location", key: "location", minWidth: "110px" },
   { label: "Duration", key: "duration", minWidth: "80px" },
+  { label: "Deadline", key: "application_deadline", minWidth: "100px" },
   { label: "Status", key: "status", minWidth: "95px" },
   { label: "Match", key: "match_score", minWidth: "65px" },
   { label: "Kit", key: null, minWidth: "45px" },
@@ -143,6 +145,16 @@ const JobTracker = () => {
   const [generatingKit, setGeneratingKit] = useState<string | null>(null);
   const [kitModalJobId, setKitModalJobId] = useState<string | null>(null);
   const [outreachMap, setOutreachMap] = useState<Record<string, { count: number; maxStatus: string }>>({});
+  const [deadlineAlertDismissed, setDeadlineAlertDismissed] = useState(false);
+
+  // Compute urgent deadline jobs (within 7 days, status Saved or Applied)
+  const urgentDeadlineJobs = useMemo(() => {
+    return jobs.filter(j => {
+      if (j.status !== "Saved" && j.status !== "Applied") return false;
+      const state = computeDeadlineState(j.application_deadline, j.status);
+      return state.kind === "red" || state.kind === "orange";
+    });
+  }, [jobs]);
 
   // Sort & filter state
   const [sortKey, setSortKey] = useState<SortKey>("created_at");
@@ -157,7 +169,7 @@ const JobTracker = () => {
       setSortDir(prev => prev === "asc" ? "desc" : "asc");
     } else {
       setSortKey(key);
-      setSortDir(key === "match_score" || key === "created_at" || key === "applied_date" ? "desc" : "asc");
+      setSortDir(key === "match_score" || key === "created_at" || key === "applied_date" || key === "application_deadline" ? "desc" : "asc");
     }
   };
 
@@ -180,13 +192,15 @@ const JobTracker = () => {
           ? new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
           : new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
       }
-      if (sortKey === "applied_date") {
-        if (!a.applied_date && !b.applied_date) return 0;
-        if (!a.applied_date) return 1;
-        if (!b.applied_date) return -1;
+      if (sortKey === "applied_date" || sortKey === "application_deadline") {
+        const av = a[sortKey] as string | null;
+        const bv = b[sortKey] as string | null;
+        if (!av && !bv) return 0;
+        if (!av) return 1;
+        if (!bv) return -1;
         return sortDir === "desc"
-          ? new Date(b.applied_date).getTime() - new Date(a.applied_date).getTime()
-          : new Date(a.applied_date).getTime() - new Date(b.applied_date).getTime();
+          ? new Date(bv).getTime() - new Date(av).getTime()
+          : new Date(av).getTime() - new Date(bv).getTime();
       }
       return compareStr(a[sortKey] as string | null, b[sortKey] as string | null, sortDir);
     });
@@ -241,7 +255,7 @@ const JobTracker = () => {
   const fetchJobs = async (uid: string) => {
     const { data } = await supabase
       .from("jobs")
-      .select("id, url, company_name, job_title, function, location, work_mode, duration, status, match_score, created_at, priority, applied_date")
+      .select("id, url, company_name, job_title, function, location, work_mode, duration, status, match_score, created_at, priority, applied_date, application_deadline")
       .eq("user_id", uid)
       .order("created_at", { ascending: false });
     if (data) setJobs(data as any);
@@ -363,7 +377,7 @@ const JobTracker = () => {
     const { data: job, error } = await supabase
       .from("jobs")
       .insert(insertData)
-      .select("id, url, company_name, job_title, function, location, work_mode, duration, status, match_score, created_at, priority, applied_date")
+      .select("id, url, company_name, job_title, function, location, work_mode, duration, status, match_score, created_at, priority, applied_date, application_deadline")
       .single();
     if (error || !job) { toast.error("Failed to save job."); return; }
     setJobs((prev) => [job as any, ...prev]);
@@ -406,6 +420,12 @@ const JobTracker = () => {
     setJobs((prev) => prev.map((j) => (j.id === jobId ? { ...j, applied_date } : j)));
   };
 
+  const handleDeadlineChange = async (jobId: string, date: Date | undefined) => {
+    const application_deadline = date ? format(date, "yyyy-MM-dd") : null;
+    await supabase.from("jobs").update({ application_deadline }).eq("id", jobId);
+    setJobs((prev) => prev.map((j) => (j.id === jobId ? { ...j, application_deadline } : j)));
+  };
+
   const confirmDeleteJob = async () => {
     if (!deleteJobId) return;
     await supabase.from("jobs").delete().eq("id", deleteJobId);
@@ -423,6 +443,47 @@ const JobTracker = () => {
         <h1 className="text-[28px] font-bold text-primary">Job Tracker</h1>
         <p className="text-muted-foreground mt-1">Paste a job URL below to automatically fill in all details.</p>
       </div>
+
+      {/* Urgent deadline alert */}
+      {!deadlineAlertDismissed && urgentDeadlineJobs.length > 0 && (
+        <div
+          className="flex items-start justify-between gap-3 rounded-lg border p-3"
+          style={{ backgroundColor: '#FFF5F5', borderColor: '#950606' }}
+        >
+          <div className="flex items-start gap-2.5">
+            <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" style={{ color: '#950606' }} />
+            <div className="text-sm">
+              <p className="font-semibold" style={{ color: '#950606' }}>
+                You have {urgentDeadlineJobs.length} application deadline{urgentDeadlineJobs.length === 1 ? "" : "s"} in the next 7 days
+              </p>
+              <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                {urgentDeadlineJobs.map(j => {
+                  const s = computeDeadlineState(j.application_deadline, j.status);
+                  const days = s.kind === "red" || s.kind === "orange" ? s.days : 0;
+                  return (
+                    <button
+                      key={j.id}
+                      onClick={() => navigate(`/jobs/${j.id}`)}
+                      className="text-xs underline-offset-2 hover:underline text-foreground"
+                    >
+                      <span className="font-medium">{j.company_name || "–"}</span>
+                      <span className="text-muted-foreground"> · {j.job_title || "–"}</span>
+                      <span className="ml-1 font-semibold" style={{ color: '#950606' }}>({days}d)</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => setDeadlineAlertDismissed(true)}
+            className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
+            aria-label="Dismiss"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       <div>
         <div className="flex gap-3">
@@ -564,6 +625,7 @@ const JobTracker = () => {
                       <td className="px-3 py-3"><Skeleton className="h-4 w-20" /></td>
                       <td className="px-3 py-3"><Skeleton className="h-5 w-14 rounded-full" /></td>
                       <td className="px-3 py-3"><Skeleton className="h-4 w-14" /></td>
+                      <td className="px-3 py-3"><Skeleton className="h-4 w-16" /></td>
                       <td className="px-3 py-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
                       <td className="px-3 py-3"><Skeleton className="h-8 w-8 rounded-full" /></td>
                       <td className="px-3 py-3"><Skeleton className="h-4 w-4" /></td>
@@ -639,6 +701,48 @@ const JobTracker = () => {
                             {job.duration && job.duration.length > 8 && <TooltipContent>{job.duration}</TooltipContent>}
                           </Tooltip>
                         </TooltipProvider>
+                      </td>
+                      <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                        {(() => {
+                          const state = computeDeadlineState(job.application_deadline, job.status);
+                          if (state.kind === "none") {
+                            return (
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <button className="inline-flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors text-xs">
+                                    <span>–</span>
+                                    <Pencil className="h-3 w-3" />
+                                  </button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                  <Calendar
+                                    mode="single"
+                                    selected={undefined}
+                                    onSelect={(d) => handleDeadlineChange(job.id, d)}
+                                    className={cn("p-3 pointer-events-auto")}
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                            );
+                          }
+                          return (
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <button className="hover:opacity-80 transition-opacity">
+                                  <DeadlineBadge state={state} />
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                  mode="single"
+                                  selected={job.application_deadline ? new Date(job.application_deadline) : undefined}
+                                  onSelect={(d) => handleDeadlineChange(job.id, d)}
+                                  className={cn("p-3 pointer-events-auto")}
+                                />
+                              </PopoverContent>
+                            </Popover>
+                          );
+                        })()}
                       </td>
                       <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                         <Select value={job.status} onValueChange={(v) => handleStatusChange(job.id, v)}>

@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, ExternalLink, MapPin, Copy, Check, Trash2, ChevronDown, ChevronUp, FileText, CheckCircle2, XCircle, CalendarIcon, RefreshCw, Lightbulb, History, RotateCcw, Pencil, X as XIcon, AlertTriangle, Loader2, Minus, Plus } from "lucide-react";
+import { ArrowLeft, ExternalLink, MapPin, Copy, Check, Trash2, ChevronDown, ChevronUp, FileText, CheckCircle2, XCircle, CalendarIcon, RefreshCw, Lightbulb, History, RotateCcw, Pencil, X as XIcon, AlertTriangle, Loader2, Minus, Plus, AlertCircle } from "lucide-react";
+import { computeDeadlineState, DeadlineBadge } from "@/lib/deadlineUtils";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -764,8 +765,29 @@ const JobDetail = () => {
 
   if (!job) return null;
 
+  const deadlineState = computeDeadlineState(job.application_deadline, job.status);
+  const showDeadlineBanner =
+    (deadlineState.kind === "red" || deadlineState.kind === "orange") &&
+    (job.status === "Saved" || job.status === "Applied");
+
   return (
     <div className="space-y-6">
+      {/* Deadline banner */}
+      {showDeadlineBanner && (
+        <div
+          className={cn(
+            "flex items-center gap-2.5 rounded-lg border p-3 text-sm",
+            deadlineState.kind === "red" ? "text-white" : "text-orange-800 bg-orange-50 border-orange-300",
+          )}
+          style={deadlineState.kind === "red" ? { backgroundColor: "#950606", borderColor: "#950606" } : undefined}
+        >
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <p className="font-semibold">
+            Deadline approaching: {(deadlineState as any).days} day{(deadlineState as any).days === 1 ? "" : "s"} left to apply
+          </p>
+        </div>
+      )}
+
       {/* Header */}
       <div>
         <button onClick={() => navigate("/dashboard")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors">
@@ -777,6 +799,23 @@ const JobDetail = () => {
             <p className="text-lg text-muted-foreground">{job.company_name || "Unknown Company"}</p>
           </div>
           <div className="flex items-center gap-3">
+            {deadlineState.kind !== "none" && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button className="hover:opacity-80 transition-opacity">
+                    <DeadlineBadge state={deadlineState} size="md" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar
+                    mode="single"
+                    selected={job.application_deadline ? new Date(job.application_deadline) : undefined}
+                    onSelect={handleDeadlineInline}
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            )}
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className={cn("gap-1.5 text-sm", !job.applied_date && "text-muted-foreground")}>
@@ -960,8 +999,12 @@ const JobDetail = () => {
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Application Deadline</p>
                     <Popover>
                       <PopoverTrigger asChild>
-                        <button className="text-sm text-foreground flex items-center gap-1.5 hover:text-primary transition-colors">
-                          {job.application_deadline ? format(new Date(job.application_deadline), "MMM d, yyyy") : "–"}
+                        <button className="text-sm flex items-center gap-2 hover:opacity-80 transition-opacity">
+                          {deadlineState.kind === "none" ? (
+                            <span className="text-muted-foreground">–</span>
+                          ) : (
+                            <DeadlineBadge state={deadlineState} size="md" />
+                          )}
                           <Pencil className="h-3 w-3 text-muted-foreground" />
                         </button>
                       </PopoverTrigger>
