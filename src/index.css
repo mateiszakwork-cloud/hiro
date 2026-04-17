@@ -1959,3 +1959,256 @@ select:focus-visible,
   }
   main { padding: 0 !important; margin: 0 !important; }
 }
+
+/* ============================================
+   AUTH PAGES (Login / Register) — premium dark + white
+   ============================================ */
+.hiro-auth {
+  min-height: 100vh;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 55% 45%;
+  background: var(--color-bg-dark);
+  background-image:
+    radial-gradient(ellipse 600px 500px at 70% 30%, rgba(149, 6, 6, 0.10) 0%, transparent 65%),
+    repeating-linear-gradient(rgba(255,255,255,0.02) 0px, rgba(255,255,255,0.02) 1px, transparent 1px, transparent 60px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.02) 0px, rgba(255,255,255,0.02) 1px, transparent 1px, transparent 60px);
+}
+
+.hiro-auth-left {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 60px;
+  position: relative;
+}
+
+.hiro-auth-wordmark {
+  font-family: var(--font-heading);
+  font-size: 32px;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: -0.03em;
+  display: inline-flex;
+  align-items: flex-start;
+}
+.hiro-auth-wordmark::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  margin-left: 4px;
+  position: relative;
+  top: 8px;
+}
+
+.hiro-auth-tagline {
+  font-family: var(--font-heading);
+  font-size: 42px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  margin-top: 48px;
+  max-width: 460px;
+}
+
+.hiro-auth-subtext {
+  font-family: var(--font-body);
+  font-size: 16px;
+  color: rgba(255,255,255,0.5);
+  line-height: 1.6;
+  margin-top: 16px;
+  max-width: 380px;
+}
+
+.hiro-auth-pills {
+  margin-top: 32px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hiro-auth-pill {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: var(--radius-full);
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: rgba(255,255,255,0.7);
+  padding: 8px 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.hiro-auth-pill svg {
+  width: 14px;
+  height: 14px;
+  color: var(--color-primary);
+}
+
+.hiro-auth-right {
+  background: #fff;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+}
+
+.hiro-auth-card {
+  width: 100%;
+  max-width: 400px;
+}
+
+.hiro-auth-logo {
+  font-family: var(--font-heading);
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--color-text-primary);
+  letter-spacing: -0.02em;
+  margin-bottom: 32px;
+  display: inline-flex;
+  align-items: flex-start;
+}
+.hiro-auth-logo::after {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  margin-left: 3px;
+  position: relative;
+  top: 5px;
+}
+
+.hiro-auth-heading {
+  font-family: var(--font-heading);
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--color-text-primary);
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+  line-height: 1.2;
+}
+
+.hiro-auth-sub {
+  font-family: var(--font-body);
+  font-size: 15px;
+  color: var(--color-text-muted);
+  margin-bottom: 32px;
+}
+
+.hiro-auth-label {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-secondary);
+  margin-bottom: 6px;
+  display: block;
+}
+
+.hiro-auth-input {
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 14px;
+  padding: 12px 16px;
+  width: 100%;
+  background: #fff;
+  color: var(--color-text-primary);
+  transition: var(--transition);
+  height: auto;
+}
+.hiro-auth-input:focus,
+.hiro-auth-input:focus-visible {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.hiro-auth-field {
+  margin-bottom: 16px;
+}
+
+.hiro-auth-submit {
+  width: 100%;
+  height: 50px;
+  background: var(--color-primary);
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 700;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-red);
+  transition: var(--transition);
+  margin-top: 8px;
+  border: none;
+  cursor: pointer;
+}
+.hiro-auth-submit:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+.hiro-auth-submit:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.hiro-auth-switch {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--color-text-muted);
+  text-align: center;
+  margin-top: 20px;
+}
+.hiro-auth-switch a {
+  color: var(--color-primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+.hiro-auth-switch a:hover {
+  text-decoration: underline;
+}
+
+.hiro-auth-error {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: #EF4444;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: -10px;
+  margin-bottom: 10px;
+}
+
+/* Verification / unverified card */
+.hiro-auth-verify {
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+}
+.hiro-auth-verify-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 1024px) {
+  .hiro-auth { grid-template-columns: 1fr; }
+  .hiro-auth-left { display: none; }
+  .hiro-auth-right { min-height: 100vh; }
+}
+
+@media (max-width: 480px) {
+  .hiro-auth-right { padding: 32px 20px; }
+  .hiro-auth-heading { font-size: 24px; }
+}

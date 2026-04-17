@@ -1,17 +1,29 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { AlertTriangle, Mail } from "lucide-react";
+import { AlertTriangle, Mail, Check } from "lucide-react";
 
 const InlineError = ({ message }: { message: string }) => (
-  <p className="flex items-center gap-1.5 text-xs text-destructive mt-1">
+  <p className="hiro-auth-error">
     <AlertTriangle className="h-3 w-3 shrink-0" />
     {message}
   </p>
+);
+
+const AuthLeftPanel = () => (
+  <div className="hiro-auth-left">
+    <span className="hiro-auth-wordmark">Hiro</span>
+    <h2 className="hiro-auth-tagline">Your complete application, built in seconds.</h2>
+    <p className="hiro-auth-subtext">
+      Paste a job URL. Get a tailored CV, the right contacts, and personalised outreach. All in one place.
+    </p>
+    <div className="hiro-auth-pills">
+      <span className="hiro-auth-pill"><Check /> Tailored CV in seconds</span>
+      <span className="hiro-auth-pill"><Check /> LinkedIn contact finder</span>
+      <span className="hiro-auth-pill"><Check /> Interview prep kit</span>
+    </div>
+  </div>
 );
 
 const Register = () => {
@@ -26,7 +38,6 @@ const Register = () => {
   const [resendCooldown, setResendCooldown] = useState(60);
   const [canResend, setCanResend] = useState(false);
 
-  // Countdown timer for resend
   useEffect(() => {
     if (!showVerification) return;
     if (resendCooldown <= 0) {
@@ -66,11 +77,9 @@ const Register = () => {
       toast.error(error.message);
       return;
     }
-    // Save full name to profiles table
     if (data.user) {
       await supabase.from("profiles").update({ full_name: fullName.trim() }).eq("id", data.user.id);
     }
-    // Show verification screen instead of redirecting
     setShowVerification(true);
     setResendCooldown(60);
     setCanResend(false);
@@ -94,73 +103,99 @@ const Register = () => {
 
   if (showVerification) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-4">
-        <div className="w-full max-w-md bg-card rounded-lg shadow-lg p-8 text-center">
-          <Mail className="h-12 w-12 text-primary mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-foreground mb-2">Check your email</h1>
-          <p className="text-muted-foreground mb-1">
-            We sent a verification link to
-          </p>
-          <p className="font-medium text-foreground mb-6">{email}</p>
-          <p className="text-sm text-muted-foreground mb-6">
-            Click the link in your email to activate your account.
-          </p>
-          <div className="text-sm text-muted-foreground">
-            {canResend ? (
-              <button
-                onClick={handleResend}
-                className="text-primary font-medium hover:underline"
-              >
-                Resend email
-              </button>
-            ) : (
-              <span>Resend available in {resendCooldown}s</span>
-            )}
+      <div className="hiro-auth">
+        <AuthLeftPanel />
+        <div className="hiro-auth-right">
+          <div className="hiro-auth-verify">
+            <div className="hiro-auth-verify-icon">
+              <Mail className="h-6 w-6" />
+            </div>
+            <h1 className="hiro-auth-heading">Check your email.</h1>
+            <p className="hiro-auth-sub">
+              We sent a verification link to <span className="font-medium" style={{ color: "var(--color-text-primary)" }}>{email}</span>. Click it to activate your account.
+            </p>
+            <div style={{ fontSize: 14, color: "var(--color-text-muted)" }}>
+              {canResend ? (
+                <button onClick={handleResend} style={{ color: "var(--color-primary)", fontWeight: 600 }} className="hover:underline">
+                  Resend email
+                </button>
+              ) : (
+                <span>Resend available in {resendCooldown}s</span>
+              )}
+            </div>
+            <p className="hiro-auth-switch">
+              Already verified? <Link to="/login">Log in</Link>
+            </p>
           </div>
-          <p className="text-center text-sm text-muted-foreground mt-6">
-            Already verified?{" "}
-            <Link to="/login" className="text-primary font-medium hover:underline">
-              Log in
-            </Link>
-          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="w-full max-w-md bg-card rounded-lg shadow-lg p-8">
-        <h1 className="text-2xl font-bold text-primary text-center mb-6">Create your account</h1>
-        <form onSubmit={handleSubmit} noValidate className="space-y-4">
-          <div className="space-y-1">
-            <Label htmlFor="fullName">Full Name</Label>
-            <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} className="rounded-lg" placeholder="John Doe" />
-            {errors.fullName && <InlineError message={errors.fullName} />}
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="rounded-lg" placeholder="you@example.com" />
-            {errors.email && <InlineError message={errors.email} />}
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="rounded-lg" placeholder="••••••••" />
-            {errors.password && <InlineError message={errors.password} />}
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="confirmPassword">Confirm Password</Label>
-            <Input id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="rounded-lg" placeholder="••••••••" />
-            {errors.confirmPassword && <InlineError message={errors.confirmPassword} />}
-          </div>
-          <Button type="submit" disabled={loading} className="w-full rounded-lg text-base font-semibold hover:bg-accent transition-colors">
-            {loading ? "Signing up..." : "Sign Up"}
-          </Button>
-        </form>
-        <p className="text-center text-sm text-muted-foreground mt-6">
-          Already have an account?{" "}
-          <Link to="/login" className="text-primary font-medium hover:underline">Log in</Link>
-        </p>
+    <div className="hiro-auth">
+      <AuthLeftPanel />
+      <div className="hiro-auth-right">
+        <div className="hiro-auth-card">
+          <div className="hiro-auth-logo">Hiro</div>
+          <h1 className="hiro-auth-heading">Create your account.</h1>
+          <p className="hiro-auth-sub">Start your free account. No credit card needed.</p>
+          <form onSubmit={handleSubmit} noValidate>
+            <div className="hiro-auth-field">
+              <label htmlFor="fullName" className="hiro-auth-label">Full Name</label>
+              <input
+                id="fullName"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                className="hiro-auth-input"
+                placeholder="John Doe"
+              />
+              {errors.fullName && <InlineError message={errors.fullName} />}
+            </div>
+            <div className="hiro-auth-field">
+              <label htmlFor="email" className="hiro-auth-label">Email</label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="hiro-auth-input"
+                placeholder="you@example.com"
+              />
+              {errors.email && <InlineError message={errors.email} />}
+            </div>
+            <div className="hiro-auth-field">
+              <label htmlFor="password" className="hiro-auth-label">Password</label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="hiro-auth-input"
+                placeholder="••••••••"
+              />
+              {errors.password && <InlineError message={errors.password} />}
+            </div>
+            <div className="hiro-auth-field">
+              <label htmlFor="confirmPassword" className="hiro-auth-label">Confirm Password</label>
+              <input
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="hiro-auth-input"
+                placeholder="••••••••"
+              />
+              {errors.confirmPassword && <InlineError message={errors.confirmPassword} />}
+            </div>
+            <button type="submit" disabled={loading} className="hiro-auth-submit">
+              {loading ? "Creating..." : "Create my account"}
+            </button>
+          </form>
+          <p className="hiro-auth-switch">
+            Already have an account? <Link to="/login">Log in</Link>
+          </p>
+        </div>
       </div>
     </div>
   );
