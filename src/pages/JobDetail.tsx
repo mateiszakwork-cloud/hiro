@@ -923,7 +923,7 @@ const JobDetail = () => {
         </TabsList>
 
         {/* Overview Tab */}
-        <TabsContent value="overview" className="mt-6">
+        <TabsContent value="overview" className="hiro-tab-content mt-0">
           <Card>
             <CardContent className="p-6">
               <div className="flex justify-end mb-4">
@@ -1206,7 +1206,7 @@ const JobDetail = () => {
         </TabsContent>
 
         {/* Outreach Tab */}
-        <TabsContent value="outreach" className="mt-6">
+        <TabsContent value="outreach" className="hiro-tab-content mt-0">
           {job && userId && (
             <OutreachTab
               jobId={job.id}
@@ -1221,7 +1221,7 @@ const JobDetail = () => {
         </TabsContent>
 
         {/* CV Tab — Application Kit */}
-        <TabsContent value="cv" className="mt-6 space-y-6">
+        <TabsContent value="cv" className="hiro-tab-content mt-0 space-y-6">
           {/* Generate / Regenerate button */}
           <div className="flex items-center justify-between">
             <div>
@@ -1714,7 +1714,7 @@ const JobDetail = () => {
         </TabsContent>
 
         {/* Interview Prep Tab */}
-        <TabsContent value="interview" className="mt-6 space-y-6">
+        <TabsContent value="interview" className="hiro-tab-content mt-0 space-y-6">
           {/* Interview banner */}
           {job && ["Interview", "Offer"].includes(job.status) && !interviewPrep && (
             <div className="flex items-center gap-3 p-4 rounded-xl border-2 border-[#950606] bg-[#950606]/5">
@@ -1872,24 +1872,22 @@ const JobDetail = () => {
         </TabsContent>
 
         {/* Notes Tab */}
-        <TabsContent value="notes" className="mt-6">
-          <Card>
-            <CardContent className="p-6 space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-foreground">Notes</h3>
-                <span className={`text-xs transition-opacity ${notesSaved ? "text-muted-foreground opacity-100" : "opacity-0"}`}>
-                  {notesSaved && notes ? "✓ Saved" : ""}
-                </span>
-              </div>
-              <Textarea
-                value={notes}
-                onChange={(e) => handleNotesChange(e.target.value)}
-                placeholder="Write any notes about this application..."
-                rows={12}
-                className="resize-none"
-              />
-            </CardContent>
-          </Card>
+        <TabsContent value="notes" className="hiro-tab-content mt-0">
+          <h2 className="hiro-section-heading mb-4">Notes</h2>
+          <textarea
+            value={notes}
+            onChange={(e) => handleNotesChange(e.target.value)}
+            placeholder="Write any notes about this application..."
+            className="hiro-notes-textarea"
+          />
+          <div className="flex items-center justify-end gap-1.5 mt-2 text-xs text-muted-foreground">
+            {notesSaved && notes && (
+              <>
+                <span className="hiro-saved-dot" />
+                <span>Saved</span>
+              </>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
     </div>
