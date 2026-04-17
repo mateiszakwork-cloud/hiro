@@ -222,7 +222,8 @@ const MessageCell = ({
     return (
       <button
         onClick={generate}
-        className="text-xs text-gray-500 bg-gray-100 hover:bg-gray-200 rounded px-2.5 py-1 transition-colors"
+        className="text-xs rounded px-2.5 py-1 transition-colors font-medium"
+        style={{ background: "var(--color-primary-light)", color: "var(--color-primary)" }}
       >
         Draft
       </button>
