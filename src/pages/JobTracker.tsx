@@ -727,7 +727,7 @@ const JobTracker = () => {
 
       {/* Urgent deadline alert */}
       {!deadlineAlertDismissed && urgentDeadlineJobs.length > 0 && (
-        <div style={{ padding: "0 32px 16px" }}>
+        <div style={{ padding: "0 28px 16px" }}>
           <div
             className="flex items-start justify-between gap-3 rounded-lg border p-3"
             style={{ backgroundColor: "#FFF5F5", borderColor: "#950606" }}
@@ -770,7 +770,7 @@ const JobTracker = () => {
 
       {/* Filters */}
       {showTable && (
-        <div style={{ padding: "0 32px 12px" }}>
+        <div style={{ padding: "0 28px 12px" }}>
           <div className="flex items-center gap-3 flex-wrap">
             <div className="ml-auto flex items-center gap-2">
               <Select value={filterStatus} onValueChange={setFilterStatus}>
@@ -829,7 +829,7 @@ const JobTracker = () => {
       )}
 
       {/* Table card wrapper */}
-      <div style={{ padding: "0 32px 32px" }}>
+      <div style={{ padding: "0 28px 24px" }}>
         <div
           style={{
             background: "var(--color-bg-white)",
@@ -867,24 +867,30 @@ const JobTracker = () => {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm" style={{ tableLayout: 'auto' }}>
+            <div style={{ width: "100%", overflowX: "hidden" }}>
+              <table className="text-sm" style={{ tableLayout: "fixed", width: "100%" }}>
+                <colgroup>
+                  {COLUMNS.map((col) => (
+                    <col key={`col-${col.label || "_open"}`} style={{ width: col.width }} />
+                  ))}
+                </colgroup>
                 <thead>
                    <tr style={{ background: "#F9FAFB", borderBottom: "2px solid var(--color-border)" }}>
                      {COLUMNS.map((col) => (
                        <th
                          key={col.label || "_open"}
                          style={{
-                           minWidth: col.minWidth,
                            fontFamily: "var(--font-body)",
                            fontSize: "11px",
                            fontWeight: 600,
                            color: "var(--color-text-muted)",
                            textTransform: "uppercase",
                            letterSpacing: "0.08em",
-                           padding: "12px 16px",
+                           padding: "10px 14px",
                            textAlign: "left",
                            whiteSpace: "nowrap",
+                           overflow: "hidden",
+                           textOverflow: "ellipsis",
                          }}
                          className={cn(
                            col.key && "cursor-pointer select-none hover:text-foreground transition-colors group/th"
