@@ -477,6 +477,44 @@ const JobTracker = () => {
         <p className="text-muted-foreground mt-1">Paste a job URL below to automatically fill in all details.</p>
       </div>
 
+      {/* Summary stats */}
+      {stats.total === 0 ? (
+        <div className="rounded-lg bg-white shadow-sm p-5 text-sm text-muted-foreground">
+          <span className="font-semibold text-foreground" style={{ fontFamily: "Sora, sans-serif" }}>Welcome to Hiro.</span>{" "}
+          Paste your first job URL above to get started.
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+          <div className="rounded-lg bg-white shadow-sm p-4">
+            <div className="text-[24px] font-bold leading-none text-foreground" style={{ fontFamily: "Sora, sans-serif" }}>{stats.total}</div>
+            <div className="text-[12px] text-muted-foreground mt-1.5">Total Tracked</div>
+          </div>
+          <div className="rounded-lg bg-white shadow-sm p-4 border-l-4" style={{ borderLeftColor: "#950606" }}>
+            <div className="text-[24px] font-bold leading-none text-foreground" style={{ fontFamily: "Sora, sans-serif" }}>{stats.applied}</div>
+            <div className="text-[12px] text-muted-foreground mt-1.5">Applied</div>
+            <div className="text-[11px] text-muted-foreground mt-0.5">({stats.appliedThisWeek} this week)</div>
+          </div>
+          <div className="rounded-lg bg-white shadow-sm p-4">
+            <div className="text-[24px] font-bold leading-none text-foreground" style={{ fontFamily: "Sora, sans-serif" }}>{stats.inProgress}</div>
+            <div className="text-[12px] text-muted-foreground mt-1.5">In Progress</div>
+          </div>
+          <div className="rounded-lg bg-white shadow-sm p-4 border-l-4" style={{ borderLeftColor: "#950606" }}>
+            <div className="text-[24px] font-bold leading-none text-foreground" style={{ fontFamily: "Sora, sans-serif" }}>{stats.interviews}</div>
+            <div className="text-[12px] text-muted-foreground mt-1.5">Interviews</div>
+          </div>
+          <div className="rounded-lg bg-white shadow-sm p-4">
+            <div className={cn("text-[24px] font-bold leading-none", getAvgScoreColor(stats.avgScore))} style={{ fontFamily: "Sora, sans-serif" }}>
+              {stats.avgScore !== null ? `${stats.avgScore}%` : "–"}
+            </div>
+            <div className="text-[12px] text-muted-foreground mt-1.5">Avg Match Score</div>
+          </div>
+          <div className="rounded-lg bg-white shadow-sm p-4">
+            <div className="text-[24px] font-bold leading-none text-foreground" style={{ fontFamily: "Sora, sans-serif" }}>{contactsReached}</div>
+            <div className="text-[12px] text-muted-foreground mt-1.5">Contacts Reached</div>
+          </div>
+        </div>
+      )}
+
       {/* Urgent deadline alert */}
       {!deadlineAlertDismissed && urgentDeadlineJobs.length > 0 && (
         <div
