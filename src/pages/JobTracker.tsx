@@ -745,6 +745,7 @@ const JobTracker = () => {
                         })()}
                       </td>
                       <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                        <Select value={job.status} onValueChange={(v) => handleStatusChange(job.id, v)}>
                           <SelectTrigger className={`h-7 w-auto border-0 gap-1 px-2 rounded-full text-xs font-medium ${getStatusColor(job.status)}`}>
                             <SelectValue />
                           </SelectTrigger>
