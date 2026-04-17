@@ -1149,8 +1149,8 @@ const JobTracker = () => {
               </table>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Application Kit Modal */}
       <Dialog open={!!kitModalJobId} onOpenChange={(open) => !open && setKitModalJobId(null)}>
