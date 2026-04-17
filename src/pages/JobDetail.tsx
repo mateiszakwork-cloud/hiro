@@ -999,8 +999,12 @@ const JobDetail = () => {
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Application Deadline</p>
                     <Popover>
                       <PopoverTrigger asChild>
-                        <button className="text-sm text-foreground flex items-center gap-1.5 hover:text-primary transition-colors">
-                          {job.application_deadline ? format(new Date(job.application_deadline), "MMM d, yyyy") : "–"}
+                        <button className="text-sm flex items-center gap-2 hover:opacity-80 transition-opacity">
+                          {deadlineState.kind === "none" ? (
+                            <span className="text-muted-foreground">–</span>
+                          ) : (
+                            <DeadlineBadge state={deadlineState} size="md" />
+                          )}
                           <Pencil className="h-3 w-3 text-muted-foreground" />
                         </button>
                       </PopoverTrigger>
