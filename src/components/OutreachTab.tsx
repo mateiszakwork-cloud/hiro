@@ -366,7 +366,8 @@ const OutreachTab = ({
       const results: SearchResult[] = data.contacts || [];
       setSearched(true);
       searchResultsCache[companyName || ""] = results;
-      await upsertSearchResults(results);
+      // Edge function persisted contacts to DB — refresh from source of truth
+      await refreshContactsFromDb();
       if (results.length === 0) toast(`No contacts found for ${companyName || "this company"}.`);
     } catch {
       toast.error("LinkedIn search failed — please try again.");
