@@ -355,12 +355,9 @@ function scoreContacts(
 
 function categorize(
   contacts: Contact[],
-  jobTitle: string,
-  jobFunction: string,
+  _jobTitle: string,
+  _jobFunction: string,
 ): Contact[] {
-  const hmRegex = /manager|lead|head|director|vp|vice president/i;
-  const hrRegex = /recruiter|talent|hr\b|people/i;
-
   const limits: Record<string, number> = {
     "In the Role": 2,
     "Hiring Manager": 1,
@@ -379,56 +376,30 @@ function categorize(
 
   const result: Contact[] = [];
 
-  // First pass: assign primary categories
+  // First pass: respect each contact's pre-assigned (AI) category, enforce per-category limits
   for (const c of contacts) {
     if (result.length >= 6) break;
-    const t = c.current_title.toLowerCase();
-
-    let assigned = false;
-
-    if (
-      counts["In the Role"] < limits["In the Role"] &&
-      titleMatchesKeywords(c.current_title, jobTitle)
-    ) {
-      c.category = "In the Role";
-      counts["In the Role"]++;
-      assigned = true;
-    } else if (
-      counts["Hiring Manager"] < limits["Hiring Manager"] &&
-      hmRegex.test(t) &&
-      titleMatchesKeywords(c.current_title + " " + c.headline, jobFunction)
-    ) {
-      c.category = "Hiring Manager";
-      counts["Hiring Manager"]++;
-      assigned = true;
-    } else if (
-      counts["HR and Recruiter"] < limits["HR and Recruiter"] &&
-      hrRegex.test(t)
-    ) {
-      c.category = "HR and Recruiter";
-      counts["HR and Recruiter"]++;
-      assigned = true;
-    } else if (
-      counts["Your Network"] < limits["Your Network"] &&
-      (c.connection_degree === "1st" || c.connection_degree === "2nd" ||
-        c.is_alumni)
-    ) {
-      c.category = "Your Network";
-      counts["Your Network"]++;
-      assigned = true;
+    const cat = c.category && limits[c.category] !== undefined ? c.category : "Your Network";
+    if (counts[cat] < limits[cat]) {
+      c.category = cat;
+      counts[cat]++;
+      result.push(c);
     }
-
-    if (assigned) result.push(c);
   }
 
-  // Second pass: fill remaining slots from unused contacts
+  // Second pass: fill remaining slots, preferring each contact's AI category
   if (result.length < 6) {
     const usedUrls = new Set(result.map((r) => r.profile_url));
     for (const c of contacts) {
       if (result.length >= 6) break;
       if (usedUrls.has(c.profile_url)) continue;
-
-      // Find a category with remaining slots
+      const preferred = c.category && limits[c.category] !== undefined ? c.category : null;
+      if (preferred && counts[preferred] < limits[preferred]) {
+        counts[preferred]++;
+        result.push(c);
+        usedUrls.add(c.profile_url);
+        continue;
+      }
       for (const cat of Object.keys(limits)) {
         if (counts[cat] < limits[cat]) {
           c.category = cat;
@@ -441,13 +412,13 @@ function categorize(
     }
   }
 
-  // Third pass: if still under 6, expand limits
+  // Third pass: if still under 6, fall back to Your Network
   if (result.length < 6) {
     const usedUrls = new Set(result.map((r) => r.profile_url));
     for (const c of contacts) {
       if (result.length >= 6) break;
       if (usedUrls.has(c.profile_url)) continue;
-      c.category = "Your Network";
+      if (!c.category || limits[c.category] === undefined) c.category = "Your Network";
       result.push(c);
     }
   }
