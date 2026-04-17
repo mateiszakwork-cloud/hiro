@@ -150,143 +150,144 @@ const Welcome = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <div className="max-w-lg w-full text-center">
-        <h1 className="text-3xl font-bold text-primary mb-2">Welcome to Hiro</h1>
-        <p className="text-muted-foreground mb-8">Your complete application toolkit, built from one URL.</p>
-
-        {/* 4-step visual flow */}
-        <div className="grid grid-cols-4 gap-3 mb-8">
-          {steps.map((step, i) => (
-            <div key={i} className="flex flex-col items-center gap-2">
-              <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                <step.icon className="h-5 w-5 text-primary" />
-              </div>
-              <p className="text-xs font-medium text-foreground leading-tight">{step.title}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Pro tip card */}
-        <div className="rounded-lg bg-amber-50 border border-amber-200 p-4 mb-8 text-left">
-          <div className="flex items-start gap-2.5">
-            <Lightbulb className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-            <p className="text-sm text-amber-900">
-              <span className="font-semibold">Pro tip:</span> The more bullet points you add per experience, the better Hiro can tailor your CV. Your current CV probably has 2–3 bullets per role — try adding 4–6 here. Hiro will always pick the most relevant ones for each job, so having more gives it more to work with.
-            </p>
+    <div className="hiro-onboarding-bg flex items-center justify-center">
+      <div className="hiro-onboarding-container w-full" style={{ maxWidth: 560 }}>
+        <div className="hiro-form-card">
+          <div className="text-center">
+            <span className="hiro-welcome-wordmark">
+              Hiro<span className="hiro-welcome-dot" />
+            </span>
+            <h1 className="hiro-welcome-heading">Welcome to your application toolkit</h1>
+            <p className="hiro-welcome-subtext">Build your profile once. Then turn any job URL into a tailored CV, interview prep, and outreach plan in seconds.</p>
           </div>
-        </div>
 
-        {/* CV Upload Section */}
-        <div className="mb-4 rounded-lg border-2 border-dashed border-border p-6 bg-muted/30">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="application/pdf"
-            onChange={handleFileUpload}
-            className="hidden"
-          />
-
-          {uploading ? (
-            <div className="flex flex-col items-center gap-3">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-sm font-medium text-foreground">Parsing your CV...</p>
-              <p className="text-xs text-muted-foreground">This may take a few seconds</p>
-            </div>
-          ) : parseError ? (
-            <div className="flex flex-col items-center gap-3">
-              <AlertTriangle className="h-8 w-8 text-destructive" />
-              <p className="text-sm font-medium text-foreground">{errorMessage || "We had trouble reading your CV."}</p>
-              <p className="text-xs text-muted-foreground">You can try again or fill in your profile manually.</p>
-              <div className="flex gap-3 mt-1">
-                <Button variant="outline" size="sm" onClick={handleRetry} className="gap-1.5">
-                  <RotateCcw className="h-3.5 w-3.5" /> Retry
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => { setParseError(false); setShowPasteMode(true); }}>
-                  Paste as text instead
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleProceed}>
-                  Build manually
-                </Button>
+          {/* 4-step visual flow */}
+          <div className="grid grid-cols-2 gap-3 mt-8">
+            {steps.map((step, i) => (
+              <div key={i} className="flex items-start gap-3 rounded-lg border border-border p-3">
+                <div className="h-7 w-7 rounded-full flex items-center justify-center shrink-0" style={{ background: 'var(--color-primary)', color: '#fff', fontSize: 12, fontWeight: 700 }}>
+                  {i + 1}
+                </div>
+                <p className="text-sm font-medium text-foreground leading-snug pt-0.5">{step.title}</p>
               </div>
-            </div>
-          ) : parsed ? (
-            <div className="flex flex-col items-center gap-3">
-              <CheckCircle className="h-8 w-8 text-primary" />
-              <p className="text-sm font-medium text-foreground">{summary}</p>
-            </div>
-          ) : showPasteMode ? (
-            <div className="flex flex-col gap-3">
-              <p className="text-sm font-medium text-foreground">Paste your CV text below</p>
-              <Textarea
-                value={pastedText}
-                onChange={(e) => setPastedText(e.target.value)}
-                placeholder="Paste your full CV text here..."
-                className="min-h-[200px] text-sm"
-              />
-              <div className="flex gap-3 justify-center">
-                <Button size="sm" onClick={handlePasteSubmit} disabled={!pastedText.trim()} className="gap-1.5">
-                  <ClipboardPaste className="h-3.5 w-3.5" /> Parse CV
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => { setShowPasteMode(false); setPastedText(""); }}>
-                  Back
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center gap-3">
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="flex items-center justify-center gap-2 w-full text-sm font-medium text-primary hover:text-accent transition-colors"
-              >
-                <Upload className="h-4 w-4" />
-                Import from CV (PDF)
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowPasteMode(true)}
-                className="flex items-center justify-center gap-2 w-full text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <ClipboardPaste className="h-4 w-4" />
-                Paste CV as text
-              </button>
-            </div>
-          )}
-        </div>
+            ))}
+          </div>
 
-        {/* Action buttons */}
-        <div className="flex flex-col gap-3">
-          <Button
-            onClick={() => fileInputRef.current?.click()}
-            size="lg"
-            disabled={uploading || !!parsed}
-            className="w-full rounded-lg text-base font-semibold"
-            style={{ backgroundColor: '#950606' }}
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            Upload my CV to get started
-          </Button>
-          {parsed ? (
-            <Button
-              onClick={handleProceed}
-              size="lg"
-              className="w-full rounded-lg text-base font-semibold"
-              style={{ backgroundColor: '#950606' }}
+          {/* Pro tip card */}
+          <div className="hiro-tip-card mt-6">
+            <div className="flex items-start gap-2">
+              <span className="text-base">💡</span>
+              <p>
+                <span className="font-semibold">Pro tip:</span> The more bullet points you add per experience, the better Hiro can tailor your CV. Try adding 4–6 per role — Hiro will always pick the most relevant ones for each job.
+              </p>
+            </div>
+          </div>
+
+          {/* CV Upload Section */}
+          <div className="mt-6 rounded-lg border-2 border-dashed border-border p-6 bg-muted/30">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/pdf"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+
+            {uploading ? (
+              <div className="flex flex-col items-center gap-3">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="text-sm font-medium text-foreground">Parsing your CV...</p>
+                <p className="text-xs text-muted-foreground">This may take a few seconds</p>
+              </div>
+            ) : parseError ? (
+              <div className="flex flex-col items-center gap-3">
+                <AlertTriangle className="h-8 w-8 text-destructive" />
+                <p className="text-sm font-medium text-foreground text-center">{errorMessage || "We had trouble reading your CV."}</p>
+                <p className="text-xs text-muted-foreground">You can try again or fill in your profile manually.</p>
+                <div className="flex flex-wrap gap-2 justify-center mt-1">
+                  <Button variant="outline" size="sm" onClick={handleRetry} className="gap-1.5">
+                    <RotateCcw className="h-3.5 w-3.5" /> Retry
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => { setParseError(false); setShowPasteMode(true); }}>
+                    Paste as text
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleProceed}>
+                    Build manually
+                  </Button>
+                </div>
+              </div>
+            ) : parsed ? (
+              <div className="flex flex-col items-center gap-3">
+                <CheckCircle className="h-8 w-8 text-primary" />
+                <p className="text-sm font-medium text-foreground text-center">{summary}</p>
+              </div>
+            ) : showPasteMode ? (
+              <div className="flex flex-col gap-3">
+                <p className="text-sm font-medium text-foreground">Paste your CV text below</p>
+                <Textarea
+                  value={pastedText}
+                  onChange={(e) => setPastedText(e.target.value)}
+                  placeholder="Paste your full CV text here..."
+                  className="min-h-[200px] text-sm"
+                />
+                <div className="flex gap-3 justify-center">
+                  <Button size="sm" onClick={handlePasteSubmit} disabled={!pastedText.trim()} className="gap-1.5">
+                    <ClipboardPaste className="h-3.5 w-3.5" /> Parse CV
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => { setShowPasteMode(false); setPastedText(""); }}>
+                    Back
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center justify-center gap-2 w-full text-sm font-medium text-primary hover:opacity-80 transition-opacity"
+                >
+                  <Upload className="h-4 w-4" />
+                  Import from CV (PDF)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowPasteMode(true)}
+                  className="flex items-center justify-center gap-2 w-full text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <ClipboardPaste className="h-4 w-4" />
+                  Paste CV as text
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Action buttons */}
+          <div className="mt-6">
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading || !!parsed}
+              className="hiro-upload-btn"
             >
-              Review & edit my profile
-            </Button>
-          ) : (
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={handleProceed}
-              disabled={uploading}
-              className="w-full rounded-lg text-base font-semibold"
-            >
-              Build my profile manually
-            </Button>
-          )}
+              <Upload className="h-4 w-4" />
+              Upload my CV to get started
+            </button>
+            {parsed ? (
+              <button
+                onClick={handleProceed}
+                className="hiro-upload-btn mt-3"
+              >
+                Review & edit my profile
+              </button>
+            ) : (
+              <button
+                onClick={handleProceed}
+                disabled={uploading}
+                className="hiro-build-manual-link"
+              >
+                Build my profile manually
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
