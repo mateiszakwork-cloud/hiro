@@ -1070,15 +1070,16 @@ const JobTracker = () => {
                           );
                         })()}
                       </td>
-                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      <td onClick={(e) => e.stopPropagation()}>
                         <Select value={job.status} onValueChange={(v) => handleStatusChange(job.id, v)}>
                           <SelectTrigger
-                            className="h-7 w-auto border-0 gap-1 px-2.5 rounded-full"
+                            className="h-6 w-auto border-0 gap-1 rounded-full"
                             style={{
                               ...getStatusPillStyle(job.status),
                               fontFamily: "var(--font-body)",
-                              fontSize: "12px",
+                              fontSize: "11px",
                               fontWeight: 600,
+                              padding: "3px 8px",
                             }}
                           >
                             <SelectValue />
@@ -1088,7 +1089,7 @@ const JobTracker = () => {
                           </SelectContent>
                         </Select>
                       </td>
-                      <td className="px-4 py-3">
+                      <td>
                         {job.match_score !== null ? (
                           <span
                             style={{
@@ -1096,11 +1097,11 @@ const JobTracker = () => {
                               display: "inline-flex",
                               alignItems: "center",
                               justifyContent: "center",
-                              width: "36px",
-                              height: "36px",
+                              width: "30px",
+                              height: "30px",
                               borderRadius: "50%",
                               fontFamily: "var(--font-data)",
-                              fontSize: "11px",
+                              fontSize: "10px",
                               fontWeight: 700,
                             }}
                           >
