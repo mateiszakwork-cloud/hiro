@@ -145,6 +145,16 @@ const JobTracker = () => {
   const [generatingKit, setGeneratingKit] = useState<string | null>(null);
   const [kitModalJobId, setKitModalJobId] = useState<string | null>(null);
   const [outreachMap, setOutreachMap] = useState<Record<string, { count: number; maxStatus: string }>>({});
+  const [deadlineAlertDismissed, setDeadlineAlertDismissed] = useState(false);
+
+  // Compute urgent deadline jobs (within 7 days, status Saved or Applied)
+  const urgentDeadlineJobs = useMemo(() => {
+    return jobs.filter(j => {
+      if (j.status !== "Saved" && j.status !== "Applied") return false;
+      const state = computeDeadlineState(j.application_deadline, j.status);
+      return state.kind === "red" || state.kind === "orange";
+    });
+  }, [jobs]);
 
   // Sort & filter state
   const [sortKey, setSortKey] = useState<SortKey>("created_at");
