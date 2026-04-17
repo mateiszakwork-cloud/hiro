@@ -355,12 +355,9 @@ function scoreContacts(
 
 function categorize(
   contacts: Contact[],
-  jobTitle: string,
-  jobFunction: string,
+  _jobTitle: string,
+  _jobFunction: string,
 ): Contact[] {
-  const hmRegex = /manager|lead|head|director|vp|vice president/i;
-  const hrRegex = /recruiter|talent|hr\b|people/i;
-
   const limits: Record<string, number> = {
     "In the Role": 2,
     "Hiring Manager": 1,
@@ -379,56 +376,30 @@ function categorize(
 
   const result: Contact[] = [];
 
-  // First pass: assign primary categories
+  // First pass: respect each contact's pre-assigned (AI) category, enforce per-category limits
   for (const c of contacts) {
     if (result.length >= 6) break;
-    const t = c.current_title.toLowerCase();
-
-    let assigned = false;
-
-    if (
-      counts["In the Role"] < limits["In the Role"] &&
-      titleMatchesKeywords(c.current_title, jobTitle)
-    ) {
-      c.category = "In the Role";
-      counts["In the Role"]++;
-      assigned = true;
-    } else if (
-      counts["Hiring Manager"] < limits["Hiring Manager"] &&
-      hmRegex.test(t) &&
-      titleMatchesKeywords(c.current_title + " " + c.headline, jobFunction)
-    ) {
-      c.category = "Hiring Manager";
-      counts["Hiring Manager"]++;
-      assigned = true;
-    } else if (
-      counts["HR and Recruiter"] < limits["HR and Recruiter"] &&
-      hrRegex.test(t)
-    ) {
-      c.category = "HR and Recruiter";
-      counts["HR and Recruiter"]++;
-      assigned = true;
-    } else if (
-      counts["Your Network"] < limits["Your Network"] &&
-      (c.connection_degree === "1st" || c.connection_degree === "2nd" ||
-        c.is_alumni)
-    ) {
-      c.category = "Your Network";
-      counts["Your Network"]++;
-      assigned = true;
+    const cat = c.category && limits[c.category] !== undefined ? c.category : "Your Network";
+    if (counts[cat] < limits[cat]) {
+      c.category = cat;
+      counts[cat]++;
+      result.push(c);
     }
-
-    if (assigned) result.push(c);
   }
 
-  // Second pass: fill remaining slots from unused contacts
+  // Second pass: fill remaining slots, preferring each contact's AI category
   if (result.length < 6) {
     const usedUrls = new Set(result.map((r) => r.profile_url));
     for (const c of contacts) {
       if (result.length >= 6) break;
       if (usedUrls.has(c.profile_url)) continue;
-
-      // Find a category with remaining slots
+      const preferred = c.category && limits[c.category] !== undefined ? c.category : null;
+      if (preferred && counts[preferred] < limits[preferred]) {
+        counts[preferred]++;
+        result.push(c);
+        usedUrls.add(c.profile_url);
+        continue;
+      }
       for (const cat of Object.keys(limits)) {
         if (counts[cat] < limits[cat]) {
           c.category = cat;
@@ -441,13 +412,13 @@ function categorize(
     }
   }
 
-  // Third pass: if still under 6, expand limits
+  // Third pass: if still under 6, fall back to Your Network
   if (result.length < 6) {
     const usedUrls = new Set(result.map((r) => r.profile_url));
     for (const c of contacts) {
       if (result.length >= 6) break;
       if (usedUrls.has(c.profile_url)) continue;
-      c.category = "Your Network";
+      if (!c.category || limits[c.category] === undefined) c.category = "Your Network";
       result.push(c);
     }
   }
@@ -638,7 +609,101 @@ serve(async (req) => {
       `Found ${allContacts.length} unique profiles after deduplication`,
     );
 
-    // Step 4: Score
+    // Step 3.5: AI classification of profiles into categories
+    if (allContacts.length > 0) {
+      try {
+        const openaiKey = Deno.env.get("OPENAI_API_KEY");
+        if (!openaiKey) {
+          console.log("OPENAI_API_KEY not set — skipping AI classification");
+        } else {
+          const systemPrompt = `You are an expert recruiter assistant. You will receive a list of LinkedIn profiles and the details of a job being applied for. Classify each profile into exactly one category based on their current role and its relevance to the job.
+
+Categories:
+- In the Role: currently doing the same or very similar work to the job being applied for, would be a peer of the applicant
+- Hiring Manager: senior person in the same function who would likely manage or oversee this role (Lead, Manager, Head, Director, VP level in the relevant function)
+- HR and Recruiter: works in talent acquisition, recruiting, HR, people operations, or similar
+- Your Network: does not fit the above three but is still at the company and potentially useful to contact
+
+Return ONLY a valid JSON array where each element has: profile_url (string, the exact URL provided), category (one of the four category names exactly as written above), confidence (integer 0-100).
+
+Job being applied for: ${job_title ?? ""} at ${company_name} in the ${job_function ?? ""} function.`;
+
+          const userPayload = allContacts.map((c) => ({
+            profile_url: c.profile_url,
+            full_name: c.full_name,
+            current_title: c.current_title,
+            headline: c.headline,
+          }));
+
+          const aiRes = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${openaiKey}`,
+            },
+            body: JSON.stringify({
+              model: "gpt-4o-mini",
+              temperature: 0,
+              response_format: { type: "json_object" },
+              messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: JSON.stringify({ profiles: userPayload }) },
+              ],
+            }),
+          });
+
+          if (!aiRes.ok) {
+            console.error("AI classification failed:", aiRes.status, await aiRes.text());
+          } else {
+            const aiData = await aiRes.json();
+            const content = aiData?.choices?.[0]?.message?.content ?? "";
+            let parsed: any;
+            try {
+              parsed = JSON.parse(content);
+            } catch (e) {
+              console.error("AI response JSON parse failed:", e);
+            }
+
+            let arr: any[] | null = null;
+            if (Array.isArray(parsed)) arr = parsed;
+            else if (parsed && typeof parsed === "object") {
+              for (const v of Object.values(parsed)) {
+                if (Array.isArray(v)) { arr = v as any[]; break; }
+              }
+            }
+
+            if (arr) {
+              const validCats = new Set([
+                "In the Role",
+                "Hiring Manager",
+                "HR and Recruiter",
+                "Your Network",
+              ]);
+              const byUrl = new Map<string, { category: string; confidence: number }>();
+              for (const item of arr) {
+                if (!item || typeof item !== "object") continue;
+                const url = String(item.profile_url || "");
+                let cat = String(item.category || "");
+                const conf = Number(item.confidence ?? 0);
+                if (!validCats.has(cat) || conf < 40) cat = "Your Network";
+                if (url) byUrl.set(url, { category: cat, confidence: conf });
+              }
+              for (const c of allContacts) {
+                const m = byUrl.get(c.profile_url);
+                c.category = m ? m.category : "Your Network";
+              }
+              console.log(`AI classified ${byUrl.size} profiles`);
+            } else {
+              console.error("AI classification: no array in response");
+            }
+          }
+        }
+      } catch (aiErr) {
+        console.error("AI classification error:", aiErr);
+      }
+    }
+
+    // Step 4: Score (uses AI-assigned categories where available)
     scoreContacts(
       allContacts,
       job_title ?? "",
@@ -646,7 +711,7 @@ serve(async (req) => {
       userSchools,
     );
 
-    // Step 5 & 6: Categorize and take top 6
+    // Step 5 & 6: Categorize and take top 6 (respects AI categories already on contacts)
     const topContacts = categorize(
       allContacts,
       job_title ?? "",
