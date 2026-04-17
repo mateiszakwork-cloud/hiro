@@ -68,15 +68,15 @@ const Onboarding = () => {
               const isActive = step.n === currentStep;
               const cls = isComplete ? "hiro-step-circle--complete" : isActive ? "hiro-step-circle--active" : "hiro-step-circle--upcoming";
               return (
-                <>
-                  <div key={`s-${step.n}`} className="hiro-stepper-item">
+                <Fragment key={step.n}>
+                  <div className="hiro-stepper-item">
                     <div className={`hiro-step-circle ${cls}`}>
                       {isComplete ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : step.n}
                     </div>
                     <span className="hiro-step-label">{step.label}</span>
                   </div>
-                  {idx < STEPS.length - 1 && <div key={`l-${step.n}`} className="hiro-step-line" />}
-                </>
+                  {idx < STEPS.length - 1 && <div className="hiro-step-line" />}
+                </Fragment>
               );
             })}
           </div>
