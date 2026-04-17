@@ -440,6 +440,37 @@ const JobDetail = () => {
     setBulletToggles({});
   }, [cvOutput?.id, cvOutput?.updated_at]);
 
+  // Auto-generate interview prep when status is Interview+ and no prep exists yet
+  useEffect(() => {
+    if (!job || !jobId || !interviewFetched || interviewPrep || interviewLoading) return;
+    if (!["Interview", "Offer"].includes(job.status)) return;
+
+    let cancelled = false;
+    (async () => {
+      setInterviewLoading(true);
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData?.session?.access_token;
+        if (!token) return;
+        const { data, error } = await supabase.functions.invoke("generate-interview-prep", {
+          body: { job_id: jobId },
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (cancelled) return;
+        if (!error && data?.success && data.data) {
+          setInterviewPrep(data.data);
+        }
+        // Silent failure - fall back to Generate button
+      } catch {
+        // Silent
+      } finally {
+        if (!cancelled) setInterviewLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [job?.status, interviewFetched, interviewPrep, jobId]);
+
   const handleStatusChange = async (newStatus: string) => {
     if (!job) return;
     const previousStatus = job.status;
