@@ -50,44 +50,158 @@ const DashboardLayout = () => {
 
   const sidebarContent = (
     <div className="flex flex-col h-full">
-      <div className="flex flex-col px-5 py-6">
-        <span className="text-xl font-bold text-white">Hiro</span>
-        <span className="text-xs text-white/50">Become the obvious hire.</span>
+      {/* Logo area */}
+      <div
+        className="flex items-center"
+        style={{
+          height: "64px",
+          padding: "0 20px",
+          borderBottom: "1px solid var(--color-border-dark)",
+        }}
+      >
+        <div className="flex flex-col">
+          <div className="flex items-start">
+            <span
+              style={{
+                fontFamily: "var(--font-heading)",
+                fontSize: "20px",
+                fontWeight: 800,
+                color: "#fff",
+                letterSpacing: "-0.02em",
+                lineHeight: 1,
+              }}
+            >
+              Hiro
+            </span>
+            <span
+              style={{
+                width: "6px",
+                height: "6px",
+                borderRadius: "9999px",
+                background: "var(--color-primary)",
+                marginLeft: "4px",
+                position: "relative",
+                top: "-8px",
+              }}
+            />
+          </div>
+          <span
+            style={{
+              fontFamily: "var(--font-body)",
+              fontSize: "10px",
+              color: "var(--color-text-white-50)",
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              marginTop: "4px",
+            }}
+          >
+            Become the obvious hire
+          </span>
+        </div>
       </div>
 
-      <nav className="flex-1 px-3 space-y-1">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.to === "/dashboard"}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/10 transition-colors"
-            activeClassName="!bg-white !text-[#950606] font-semibold"
-          >
-            <item.icon className="h-4 w-4" />
-            <span>{item.label}</span>
-          </NavLink>
-        ))}
+      {/* Navigation */}
+      <nav style={{ padding: "16px 12px", flex: 1 }}>
+        <div
+          style={{
+            fontFamily: "var(--font-body)",
+            fontSize: "10px",
+            color: "var(--color-text-white-50)",
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            padding: "8px 8px 4px",
+            marginBottom: "4px",
+          }}
+        >
+          Workspace
+        </div>
+        <div className="space-y-1">
+          {navItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.to === "/dashboard"}
+              className="hiro-nav-link"
+              activeClassName="hiro-nav-link-active"
+            >
+              <item.icon className="hiro-nav-icon" style={{ width: 18, height: 18 }} />
+              <span className="hiro-nav-label">{item.label}</span>
+            </NavLink>
+          ))}
+        </div>
       </nav>
 
-      <div className="px-4 pb-5 space-y-3">
-        {fullName && <p className="text-sm text-white font-medium truncate">{fullName}</p>}
-        <p className="text-xs text-white/50 truncate">{email}</p>
+      {/* Bottom user area */}
+      <div
+        style={{
+          padding: "16px 20px",
+          borderTop: "1px solid var(--color-border-dark)",
+        }}
+      >
+        {fullName && (
+          <p
+            style={{
+              fontFamily: "var(--font-body)",
+              fontSize: "13px",
+              color: "#fff",
+              fontWeight: 500,
+              marginBottom: "2px",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {fullName}
+          </p>
+        )}
+        <p
+          style={{
+            fontFamily: "var(--font-body)",
+            fontSize: "12px",
+            color: "var(--color-text-white-50)",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {email}
+        </p>
         <button
           onClick={handleLogout}
-          className="flex items-center gap-2 text-sm text-white/70 hover:text-white transition-colors"
+          style={{
+            fontFamily: "var(--font-body)",
+            fontSize: "13px",
+            color: "var(--color-text-white-50)",
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: "4px 0",
+            display: "block",
+            marginTop: "4px",
+            transition: "var(--transition)",
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = "var(--color-primary)")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = "var(--color-text-white-50)")}
         >
-          <LogOut className="h-4 w-4" />
-          Log Out
+          Log out
         </button>
       </div>
     </div>
   );
 
+  const sidebarStyle: React.CSSProperties = {
+    background: "linear-gradient(180deg, #0F1525 0%, #0A0E1A 100%)",
+    borderRight: "1px solid var(--color-border-dark)",
+    padding: 0,
+  };
+
   return (
-    <div className="min-h-screen flex" style={{ background: "#F5F6FA" }}>
+    <div className="min-h-screen flex" style={{ background: "var(--color-bg-page)" }}>
       {!isMobile && (
-        <aside className="w-60 shrink-0 fixed inset-y-0 left-0 z-30" style={{ background: "#950606" }}>
+        <aside
+          className="shrink-0 fixed inset-y-0 left-0 z-30"
+          style={{ width: "240px", ...sidebarStyle }}
+        >
           {sidebarContent}
         </aside>
       )}
@@ -95,7 +209,10 @@ const DashboardLayout = () => {
       {isMobile && sidebarOpen && (
         <>
           <div className="fixed inset-0 bg-black/50 z-40" onClick={() => setSidebarOpen(false)} />
-          <aside className="fixed inset-y-0 left-0 w-60 z-50" style={{ background: "#950606" }}>
+          <aside
+            className="fixed inset-y-0 left-0 z-50"
+            style={{ width: "240px", ...sidebarStyle }}
+          >
             <button
               onClick={() => setSidebarOpen(false)}
               className="absolute top-4 right-4 text-white/70 hover:text-white"
@@ -107,7 +224,14 @@ const DashboardLayout = () => {
         </>
       )}
 
-      <div className={`flex-1 flex flex-col ${!isMobile ? "ml-60" : ""}`}>
+      <div
+        className="flex-1 flex flex-col"
+        style={{
+          marginLeft: !isMobile ? "240px" : 0,
+          background: "var(--color-bg-page)",
+          minHeight: "100vh",
+        }}
+      >
         {isMobile && (
           <header className="sticky top-0 z-20 flex items-center h-14 px-4 border-b bg-white">
             <button onClick={() => setSidebarOpen(true)}>
