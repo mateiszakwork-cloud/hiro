@@ -685,7 +685,7 @@ const JobDetail = () => {
         return;
       }
       const { data, error } = await supabase.functions.invoke("generate-interview-prep", {
-        body: { job_id: jobId },
+        body: { job_id: jobId, force: !!interviewPrep },
         headers: { Authorization: `Bearer ${token}` },
       });
       if (error || !data?.success) {
