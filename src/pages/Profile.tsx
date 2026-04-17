@@ -802,6 +802,9 @@ const Profile = () => {
         </CardContent>
       </Card>
 
+        </div>
+      </div>
+
       {/* Remove work experience dialog */}
       <AlertDialog open={removeWorkIdx !== null} onOpenChange={(open) => !open && setRemoveWorkIdx(null)}>
         <AlertDialogContent>
