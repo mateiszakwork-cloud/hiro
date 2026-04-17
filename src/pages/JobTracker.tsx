@@ -36,6 +36,17 @@ type CvOutput = {
   updated_at: string;
 };
 
+const FUNCTION_PILL: Record<string, { bg: string; color: string }> = {
+  Strategy:   { bg: "#EFF6FF", color: "#1D4ED8" },
+  Finance:    { bg: "#F0FDF4", color: "#166534" },
+  Marketing:  { bg: "#FDF2F8", color: "#9D174D" },
+  Product:    { bg: "#F5F3FF", color: "#5B21B6" },
+  Operations: { bg: "#FFF7ED", color: "#9A3412" },
+  HR:         { bg: "#F0FDFA", color: "#0F766E" },
+  Consulting: { bg: "#EEF2FF", color: "#3730A3" },
+  Other:      { bg: "#F3F4F6", color: "#6B7280" },
+};
+
 const FUNCTION_COLORS: Record<string, string> = {
   Strategy: "bg-primary text-primary-foreground",
   Finance: "bg-[#16A34A]/15 text-[#16A34A]",
@@ -53,6 +64,15 @@ const WORK_MODE_COLORS: Record<string, string> = {
   Remote: "bg-green-100 text-green-700",
 };
 
+const STATUS_PILL: Record<string, { bg: string; color: string }> = {
+  Saved:     { bg: "#F3F4F6", color: "#6B7280" },
+  Applied:   { bg: "#EFF6FF", color: "#1D4ED8" },
+  Screening: { bg: "#FFFBEB", color: "#92400E" },
+  Interview: { bg: "#FFF7ED", color: "#C2410C" },
+  Offer:     { bg: "#F0FDF4", color: "#15803D" },
+  Rejected:  { bg: "#FEF2F2", color: "#991B1B" },
+};
+
 const STATUS_OPTIONS = [
   { value: "Saved", color: "bg-gray-200 text-gray-700" },
   { value: "Applied", color: "bg-blue-100 text-blue-700" },
@@ -62,6 +82,11 @@ const STATUS_OPTIONS = [
   { value: "Rejected", color: "bg-red-100 text-red-700" },
 ];
 
+const getStatusPillStyle = (status: string): React.CSSProperties => {
+  const p = STATUS_PILL[status] || { bg: "#F3F4F6", color: "#6B7280" };
+  return { background: p.bg, color: p.color };
+};
+
 const getStatusColor = (status: string) =>
   STATUS_OPTIONS.find((s) => s.value === status)?.color || "bg-muted text-muted-foreground";
 
@@ -70,6 +95,13 @@ const getScoreColor = (score: number | null) => {
   if (score >= 70) return "text-green-600 border-green-300 bg-green-50";
   if (score >= 40) return "text-amber-600 border-amber-300 bg-amber-50";
   return "text-red-600 border-red-300 bg-red-50";
+};
+
+const getScoreBadgeStyle = (score: number | null): React.CSSProperties => {
+  if (score === null) return { background: "#F3F4F6", color: "#9CA3AF", border: "2px solid #E5E7EB" };
+  if (score >= 70) return { background: "#F0FDF4", color: "#15803D", border: "2px solid #BBF7D0" };
+  if (score >= 40) return { background: "#FFFBEB", color: "#92400E", border: "2px solid #FDE68A" };
+  return { background: "#FEF2F2", color: "#991B1B", border: "2px solid #FECACA" };
 };
 
 const PRIORITY_OPTIONS = [
@@ -490,197 +522,371 @@ const JobTracker = () => {
   const modalJob = kitModalJobId ? jobs.find(j => j.id === kitModalJobId) : null;
   const modalCv = kitModalJobId ? cvMap[kitModalJobId] : null;
 
+  // Premium metric card style
+  const metricCardStyle: React.CSSProperties = {
+    background: "var(--color-bg-white)",
+    borderRadius: "var(--radius-lg)",
+    border: "1px solid var(--color-border)",
+    padding: "16px 20px",
+    transition: "var(--transition)",
+  };
+  const metricNumStyle: React.CSSProperties = {
+    fontFamily: "var(--font-data)",
+    fontSize: "26px",
+    fontWeight: 700,
+    color: "var(--color-text-primary)",
+    letterSpacing: "-0.02em",
+    lineHeight: 1,
+  };
+  const metricLabelStyle: React.CSSProperties = {
+    fontFamily: "var(--font-body)",
+    fontSize: "11px",
+    color: "var(--color-text-muted)",
+    textTransform: "uppercase",
+    letterSpacing: "0.08em",
+    marginTop: "8px",
+  };
+  const metricCardHover = (e: React.MouseEvent<HTMLDivElement>, hover: boolean) => {
+    e.currentTarget.style.boxShadow = hover ? "var(--shadow-md)" : "none";
+    e.currentTarget.style.transform = hover ? "translateY(-1px)" : "translateY(0)";
+  };
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-[28px] font-bold text-primary">Job Tracker</h1>
-        <p className="text-muted-foreground mt-1">Paste a job URL below to automatically fill in all details.</p>
+    <div style={{ margin: "-32px", background: "var(--color-bg-page)", minHeight: "calc(100vh - 0px)" }}>
+      {/* Page header bar */}
+      <div
+        style={{
+          background: "var(--color-bg-white)",
+          padding: "20px 32px",
+          borderBottom: "1px solid var(--color-border)",
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: "24px",
+          flexWrap: "wrap",
+        }}
+      >
+        <div>
+          <h1
+            style={{
+              fontFamily: "var(--font-heading)",
+              fontSize: "26px",
+              fontWeight: 800,
+              color: "var(--color-text-primary)",
+              letterSpacing: "-0.02em",
+              lineHeight: 1.1,
+            }}
+          >
+            Job Tracker
+          </h1>
+          <p
+            style={{
+              fontFamily: "var(--font-body)",
+              fontSize: "13px",
+              color: "var(--color-text-muted)",
+              marginTop: "6px",
+            }}
+          >
+            Paste a job URL to automatically fill every column
+          </p>
+        </div>
+
+        <div style={{ flex: 1, maxWidth: "520px", minWidth: "280px" }}>
+          <div style={{ display: "flex", gap: "10px" }}>
+            <Input
+              value={url}
+              onChange={(e) => { setUrl(e.target.value); if (urlError) setUrlError(""); }}
+              placeholder="Paste a job posting URL..."
+              onKeyDown={(e) => e.key === "Enter" && !loading && handleAddJob()}
+              disabled={loading}
+              style={{
+                height: "44px",
+                fontFamily: "var(--font-body)",
+                fontSize: "14px",
+                border: `1.5px solid ${urlError ? "#DC2626" : "var(--color-border)"}`,
+                borderRadius: "var(--radius-md)",
+                flex: 1,
+              }}
+            />
+            <button
+              onClick={handleAddJob}
+              disabled={loading}
+              style={{
+                height: "44px",
+                background: "var(--color-primary)",
+                color: "#fff",
+                fontFamily: "var(--font-body)",
+                fontSize: "14px",
+                fontWeight: 600,
+                borderRadius: "var(--radius-md)",
+                padding: "0 20px",
+                border: "none",
+                cursor: loading ? "not-allowed" : "pointer",
+                transition: "var(--transition)",
+                opacity: loading ? 0.7 : 1,
+                whiteSpace: "nowrap",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
+              onMouseEnter={(e) => {
+                if (!loading) {
+                  e.currentTarget.style.background = "var(--color-primary-hover)";
+                  e.currentTarget.style.boxShadow = "var(--shadow-red)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "var(--color-primary)";
+                e.currentTarget.style.boxShadow = "none";
+              }}
+            >
+              {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Parsing...</> : "Add Job"}
+            </button>
+          </div>
+          <div className="flex items-center gap-3 mt-1.5">
+            {urlError && <p className="text-destructive text-xs">{urlError}</p>}
+            <button
+              type="button"
+              onClick={() => { setManualPrefillUrl(url.trim()); setManualOpen(true); }}
+              className="text-xs ml-auto"
+              style={{ color: "var(--color-text-muted)" }}
+            >
+              Add manually
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Summary stats */}
-      {stats.total === 0 ? (
-        <div className="rounded-lg bg-white shadow-sm p-5 text-sm text-muted-foreground">
-          <span className="font-semibold text-foreground" style={{ fontFamily: "Sora, sans-serif" }}>Welcome to Hiro.</span>{" "}
-          Paste your first job URL above to get started.
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-          <div className="rounded-lg bg-white shadow-sm p-4">
-            <div className="text-[24px] font-bold leading-none text-foreground" style={{ fontFamily: "Sora, sans-serif" }}>{stats.total}</div>
-            <div className="text-[12px] text-muted-foreground mt-1.5">Total Tracked</div>
+      {/* Metrics bar */}
+      <div style={{ padding: "20px 32px" }}>
+        {stats.total === 0 ? (
+          <div
+            style={{
+              background: "var(--color-bg-white)",
+              borderRadius: "var(--radius-lg)",
+              border: "1px solid var(--color-border)",
+              padding: "20px",
+              fontSize: "14px",
+              color: "var(--color-text-secondary)",
+            }}
+          >
+            <span style={{ fontWeight: 600, color: "var(--color-text-primary)", fontFamily: "var(--font-data)" }}>
+              Welcome to Hiro.
+            </span>{" "}
+            Paste your first job URL above to get started.
           </div>
-          <div className="rounded-lg bg-white shadow-sm p-4 border-l-4" style={{ borderLeftColor: "#950606" }}>
-            <div className="text-[24px] font-bold leading-none text-foreground" style={{ fontFamily: "Sora, sans-serif" }}>{stats.applied}</div>
-            <div className="text-[12px] text-muted-foreground mt-1.5">Applied</div>
-            <div className="text-[11px] text-muted-foreground mt-0.5">({stats.appliedThisWeek} this week)</div>
-          </div>
-          <div className="rounded-lg bg-white shadow-sm p-4">
-            <div className="text-[24px] font-bold leading-none text-foreground" style={{ fontFamily: "Sora, sans-serif" }}>{stats.inProgress}</div>
-            <div className="text-[12px] text-muted-foreground mt-1.5">In Progress</div>
-          </div>
-          <div className="rounded-lg bg-white shadow-sm p-4 border-l-4" style={{ borderLeftColor: "#950606" }}>
-            <div className="text-[24px] font-bold leading-none text-foreground" style={{ fontFamily: "Sora, sans-serif" }}>{stats.interviews}</div>
-            <div className="text-[12px] text-muted-foreground mt-1.5">Interviews</div>
-          </div>
-          <div className="rounded-lg bg-white shadow-sm p-4">
-            <div className={cn("text-[24px] font-bold leading-none", getAvgScoreColor(stats.avgScore))} style={{ fontFamily: "Sora, sans-serif" }}>
-              {stats.avgScore !== null ? `${stats.avgScore}%` : "–"}
+        ) : (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(6, minmax(0, 1fr))",
+              gap: "12px",
+            }}
+            className="hiro-metrics-grid"
+          >
+            <div style={metricCardStyle} onMouseEnter={(e) => metricCardHover(e, true)} onMouseLeave={(e) => metricCardHover(e, false)}>
+              <div style={metricNumStyle}>{stats.total}</div>
+              <div style={metricLabelStyle}>Total Tracked</div>
             </div>
-            <div className="text-[12px] text-muted-foreground mt-1.5">Avg Match Score</div>
+            <div
+              style={{ ...metricCardStyle, borderLeft: "3px solid var(--color-primary)" }}
+              onMouseEnter={(e) => metricCardHover(e, true)}
+              onMouseLeave={(e) => metricCardHover(e, false)}
+            >
+              <div style={metricNumStyle}>{stats.applied}</div>
+              <div style={metricLabelStyle}>Applied</div>
+              <div style={{ fontSize: "11px", color: "var(--color-text-muted)", marginTop: "4px" }}>
+                ({stats.appliedThisWeek} this week)
+              </div>
+            </div>
+            <div style={metricCardStyle} onMouseEnter={(e) => metricCardHover(e, true)} onMouseLeave={(e) => metricCardHover(e, false)}>
+              <div style={metricNumStyle}>{stats.inProgress}</div>
+              <div style={metricLabelStyle}>In Progress</div>
+            </div>
+            <div
+              style={{ ...metricCardStyle, borderLeft: "3px solid var(--color-primary)" }}
+              onMouseEnter={(e) => metricCardHover(e, true)}
+              onMouseLeave={(e) => metricCardHover(e, false)}
+            >
+              <div style={metricNumStyle}>{stats.interviews}</div>
+              <div style={metricLabelStyle}>Interviews</div>
+            </div>
+            <div style={metricCardStyle} onMouseEnter={(e) => metricCardHover(e, true)} onMouseLeave={(e) => metricCardHover(e, false)}>
+              <div style={{ ...metricNumStyle, color: stats.avgScore === null ? "var(--color-text-primary)" : stats.avgScore > 70 ? "#15803D" : stats.avgScore >= 40 ? "#92400E" : "#991B1B" }}>
+                {stats.avgScore !== null ? `${stats.avgScore}%` : "–"}
+              </div>
+              <div style={metricLabelStyle}>Avg Match</div>
+            </div>
+            <div style={metricCardStyle} onMouseEnter={(e) => metricCardHover(e, true)} onMouseLeave={(e) => metricCardHover(e, false)}>
+              <div style={metricNumStyle}>{contactsReached}</div>
+              <div style={metricLabelStyle}>Contacts Reached</div>
+            </div>
           </div>
-          <div className="rounded-lg bg-white shadow-sm p-4">
-            <div className="text-[24px] font-bold leading-none text-foreground" style={{ fontFamily: "Sora, sans-serif" }}>{contactsReached}</div>
-            <div className="text-[12px] text-muted-foreground mt-1.5">Contacts Reached</div>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Urgent deadline alert */}
       {!deadlineAlertDismissed && urgentDeadlineJobs.length > 0 && (
-        <div
-          className="flex items-start justify-between gap-3 rounded-lg border p-3"
-          style={{ backgroundColor: '#FFF5F5', borderColor: '#950606' }}
-        >
-          <div className="flex items-start gap-2.5">
-            <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" style={{ color: '#950606' }} />
-            <div className="text-sm">
-              <p className="font-semibold" style={{ color: '#950606' }}>
-                You have {urgentDeadlineJobs.length} application deadline{urgentDeadlineJobs.length === 1 ? "" : "s"} in the next 7 days
-              </p>
-              <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
-                {urgentDeadlineJobs.map(j => {
-                  const s = computeDeadlineState(j.application_deadline, j.status);
-                  const days = s.kind === "red" || s.kind === "orange" ? s.days : 0;
-                  return (
-                    <button
-                      key={j.id}
-                      onClick={() => navigate(`/jobs/${j.id}`)}
-                      className="text-xs underline-offset-2 hover:underline text-foreground"
-                    >
-                      <span className="font-medium">{j.company_name || "–"}</span>
-                      <span className="text-muted-foreground"> · {j.job_title || "–"}</span>
-                      <span className="ml-1 font-semibold" style={{ color: '#950606' }}>({days}d)</span>
-                    </button>
-                  );
-                })}
+        <div style={{ padding: "0 32px 16px" }}>
+          <div
+            className="flex items-start justify-between gap-3 rounded-lg border p-3"
+            style={{ backgroundColor: "#FFF5F5", borderColor: "#950606" }}
+          >
+            <div className="flex items-start gap-2.5">
+              <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "#950606" }} />
+              <div className="text-sm">
+                <p className="font-semibold" style={{ color: "#950606" }}>
+                  You have {urgentDeadlineJobs.length} application deadline{urgentDeadlineJobs.length === 1 ? "" : "s"} in the next 7 days
+                </p>
+                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                  {urgentDeadlineJobs.map((j) => {
+                    const s = computeDeadlineState(j.application_deadline, j.status);
+                    const days = s.kind === "red" || s.kind === "orange" ? s.days : 0;
+                    return (
+                      <button
+                        key={j.id}
+                        onClick={() => navigate(`/jobs/${j.id}`)}
+                        className="text-xs underline-offset-2 hover:underline text-foreground"
+                      >
+                        <span className="font-medium">{j.company_name || "–"}</span>
+                        <span className="text-muted-foreground"> · {j.job_title || "–"}</span>
+                        <span className="ml-1 font-semibold" style={{ color: "#950606" }}>({days}d)</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
+            <button
+              onClick={() => setDeadlineAlertDismissed(true)}
+              className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
+              aria-label="Dismiss"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
-          <button
-            onClick={() => setDeadlineAlertDismissed(true)}
-            className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
-            aria-label="Dismiss"
-          >
-            <X className="h-4 w-4" />
-          </button>
         </div>
       )}
-
-      <div>
-        <div className="flex gap-3">
-          <Input
-            value={url}
-            onChange={(e) => { setUrl(e.target.value); if (urlError) setUrlError(""); }}
-            placeholder="Paste a job posting URL here (e.g. from LinkedIn, Workday, or a company careers page)..."
-            className={`h-12 flex-1 text-sm ${urlError ? "border-destructive" : ""}`}
-            onKeyDown={(e) => e.key === "Enter" && !loading && handleAddJob()}
-            disabled={loading}
-          />
-          <Button onClick={handleAddJob} disabled={loading} className="h-12 px-6 text-sm font-semibold rounded-lg">
-            {loading ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Parsing...</> : "Add Job"}
-          </Button>
-        </div>
-        <div className="flex items-center gap-3 mt-1.5">
-          {urlError && <p className="text-destructive text-xs">{urlError}</p>}
-          <button
-            type="button"
-            onClick={() => { setManualPrefillUrl(url.trim()); setManualOpen(true); }}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors ml-auto"
-          >
-            Add manually
-          </button>
-        </div>
-      </div>
 
       {/* Filters */}
       {showTable && (
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="ml-auto flex items-center gap-2">
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="h-8 w-auto gap-1 px-3 text-xs border rounded-lg">
-                <SelectValue placeholder="Status" />
-                {filterStatus !== "All" && (
-                  <span className="ml-1 inline-flex items-center justify-center h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
-                    {jobs.filter(j => j.status === filterStatus).length}
-                  </span>
-                )}
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="All">All Statuses</SelectItem>
-                {STATUS_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.value}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={filterFunction} onValueChange={setFilterFunction}>
-              <SelectTrigger className="h-8 w-auto gap-1 px-3 text-xs border rounded-lg">
-                <SelectValue placeholder="Function" />
-                {filterFunction !== "All" && (
-                  <span className="ml-1 inline-flex items-center justify-center h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
-                    {jobs.filter(j => j.function === filterFunction).length}
-                  </span>
-                )}
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="All">All Functions</SelectItem>
-                {FUNCTION_VALUES.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={filterPriority} onValueChange={setFilterPriority}>
-              <SelectTrigger className="h-8 w-auto gap-1 px-3 text-xs border rounded-lg">
-                <SelectValue placeholder="Priority" />
-                {filterPriority !== "All" && (
-                  <span className="ml-1 inline-flex items-center justify-center h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
-                    {jobs.filter(j => j.priority === filterPriority).length}
-                  </span>
-                )}
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="All">All Priorities</SelectItem>
-                {PRIORITY_OPTIONS.map(p => <SelectItem key={p.value} value={p.value}>{p.value}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            {filtersActive && (
-              <button
-                onClick={() => { setFilterStatus("All"); setFilterFunction("All"); setFilterPriority("All"); }}
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Clear filters
-              </button>
-            )}
+        <div style={{ padding: "0 32px 12px" }}>
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="ml-auto flex items-center gap-2">
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="h-8 w-auto gap-1 px-3 text-xs border rounded-lg">
+                  <SelectValue placeholder="Status" />
+                  {filterStatus !== "All" && (
+                    <span className="ml-1 inline-flex items-center justify-center h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
+                      {jobs.filter(j => j.status === filterStatus).length}
+                    </span>
+                  )}
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All Statuses</SelectItem>
+                  {STATUS_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.value}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={filterFunction} onValueChange={setFilterFunction}>
+                <SelectTrigger className="h-8 w-auto gap-1 px-3 text-xs border rounded-lg">
+                  <SelectValue placeholder="Function" />
+                  {filterFunction !== "All" && (
+                    <span className="ml-1 inline-flex items-center justify-center h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
+                      {jobs.filter(j => j.function === filterFunction).length}
+                    </span>
+                  )}
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All Functions</SelectItem>
+                  {FUNCTION_VALUES.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={filterPriority} onValueChange={setFilterPriority}>
+                <SelectTrigger className="h-8 w-auto gap-1 px-3 text-xs border rounded-lg">
+                  <SelectValue placeholder="Priority" />
+                  {filterPriority !== "All" && (
+                    <span className="ml-1 inline-flex items-center justify-center h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
+                      {jobs.filter(j => j.priority === filterPriority).length}
+                    </span>
+                  )}
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All Priorities</SelectItem>
+                  {PRIORITY_OPTIONS.map(p => <SelectItem key={p.value} value={p.value}>{p.value}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {filtersActive && (
+                <button
+                  onClick={() => { setFilterStatus("All"); setFilterFunction("All"); setFilterPriority("All"); }}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Clear filters
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
 
-      <Card className="overflow-hidden">
-        <CardContent className="p-0">
+      {/* Table card wrapper */}
+      <div style={{ padding: "0 32px 32px" }}>
+        <div
+          style={{
+            background: "var(--color-bg-white)",
+            borderRadius: "var(--radius-lg)",
+            border: "1px solid var(--color-border)",
+            overflow: "hidden",
+            boxShadow: "var(--shadow-sm)",
+          }}
+        >
           {!showTable ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
-                <Briefcase className="h-8 w-8 text-muted-foreground" />
-              </div>
-              <p className="font-semibold text-foreground">No jobs tracked yet</p>
-              <p className="text-sm text-muted-foreground mt-1">Paste a job URL above to get started.</p>
+            <div style={{ padding: "80px 32px", textAlign: "center" }}>
+              <Briefcase style={{ width: 48, height: 48, color: "#D1D5DB", margin: "0 auto" }} />
+              <h2
+                style={{
+                  fontFamily: "var(--font-heading)",
+                  fontSize: "22px",
+                  color: "var(--color-text-primary)",
+                  marginTop: "16px",
+                }}
+              >
+                No jobs tracked yet
+              </h2>
+              <p
+                style={{
+                  fontFamily: "var(--font-body)",
+                  fontSize: "15px",
+                  color: "var(--color-text-muted)",
+                  marginTop: "8px",
+                  maxWidth: "400px",
+                  marginLeft: "auto",
+                  marginRight: "auto",
+                }}
+              >
+                Paste a job URL at the top of the page and Hiro will fill in every column for you.
+              </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm" style={{ tableLayout: 'auto' }}>
                 <thead>
-                   <tr className="border-b bg-muted/40">
+                   <tr style={{ background: "#F9FAFB", borderBottom: "2px solid var(--color-border)" }}>
                      {COLUMNS.map((col) => (
                        <th
                          key={col.label || "_open"}
-                         style={{ minWidth: col.minWidth }}
+                         style={{
+                           minWidth: col.minWidth,
+                           fontFamily: "var(--font-body)",
+                           fontSize: "11px",
+                           fontWeight: 600,
+                           color: "var(--color-text-muted)",
+                           textTransform: "uppercase",
+                           letterSpacing: "0.08em",
+                           padding: "12px 16px",
+                           textAlign: "left",
+                           whiteSpace: "nowrap",
+                         }}
                          className={cn(
-                           "px-3 py-3 text-left font-medium text-muted-foreground whitespace-nowrap",
                            col.key && "cursor-pointer select-none hover:text-foreground transition-colors group/th"
                          )}
                          onClick={() => handleSort(col.key)}
@@ -725,7 +931,17 @@ const JobTracker = () => {
                     </tr>
                   )}
                   {filteredAndSorted.map((job) => (
-                    <tr key={job.id} onClick={() => navigate(`/jobs/${job.id}`)} className="group border-b last:border-0 hover:bg-[#fff5f5] cursor-pointer transition-colors">
+                    <tr
+                      key={job.id}
+                      onClick={() => navigate(`/jobs/${job.id}`)}
+                      className="group hiro-table-row"
+                      style={{
+                        borderBottom: "1px solid #F3F4F6",
+                        cursor: "pointer",
+                        transition: "var(--transition)",
+                        minHeight: "56px",
+                      }}
+                    >
                       {/* Open Full Page arrow - first column */}
                       <td className="px-3 py-3" onClick={(e) => { e.stopPropagation(); navigate(`/jobs/${job.id}`); }}>
                         <TooltipProvider delayDuration={200}>
@@ -766,9 +982,22 @@ const JobTracker = () => {
                           </Tooltip>
                         </TooltipProvider>
                       </td>
-                      <td className="px-3 py-3">
+                      <td className="px-4 py-3">
                         {job.function ? (
-                          <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium truncate max-w-full ${FUNCTION_COLORS[job.function] || FUNCTION_COLORS.Other}`}>{job.function}</span>
+                          <span
+                            style={{
+                              display: "inline-block",
+                              borderRadius: "var(--radius-full)",
+                              padding: "4px 10px",
+                              fontFamily: "var(--font-body)",
+                              fontSize: "11px",
+                              fontWeight: 600,
+                              background: (FUNCTION_PILL[job.function] || FUNCTION_PILL.Other).bg,
+                              color: (FUNCTION_PILL[job.function] || FUNCTION_PILL.Other).color,
+                            }}
+                          >
+                            {job.function}
+                          </span>
                         ) : <span className="text-muted-foreground">–</span>}
                       </td>
                       <td className="px-3 py-3">
@@ -835,9 +1064,17 @@ const JobTracker = () => {
                           );
                         })()}
                       </td>
-                      <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                         <Select value={job.status} onValueChange={(v) => handleStatusChange(job.id, v)}>
-                          <SelectTrigger className={`h-7 w-auto border-0 gap-1 px-2 rounded-full text-xs font-medium ${getStatusColor(job.status)}`}>
+                          <SelectTrigger
+                            className="h-7 w-auto border-0 gap-1 px-2.5 rounded-full"
+                            style={{
+                              ...getStatusPillStyle(job.status),
+                              fontFamily: "var(--font-body)",
+                              fontSize: "12px",
+                              fontWeight: 600,
+                            }}
+                          >
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -845,9 +1082,24 @@ const JobTracker = () => {
                           </SelectContent>
                         </Select>
                       </td>
-                      <td className="px-3 py-3">
+                      <td className="px-4 py-3">
                         {job.match_score !== null ? (
-                          <span className={`inline-flex items-center justify-center h-7 w-7 rounded-full border text-xs font-bold ${getScoreColor(job.match_score)}`}>{job.match_score}</span>
+                          <span
+                            style={{
+                              ...getScoreBadgeStyle(job.match_score),
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              width: "36px",
+                              height: "36px",
+                              borderRadius: "50%",
+                              fontFamily: "var(--font-data)",
+                              fontSize: "11px",
+                              fontWeight: 700,
+                            }}
+                          >
+                            {job.match_score}
+                          </span>
                         ) : <span className="text-muted-foreground">–</span>}
                       </td>
                       {/* Kit column */}
@@ -943,8 +1195,8 @@ const JobTracker = () => {
               </table>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Application Kit Modal */}
       <Dialog open={!!kitModalJobId} onOpenChange={(open) => !open && setKitModalJobId(null)}>

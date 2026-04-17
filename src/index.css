@@ -253,3 +253,15 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #9CA3AF;
 }
+
+/* Hiro table row hover */
+.hiro-table-row:hover {
+  background: #FFF8F8;
+}
+
+/* Hiro responsive metrics grid: 6 cols desktop, 2 cols on small screens */
+@media (max-width: 900px) {
+  .hiro-metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
