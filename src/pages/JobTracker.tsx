@@ -839,121 +839,54 @@ const JobTracker = () => {
             boxShadow: "var(--shadow-sm)",
           }}
         >
-          <button
-            onClick={() => setDeadlineAlertDismissed(true)}
-            className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
-            aria-label="Dismiss"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      )}
-
-      <div>
-        <div className="flex gap-3">
-          <Input
-            value={url}
-            onChange={(e) => { setUrl(e.target.value); if (urlError) setUrlError(""); }}
-            placeholder="Paste a job posting URL here (e.g. from LinkedIn, Workday, or a company careers page)..."
-            className={`h-12 flex-1 text-sm ${urlError ? "border-destructive" : ""}`}
-            onKeyDown={(e) => e.key === "Enter" && !loading && handleAddJob()}
-            disabled={loading}
-          />
-          <Button onClick={handleAddJob} disabled={loading} className="h-12 px-6 text-sm font-semibold rounded-lg">
-            {loading ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Parsing...</> : "Add Job"}
-          </Button>
-        </div>
-        <div className="flex items-center gap-3 mt-1.5">
-          {urlError && <p className="text-destructive text-xs">{urlError}</p>}
-          <button
-            type="button"
-            onClick={() => { setManualPrefillUrl(url.trim()); setManualOpen(true); }}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors ml-auto"
-          >
-            Add manually
-          </button>
-        </div>
-      </div>
-
-      {/* Filters */}
-      {showTable && (
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="ml-auto flex items-center gap-2">
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="h-8 w-auto gap-1 px-3 text-xs border rounded-lg">
-                <SelectValue placeholder="Status" />
-                {filterStatus !== "All" && (
-                  <span className="ml-1 inline-flex items-center justify-center h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
-                    {jobs.filter(j => j.status === filterStatus).length}
-                  </span>
-                )}
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="All">All Statuses</SelectItem>
-                {STATUS_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.value}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={filterFunction} onValueChange={setFilterFunction}>
-              <SelectTrigger className="h-8 w-auto gap-1 px-3 text-xs border rounded-lg">
-                <SelectValue placeholder="Function" />
-                {filterFunction !== "All" && (
-                  <span className="ml-1 inline-flex items-center justify-center h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
-                    {jobs.filter(j => j.function === filterFunction).length}
-                  </span>
-                )}
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="All">All Functions</SelectItem>
-                {FUNCTION_VALUES.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={filterPriority} onValueChange={setFilterPriority}>
-              <SelectTrigger className="h-8 w-auto gap-1 px-3 text-xs border rounded-lg">
-                <SelectValue placeholder="Priority" />
-                {filterPriority !== "All" && (
-                  <span className="ml-1 inline-flex items-center justify-center h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
-                    {jobs.filter(j => j.priority === filterPriority).length}
-                  </span>
-                )}
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="All">All Priorities</SelectItem>
-                {PRIORITY_OPTIONS.map(p => <SelectItem key={p.value} value={p.value}>{p.value}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            {filtersActive && (
-              <button
-                onClick={() => { setFilterStatus("All"); setFilterFunction("All"); setFilterPriority("All"); }}
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Clear filters
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      <Card className="overflow-hidden">
-        <CardContent className="p-0">
           {!showTable ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
-                <Briefcase className="h-8 w-8 text-muted-foreground" />
-              </div>
-              <p className="font-semibold text-foreground">No jobs tracked yet</p>
-              <p className="text-sm text-muted-foreground mt-1">Paste a job URL above to get started.</p>
+            <div style={{ padding: "80px 32px", textAlign: "center" }}>
+              <Briefcase style={{ width: 48, height: 48, color: "#D1D5DB", margin: "0 auto" }} />
+              <h2
+                style={{
+                  fontFamily: "var(--font-heading)",
+                  fontSize: "22px",
+                  color: "var(--color-text-primary)",
+                  marginTop: "16px",
+                }}
+              >
+                No jobs tracked yet
+              </h2>
+              <p
+                style={{
+                  fontFamily: "var(--font-body)",
+                  fontSize: "15px",
+                  color: "var(--color-text-muted)",
+                  marginTop: "8px",
+                  maxWidth: "400px",
+                  marginLeft: "auto",
+                  marginRight: "auto",
+                }}
+              >
+                Paste a job URL at the top of the page and Hiro will fill in every column for you.
+              </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm" style={{ tableLayout: 'auto' }}>
                 <thead>
-                   <tr className="border-b bg-muted/40">
+                   <tr style={{ background: "#F9FAFB", borderBottom: "2px solid var(--color-border)" }}>
                      {COLUMNS.map((col) => (
                        <th
                          key={col.label || "_open"}
-                         style={{ minWidth: col.minWidth }}
+                         style={{
+                           minWidth: col.minWidth,
+                           fontFamily: "var(--font-body)",
+                           fontSize: "11px",
+                           fontWeight: 600,
+                           color: "var(--color-text-muted)",
+                           textTransform: "uppercase",
+                           letterSpacing: "0.08em",
+                           padding: "12px 16px",
+                           textAlign: "left",
+                           whiteSpace: "nowrap",
+                         }}
                          className={cn(
-                           "px-3 py-3 text-left font-medium text-muted-foreground whitespace-nowrap",
                            col.key && "cursor-pointer select-none hover:text-foreground transition-colors group/th"
                          )}
                          onClick={() => handleSort(col.key)}
