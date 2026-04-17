@@ -481,7 +481,7 @@ const Profile = () => {
           )}
       </div>
 
-      <Card>
+      <Card className="hiro-section-card border-0 shadow-none">
         {sectionHeader("Work Experience", "work")}
         <CardContent>
           {editSection === "work" ? (
@@ -559,7 +559,7 @@ const Profile = () => {
       </Card>
 
       {/* ─── Education ─── */}
-      <Card>
+      <Card className="hiro-section-card border-0 shadow-none">
         {sectionHeader("Education", "edu")}
         <CardContent>
           {editSection === "edu" ? (
@@ -615,7 +615,7 @@ const Profile = () => {
       </Card>
 
       {/* ─── Skills ─── */}
-      <Card>
+      <Card className="hiro-section-card border-0 shadow-none">
         {sectionHeader("Skills", "skills")}
         <CardContent>
           {editSection === "skills" ? (
@@ -654,7 +654,7 @@ const Profile = () => {
       </Card>
 
       {/* ─── Languages ─── */}
-      <Card>
+      <Card className="hiro-section-card border-0 shadow-none">
         {sectionHeader("Languages", "langs")}
         <CardContent>
           {editSection === "langs" ? (
@@ -689,7 +689,7 @@ const Profile = () => {
       </Card>
 
       {/* ─── Awards ─── */}
-      <Card>
+      <Card className="hiro-section-card border-0 shadow-none">
         {sectionHeader("Awards & Achievements", "awards")}
         <CardContent>
           {editSection === "awards" ? (
@@ -730,7 +730,7 @@ const Profile = () => {
       </Card>
 
       {/* ─── Volunteering ─── */}
-      <Card>
+      <Card className="hiro-section-card border-0 shadow-none">
         {sectionHeader("Volunteering", "vols")}
         <CardContent>
           {editSection === "vols" ? (
@@ -785,7 +785,7 @@ const Profile = () => {
       </Card>
 
       {/* ─── Interests ─── */}
-      <Card>
+      <Card className="hiro-section-card border-0 shadow-none">
         {sectionHeader("Personal Interests", "interests")}
         <CardContent>
           {editSection === "interests" ? (
