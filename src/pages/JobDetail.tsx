@@ -1756,8 +1756,13 @@ const JobDetail = () => {
           {/* Generated content */}
           {!interviewLoading && interviewPrep && (
             <>
-              {/* Regenerate button */}
-              <div className="flex justify-end">
+              {/* Generated timestamp + Regenerate button */}
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-muted-foreground">
+                  {interviewPrep.updated_at || interviewPrep.created_at
+                    ? `Generated ${format(new Date(interviewPrep.updated_at || interviewPrep.created_at), "MMM d, yyyy")}`
+                    : ""}
+                </p>
                 <Button variant="outline" size="sm" onClick={handleGenerateInterviewPrep} className="gap-1.5 text-xs">
                   <RefreshCw className="h-3.5 w-3.5" /> Regenerate
                 </Button>
