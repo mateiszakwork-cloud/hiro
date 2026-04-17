@@ -420,7 +420,7 @@ const OutreachTab = ({
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-foreground" style={{ fontFamily: "Sora, sans-serif" }}>
+          <h2 className="font-bold text-foreground" style={{ fontFamily: "Sora, sans-serif", fontSize: 20 }}>
             Outreach
           </h2>
         </div>
@@ -438,8 +438,8 @@ const OutreachTab = ({
               <><Search className="h-4 w-4" /> {contacts.length > 0 ? "Search for more contacts" : "Search LinkedIn"}</>
             )}
           </Button>
-          <p className="text-[11px] text-gray-400 max-w-[260px] text-right">
-            Hiro searches LinkedIn as you to find the right people to reach out to.
+          <p className="text-[11px] text-gray-400 max-w-[280px] text-right">
+            Hiro searches LinkedIn as you. Contacts are saved automatically.
           </p>
         </div>
       </div>
@@ -653,7 +653,7 @@ const OutreachTab = ({
           onClick={() => setManualOpen(true)}
           className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1 transition-colors"
         >
-          <Plus className="h-3 w-3" /> Add contact manually
+          <Plus className="h-3 w-3" /> Add contact manually by LinkedIn URL
         </button>
       ) : (
         <div className="flex items-center gap-2">
