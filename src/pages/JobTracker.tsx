@@ -159,7 +159,7 @@ const JobTracker = () => {
       setSortDir(prev => prev === "asc" ? "desc" : "asc");
     } else {
       setSortKey(key);
-      setSortDir(key === "match_score" || key === "created_at" || key === "applied_date" ? "desc" : "asc");
+      setSortDir(key === "match_score" || key === "created_at" || key === "applied_date" || key === "application_deadline" ? "desc" : "asc");
     }
   };
 
@@ -182,13 +182,15 @@ const JobTracker = () => {
           ? new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
           : new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
       }
-      if (sortKey === "applied_date") {
-        if (!a.applied_date && !b.applied_date) return 0;
-        if (!a.applied_date) return 1;
-        if (!b.applied_date) return -1;
+      if (sortKey === "applied_date" || sortKey === "application_deadline") {
+        const av = a[sortKey] as string | null;
+        const bv = b[sortKey] as string | null;
+        if (!av && !bv) return 0;
+        if (!av) return 1;
+        if (!bv) return -1;
         return sortDir === "desc"
-          ? new Date(b.applied_date).getTime() - new Date(a.applied_date).getTime()
-          : new Date(a.applied_date).getTime() - new Date(b.applied_date).getTime();
+          ? new Date(bv).getTime() - new Date(av).getTime()
+          : new Date(av).getTime() - new Date(bv).getTime();
       }
       return compareStr(a[sortKey] as string | null, b[sortKey] as string | null, sortDir);
     });
@@ -243,7 +245,7 @@ const JobTracker = () => {
   const fetchJobs = async (uid: string) => {
     const { data } = await supabase
       .from("jobs")
-      .select("id, url, company_name, job_title, function, location, work_mode, duration, status, match_score, created_at, priority, applied_date")
+      .select("id, url, company_name, job_title, function, location, work_mode, duration, status, match_score, created_at, priority, applied_date, application_deadline")
       .eq("user_id", uid)
       .order("created_at", { ascending: false });
     if (data) setJobs(data as any);
@@ -365,7 +367,7 @@ const JobTracker = () => {
     const { data: job, error } = await supabase
       .from("jobs")
       .insert(insertData)
-      .select("id, url, company_name, job_title, function, location, work_mode, duration, status, match_score, created_at, priority, applied_date")
+      .select("id, url, company_name, job_title, function, location, work_mode, duration, status, match_score, created_at, priority, applied_date, application_deadline")
       .single();
     if (error || !job) { toast.error("Failed to save job."); return; }
     setJobs((prev) => [job as any, ...prev]);
@@ -406,6 +408,12 @@ const JobTracker = () => {
     const applied_date = date ? format(date, "yyyy-MM-dd") : null;
     await supabase.from("jobs").update({ applied_date }).eq("id", jobId);
     setJobs((prev) => prev.map((j) => (j.id === jobId ? { ...j, applied_date } : j)));
+  };
+
+  const handleDeadlineChange = async (jobId: string, date: Date | undefined) => {
+    const application_deadline = date ? format(date, "yyyy-MM-dd") : null;
+    await supabase.from("jobs").update({ application_deadline }).eq("id", jobId);
+    setJobs((prev) => prev.map((j) => (j.id === jobId ? { ...j, application_deadline } : j)));
   };
 
   const confirmDeleteJob = async () => {
