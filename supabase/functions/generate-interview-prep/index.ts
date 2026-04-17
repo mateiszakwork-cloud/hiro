@@ -66,6 +66,27 @@ serve(async (req) => {
       });
     }
 
+    // Skip generation if a recent prep already exists (< 24 hours old)
+    const serviceClientCheck = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+    const { data: existingPrep } = await serviceClientCheck
+      .from("interview_prep")
+      .select("*")
+      .eq("job_id", job_id)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (existingPrep) {
+      const ageMs = Date.now() - new Date(existingPrep.updated_at || existingPrep.created_at).getTime();
+      if (ageMs < 24 * 60 * 60 * 1000) {
+        console.log(`[generate-interview-prep] Returning cached prep (age: ${Math.round(ageMs / 1000 / 60)} min)`);
+        return new Response(JSON.stringify({ success: true, data: existingPrep, cached: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     const [jobRes, profileRes, workRes, skillsRes, eduRes, langRes] = await Promise.all([
       supabase.from("jobs").select("*").eq("id", job_id).eq("user_id", userId).single(),
       supabase.from("profiles").select("full_name, email").eq("id", userId).single(),
