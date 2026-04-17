@@ -80,10 +80,11 @@ const getStatusColor = (status: string) =>
   STATUS_OPTIONS.find((s) => s.value === status)?.color || "bg-muted text-muted-foreground";
 
 const getScoreColor = (score: number | null) => {
-  if (score === null) return "border-muted text-muted-foreground bg-muted/30";
-  if (score >= 70) return "text-green-600 border-green-300 bg-green-50";
-  if (score >= 40) return "text-amber-600 border-amber-300 bg-amber-50";
-  return "text-red-600 border-red-300 bg-red-50";
+  // Border always uses brand primary; text/bg shifts by score band
+  if (score === null) return "text-muted-foreground bg-muted/30 border-[var(--color-primary)]";
+  if (score >= 70) return "text-green-700 bg-green-50 border-[var(--color-primary)]";
+  if (score >= 40) return "text-amber-700 bg-amber-50 border-[var(--color-primary)]";
+  return "text-[var(--color-primary)] bg-[#FFF5F5] border-[var(--color-primary)]";
 };
 
 const FUNCTION_VALUES = ["Strategy", "Finance", "Marketing", "Product", "Operations", "HR", "Consulting", "Other"];
@@ -93,9 +94,10 @@ const PRIORITY_OPTIONS_EDIT = ["High", "Medium", "Low"];
 /* ── Tag list renderer ── */
 const TagList = ({ tags, className = "", soft = false }: { tags: string[] | null; className?: string; soft?: boolean }) => {
   if (!tags?.length) return <span className="text-muted-foreground">–</span>;
+  // Required: neutral chip (#F3F4F6 / #374151). Nice-to-have: soft amber (#FFFBEB / #92400E).
   const base = soft
-    ? "inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500 border border-gray-200"
-    : "inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground";
+    ? "inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#FFFBEB] text-[#92400E] border border-[#FDE68A]"
+    : "inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#F3F4F6] text-[#374151] border border-[#E5E7EB]";
   return (
     <div className="flex flex-wrap gap-1.5">
       {tags.map((t, i) => (
@@ -1165,7 +1167,7 @@ const JobDetail = () => {
                           <span className="font-medium text-muted-foreground">{label}</span>
                           <span className="font-semibold text-foreground">{value ?? "–"}</span>
                         </div>
-                        <Progress value={value ?? 0} className="h-2" />
+                        <Progress value={value ?? 0} className="h-2 hiro-match-progress" />
                       </div>
                     ))}
                   </div>
@@ -1176,7 +1178,7 @@ const JobDetail = () => {
                         <ul className="space-y-1.5">
                           {job.match_details.strengths.map((s, i) => (
                             <li key={i} className="flex items-start gap-2 text-sm text-foreground">
-                              <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+                              <CheckCircle2 className="h-4 w-4 text-[#22C55E] shrink-0 mt-0.5" />
                               {s}
                             </li>
                           ))}
@@ -1189,7 +1191,7 @@ const JobDetail = () => {
                         <ul className="space-y-1.5">
                           {job.match_details.missing_skills.map((s, i) => (
                             <li key={i} className="flex items-start gap-2 text-sm text-foreground">
-                              <XCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+                              <XCircle className="h-4 w-4 text-[var(--color-primary)] shrink-0 mt-0.5" />
                               {s}
                             </li>
                           ))}
@@ -1301,7 +1303,7 @@ const JobDetail = () => {
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <h4 className="font-semibold text-foreground">Professional Summary</h4>
-                      <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-[#950606]/10 text-[#950606]">
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full text-white" style={{ background: "linear-gradient(135deg, var(--color-primary), #FF6B6B)" }}>
                         Tailored for {job.company_name}
                       </span>
                     </div>

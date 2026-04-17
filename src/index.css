@@ -2236,3 +2236,36 @@ select:focus-visible,
   white-space: nowrap;
   vertical-align: middle;
 }
+
+/* ============================================
+   JOB DETAIL — color polish (no off-brand blue/purple)
+   ============================================ */
+/* Match-analysis sub-score progress bars: brand red fill */
+.hiro-match-progress > div {
+  background: var(--color-primary) !important;
+}
+
+/* Copy ghost buttons inside job detail tabs: muted default, primary on hover */
+.hiro-tab-content button[class*="ghost"]:hover,
+.hiro-tab-content button[class*="ghost"]:hover svg {
+  color: var(--color-primary) !important;
+}
+
+/* Calendar selected day -> brand primary */
+.rdp-day_selected,
+.rdp-day_selected:focus,
+.rdp-day_selected:hover {
+  background-color: var(--color-primary) !important;
+  color: #fff !important;
+}
+.rdp-day_today:not(.rdp-day_selected) {
+  color: var(--color-primary) !important;
+  font-weight: 700 !important;
+}
+
+/* Any select trigger focus ring inside job detail -> primary */
+.hiro-tab-content [role="combobox"]:focus-visible,
+.hiro-tab-content [role="combobox"][data-state="open"] {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 3px var(--color-primary-light) !important;
+}
