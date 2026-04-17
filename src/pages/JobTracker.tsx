@@ -574,6 +574,7 @@ const JobTracker = () => {
                       <td className="px-3 py-3"><Skeleton className="h-4 w-20" /></td>
                       <td className="px-3 py-3"><Skeleton className="h-5 w-14 rounded-full" /></td>
                       <td className="px-3 py-3"><Skeleton className="h-4 w-14" /></td>
+                      <td className="px-3 py-3"><Skeleton className="h-4 w-16" /></td>
                       <td className="px-3 py-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
                       <td className="px-3 py-3"><Skeleton className="h-8 w-8 rounded-full" /></td>
                       <td className="px-3 py-3"><Skeleton className="h-4 w-4" /></td>
