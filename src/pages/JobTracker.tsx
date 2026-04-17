@@ -440,6 +440,26 @@ const JobTracker = () => {
     }
     await supabase.from("jobs").update(updates).eq("id", jobId);
     setJobs((prev) => prev.map((j) => (j.id === jobId ? { ...j, ...updates } : j)));
+
+    // Auto-trigger interview prep generation in background when status changes to Interview
+    if (newStatus === "Interview" && currentJob?.status !== "Interview") {
+      toast.success("Interview prep is being prepared in the background", {
+        style: { background: "#16A34A", color: "white", border: "none" },
+      });
+      (async () => {
+        try {
+          const { data: sessionData } = await supabase.auth.getSession();
+          const token = sessionData?.session?.access_token;
+          if (!token) return;
+          await supabase.functions.invoke("generate-interview-prep", {
+            body: { job_id: jobId },
+            headers: { Authorization: `Bearer ${token}` },
+          });
+        } catch {
+          // Silent failure - user did not explicitly trigger this
+        }
+      })();
+    }
   };
 
   const handlePriorityChange = async (jobId: string, newPriority: string) => {

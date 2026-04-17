@@ -59,11 +59,34 @@ serve(async (req) => {
     }
     console.log(`[generate-interview-prep] Authenticated user: ${userId}`);
 
-    const { job_id } = await req.json();
+    const { job_id, force } = await req.json();
     if (!job_id) {
       return new Response(JSON.stringify({ success: false, error: "job_id is required" }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Skip generation if a recent prep already exists (< 24 hours old) — unless force regenerate
+    const serviceClientCheck = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+    if (!force) {
+      const { data: existingPrep } = await serviceClientCheck
+        .from("interview_prep")
+        .select("*")
+        .eq("job_id", job_id)
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (existingPrep) {
+        const ageMs = Date.now() - new Date(existingPrep.updated_at || existingPrep.created_at).getTime();
+        if (ageMs < 24 * 60 * 60 * 1000) {
+          console.log(`[generate-interview-prep] Returning cached prep (age: ${Math.round(ageMs / 1000 / 60)} min)`);
+          return new Response(JSON.stringify({ success: true, data: existingPrep, cached: true }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
     }
 
     const [jobRes, profileRes, workRes, skillsRes, eduRes, langRes] = await Promise.all([

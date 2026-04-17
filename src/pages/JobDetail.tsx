@@ -440,14 +440,69 @@ const JobDetail = () => {
     setBulletToggles({});
   }, [cvOutput?.id, cvOutput?.updated_at]);
 
+  // Auto-generate interview prep when status is Interview+ and no prep exists yet
+  useEffect(() => {
+    if (!job || !jobId || !interviewFetched || interviewPrep || interviewLoading) return;
+    if (!["Interview", "Offer"].includes(job.status)) return;
+
+    let cancelled = false;
+    (async () => {
+      setInterviewLoading(true);
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData?.session?.access_token;
+        if (!token) return;
+        const { data, error } = await supabase.functions.invoke("generate-interview-prep", {
+          body: { job_id: jobId },
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (cancelled) return;
+        if (!error && data?.success && data.data) {
+          setInterviewPrep(data.data);
+        }
+        // Silent failure - fall back to Generate button
+      } catch {
+        // Silent
+      } finally {
+        if (!cancelled) setInterviewLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [job?.status, interviewFetched, interviewPrep, jobId]);
+
   const handleStatusChange = async (newStatus: string) => {
     if (!job) return;
+    const previousStatus = job.status;
     const updates: any = { status: newStatus };
     if (newStatus === "Applied" && !job.applied_date) {
       updates.applied_date = format(new Date(), "yyyy-MM-dd");
     }
     await supabase.from("jobs").update(updates).eq("id", job.id);
     setJob(prev => prev ? { ...prev, ...updates } : prev);
+
+    // Auto-trigger interview prep generation in background when status changes to Interview
+    if (newStatus === "Interview" && previousStatus !== "Interview") {
+      toast.success("Interview prep is being prepared in the background", {
+        style: { background: "#16A34A", color: "white", border: "none" },
+      });
+      (async () => {
+        try {
+          const { data: sessionData } = await supabase.auth.getSession();
+          const token = sessionData?.session?.access_token;
+          if (!token) return;
+          const { data } = await supabase.functions.invoke("generate-interview-prep", {
+            body: { job_id: job.id },
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (data?.success && data.data) {
+            setInterviewPrep(data.data);
+          }
+        } catch {
+          // Silent failure - user did not explicitly trigger this
+        }
+      })();
+    }
   };
 
   const handleAppliedDateChange = async (date: Date | undefined) => {
@@ -630,7 +685,7 @@ const JobDetail = () => {
         return;
       }
       const { data, error } = await supabase.functions.invoke("generate-interview-prep", {
-        body: { job_id: jobId },
+        body: { job_id: jobId, force: !!interviewPrep },
         headers: { Authorization: `Bearer ${token}` },
       });
       if (error || !data?.success) {
@@ -1701,8 +1756,13 @@ const JobDetail = () => {
           {/* Generated content */}
           {!interviewLoading && interviewPrep && (
             <>
-              {/* Regenerate button */}
-              <div className="flex justify-end">
+              {/* Generated timestamp + Regenerate button */}
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-muted-foreground">
+                  {interviewPrep.updated_at || interviewPrep.created_at
+                    ? `Generated ${format(new Date(interviewPrep.updated_at || interviewPrep.created_at), "MMM d, yyyy")}`
+                    : ""}
+                </p>
                 <Button variant="outline" size="sm" onClick={handleGenerateInterviewPrep} className="gap-1.5 text-xs">
                   <RefreshCw className="h-3.5 w-3.5" /> Regenerate
                 </Button>
