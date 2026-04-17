@@ -97,7 +97,7 @@ const isValidUrl = (str: string): boolean => {
   }
 };
 
-type SortKey = "company_name" | "job_title" | "function" | "location" | "duration" | "status" | "match_score" | "priority" | "created_at" | "applied_date";
+type SortKey = "company_name" | "job_title" | "function" | "location" | "duration" | "status" | "match_score" | "priority" | "created_at" | "applied_date" | "application_deadline";
 type SortDir = "asc" | "desc";
 
 const COLUMNS: { label: string; key: SortKey | null; minWidth: string }[] = [
