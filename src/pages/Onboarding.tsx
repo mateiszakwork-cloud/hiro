@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Loader2, AlertTriangle, Check } from "lucide-react";
+import { Fragment } from "react";
 import StepWorkExperience from "@/components/onboarding/StepWorkExperience";
 import StepEducation from "@/components/onboarding/StepEducation";
 import StepSkills from "@/components/onboarding/StepSkills";
