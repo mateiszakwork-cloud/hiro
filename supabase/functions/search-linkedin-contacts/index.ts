@@ -566,38 +566,35 @@ serve(async (req) => {
       searchKeywords.map((k, i) => `Search ${i + 1}: ${k}`),
     );
 
-    const settled = await Promise.allSettled(
-      searchKeywords.map((kw) => searchLinkedIn(cookie, jsessionid, kw)),
-    );
-
-    // Process results individually — failures don't block successes
+    // Run sequentially with 1500ms delay between requests to reduce rate limiting
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     const successfulResults: { raw: any }[] = [];
     let cookieExpired = false;
     let rateLimited = false;
 
-    for (let i = 0; i < settled.length; i++) {
-      const outcome = settled[i];
-      if (outcome.status === "rejected") {
-        console.log(`Search ${i + 1} threw an exception:`, outcome.reason);
+    for (let i = 0; i < searchKeywords.length; i++) {
+      if (i > 0) await sleep(1500);
+      try {
+        const r = await searchLinkedIn(cookie, jsessionid, searchKeywords[i]);
+        if (r.error === "cookie_expired") {
+          console.log(`Search ${i + 1} failed: cookie_expired`);
+          cookieExpired = true;
+          continue;
+        }
+        if (r.error === "rate_limited") {
+          console.log(`Search ${i + 1} failed: rate_limited`);
+          rateLimited = true;
+          continue;
+        }
+        if (r.error) {
+          console.log(`Search ${i + 1} failed: ${r.error}`);
+          continue;
+        }
+        successfulResults.push({ raw: r.raw });
+      } catch (err) {
+        console.log(`Search ${i + 1} threw an exception:`, (err as Error).message);
         continue;
       }
-      const r = outcome.value;
-      if (r.error === "cookie_expired") {
-        console.log(`Search ${i + 1} failed: cookie_expired`);
-        cookieExpired = true;
-        continue;
-      }
-      if (r.error === "rate_limited") {
-        console.log(`Search ${i + 1} failed: rate_limited`);
-        rateLimited = true;
-        continue;
-      }
-      if (r.error) {
-        console.log(`Search ${i + 1} failed: ${r.error}`);
-        continue;
-      }
-      // Success
-      successfulResults.push({ raw: r.raw });
     }
 
     // If ALL searches failed, return the most relevant error
