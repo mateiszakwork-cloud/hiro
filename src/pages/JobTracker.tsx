@@ -1054,9 +1054,17 @@ const JobTracker = () => {
                           );
                         })()}
                       </td>
-                      <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                         <Select value={job.status} onValueChange={(v) => handleStatusChange(job.id, v)}>
-                          <SelectTrigger className={`h-7 w-auto border-0 gap-1 px-2 rounded-full text-xs font-medium ${getStatusColor(job.status)}`}>
+                          <SelectTrigger
+                            className="h-7 w-auto border-0 gap-1 px-2.5 rounded-full"
+                            style={{
+                              ...getStatusPillStyle(job.status),
+                              fontFamily: "var(--font-body)",
+                              fontSize: "12px",
+                              fontWeight: 600,
+                            }}
+                          >
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -1064,9 +1072,24 @@ const JobTracker = () => {
                           </SelectContent>
                         </Select>
                       </td>
-                      <td className="px-3 py-3">
+                      <td className="px-4 py-3">
                         {job.match_score !== null ? (
-                          <span className={`inline-flex items-center justify-center h-7 w-7 rounded-full border text-xs font-bold ${getScoreColor(job.match_score)}`}>{job.match_score}</span>
+                          <span
+                            style={{
+                              ...getScoreBadgeStyle(job.match_score),
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              width: "36px",
+                              height: "36px",
+                              borderRadius: "50%",
+                              fontFamily: "var(--font-data)",
+                              fontSize: "11px",
+                              fontWeight: 700,
+                            }}
+                          >
+                            {job.match_score}
+                          </span>
                         ) : <span className="text-muted-foreground">–</span>}
                       </td>
                       {/* Kit column */}
