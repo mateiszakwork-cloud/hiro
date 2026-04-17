@@ -522,82 +522,323 @@ const JobTracker = () => {
   const modalJob = kitModalJobId ? jobs.find(j => j.id === kitModalJobId) : null;
   const modalCv = kitModalJobId ? cvMap[kitModalJobId] : null;
 
+  // Premium metric card style
+  const metricCardStyle: React.CSSProperties = {
+    background: "var(--color-bg-white)",
+    borderRadius: "var(--radius-lg)",
+    border: "1px solid var(--color-border)",
+    padding: "16px 20px",
+    transition: "var(--transition)",
+  };
+  const metricNumStyle: React.CSSProperties = {
+    fontFamily: "var(--font-data)",
+    fontSize: "26px",
+    fontWeight: 700,
+    color: "var(--color-text-primary)",
+    letterSpacing: "-0.02em",
+    lineHeight: 1,
+  };
+  const metricLabelStyle: React.CSSProperties = {
+    fontFamily: "var(--font-body)",
+    fontSize: "11px",
+    color: "var(--color-text-muted)",
+    textTransform: "uppercase",
+    letterSpacing: "0.08em",
+    marginTop: "8px",
+  };
+  const metricCardHover = (e: React.MouseEvent<HTMLDivElement>, hover: boolean) => {
+    e.currentTarget.style.boxShadow = hover ? "var(--shadow-md)" : "none";
+    e.currentTarget.style.transform = hover ? "translateY(-1px)" : "translateY(0)";
+  };
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-[28px] font-bold text-primary">Job Tracker</h1>
-        <p className="text-muted-foreground mt-1">Paste a job URL below to automatically fill in all details.</p>
+    <div style={{ margin: "-32px", background: "var(--color-bg-page)", minHeight: "calc(100vh - 0px)" }}>
+      {/* Page header bar */}
+      <div
+        style={{
+          background: "var(--color-bg-white)",
+          padding: "20px 32px",
+          borderBottom: "1px solid var(--color-border)",
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: "24px",
+          flexWrap: "wrap",
+        }}
+      >
+        <div>
+          <h1
+            style={{
+              fontFamily: "var(--font-heading)",
+              fontSize: "26px",
+              fontWeight: 800,
+              color: "var(--color-text-primary)",
+              letterSpacing: "-0.02em",
+              lineHeight: 1.1,
+            }}
+          >
+            Job Tracker
+          </h1>
+          <p
+            style={{
+              fontFamily: "var(--font-body)",
+              fontSize: "13px",
+              color: "var(--color-text-muted)",
+              marginTop: "6px",
+            }}
+          >
+            Paste a job URL to automatically fill every column
+          </p>
+        </div>
+
+        <div style={{ flex: 1, maxWidth: "520px", minWidth: "280px" }}>
+          <div style={{ display: "flex", gap: "10px" }}>
+            <Input
+              value={url}
+              onChange={(e) => { setUrl(e.target.value); if (urlError) setUrlError(""); }}
+              placeholder="Paste a job posting URL..."
+              onKeyDown={(e) => e.key === "Enter" && !loading && handleAddJob()}
+              disabled={loading}
+              style={{
+                height: "44px",
+                fontFamily: "var(--font-body)",
+                fontSize: "14px",
+                border: `1.5px solid ${urlError ? "#DC2626" : "var(--color-border)"}`,
+                borderRadius: "var(--radius-md)",
+                flex: 1,
+              }}
+            />
+            <button
+              onClick={handleAddJob}
+              disabled={loading}
+              style={{
+                height: "44px",
+                background: "var(--color-primary)",
+                color: "#fff",
+                fontFamily: "var(--font-body)",
+                fontSize: "14px",
+                fontWeight: 600,
+                borderRadius: "var(--radius-md)",
+                padding: "0 20px",
+                border: "none",
+                cursor: loading ? "not-allowed" : "pointer",
+                transition: "var(--transition)",
+                opacity: loading ? 0.7 : 1,
+                whiteSpace: "nowrap",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
+              onMouseEnter={(e) => {
+                if (!loading) {
+                  e.currentTarget.style.background = "var(--color-primary-hover)";
+                  e.currentTarget.style.boxShadow = "var(--shadow-red)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "var(--color-primary)";
+                e.currentTarget.style.boxShadow = "none";
+              }}
+            >
+              {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Parsing...</> : "Add Job"}
+            </button>
+          </div>
+          <div className="flex items-center gap-3 mt-1.5">
+            {urlError && <p className="text-destructive text-xs">{urlError}</p>}
+            <button
+              type="button"
+              onClick={() => { setManualPrefillUrl(url.trim()); setManualOpen(true); }}
+              className="text-xs ml-auto"
+              style={{ color: "var(--color-text-muted)" }}
+            >
+              Add manually
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Summary stats */}
-      {stats.total === 0 ? (
-        <div className="rounded-lg bg-white shadow-sm p-5 text-sm text-muted-foreground">
-          <span className="font-semibold text-foreground" style={{ fontFamily: "Sora, sans-serif" }}>Welcome to Hiro.</span>{" "}
-          Paste your first job URL above to get started.
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-          <div className="rounded-lg bg-white shadow-sm p-4">
-            <div className="text-[24px] font-bold leading-none text-foreground" style={{ fontFamily: "Sora, sans-serif" }}>{stats.total}</div>
-            <div className="text-[12px] text-muted-foreground mt-1.5">Total Tracked</div>
+      {/* Metrics bar */}
+      <div style={{ padding: "20px 32px" }}>
+        {stats.total === 0 ? (
+          <div
+            style={{
+              background: "var(--color-bg-white)",
+              borderRadius: "var(--radius-lg)",
+              border: "1px solid var(--color-border)",
+              padding: "20px",
+              fontSize: "14px",
+              color: "var(--color-text-secondary)",
+            }}
+          >
+            <span style={{ fontWeight: 600, color: "var(--color-text-primary)", fontFamily: "var(--font-data)" }}>
+              Welcome to Hiro.
+            </span>{" "}
+            Paste your first job URL above to get started.
           </div>
-          <div className="rounded-lg bg-white shadow-sm p-4 border-l-4" style={{ borderLeftColor: "#950606" }}>
-            <div className="text-[24px] font-bold leading-none text-foreground" style={{ fontFamily: "Sora, sans-serif" }}>{stats.applied}</div>
-            <div className="text-[12px] text-muted-foreground mt-1.5">Applied</div>
-            <div className="text-[11px] text-muted-foreground mt-0.5">({stats.appliedThisWeek} this week)</div>
-          </div>
-          <div className="rounded-lg bg-white shadow-sm p-4">
-            <div className="text-[24px] font-bold leading-none text-foreground" style={{ fontFamily: "Sora, sans-serif" }}>{stats.inProgress}</div>
-            <div className="text-[12px] text-muted-foreground mt-1.5">In Progress</div>
-          </div>
-          <div className="rounded-lg bg-white shadow-sm p-4 border-l-4" style={{ borderLeftColor: "#950606" }}>
-            <div className="text-[24px] font-bold leading-none text-foreground" style={{ fontFamily: "Sora, sans-serif" }}>{stats.interviews}</div>
-            <div className="text-[12px] text-muted-foreground mt-1.5">Interviews</div>
-          </div>
-          <div className="rounded-lg bg-white shadow-sm p-4">
-            <div className={cn("text-[24px] font-bold leading-none", getAvgScoreColor(stats.avgScore))} style={{ fontFamily: "Sora, sans-serif" }}>
-              {stats.avgScore !== null ? `${stats.avgScore}%` : "–"}
+        ) : (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(6, minmax(0, 1fr))",
+              gap: "12px",
+            }}
+            className="hiro-metrics-grid"
+          >
+            <div style={metricCardStyle} onMouseEnter={(e) => metricCardHover(e, true)} onMouseLeave={(e) => metricCardHover(e, false)}>
+              <div style={metricNumStyle}>{stats.total}</div>
+              <div style={metricLabelStyle}>Total Tracked</div>
             </div>
-            <div className="text-[12px] text-muted-foreground mt-1.5">Avg Match Score</div>
+            <div
+              style={{ ...metricCardStyle, borderLeft: "3px solid var(--color-primary)" }}
+              onMouseEnter={(e) => metricCardHover(e, true)}
+              onMouseLeave={(e) => metricCardHover(e, false)}
+            >
+              <div style={metricNumStyle}>{stats.applied}</div>
+              <div style={metricLabelStyle}>Applied</div>
+              <div style={{ fontSize: "11px", color: "var(--color-text-muted)", marginTop: "4px" }}>
+                ({stats.appliedThisWeek} this week)
+              </div>
+            </div>
+            <div style={metricCardStyle} onMouseEnter={(e) => metricCardHover(e, true)} onMouseLeave={(e) => metricCardHover(e, false)}>
+              <div style={metricNumStyle}>{stats.inProgress}</div>
+              <div style={metricLabelStyle}>In Progress</div>
+            </div>
+            <div
+              style={{ ...metricCardStyle, borderLeft: "3px solid var(--color-primary)" }}
+              onMouseEnter={(e) => metricCardHover(e, true)}
+              onMouseLeave={(e) => metricCardHover(e, false)}
+            >
+              <div style={metricNumStyle}>{stats.interviews}</div>
+              <div style={metricLabelStyle}>Interviews</div>
+            </div>
+            <div style={metricCardStyle} onMouseEnter={(e) => metricCardHover(e, true)} onMouseLeave={(e) => metricCardHover(e, false)}>
+              <div style={{ ...metricNumStyle, color: stats.avgScore === null ? "var(--color-text-primary)" : stats.avgScore > 70 ? "#15803D" : stats.avgScore >= 40 ? "#92400E" : "#991B1B" }}>
+                {stats.avgScore !== null ? `${stats.avgScore}%` : "–"}
+              </div>
+              <div style={metricLabelStyle}>Avg Match</div>
+            </div>
+            <div style={metricCardStyle} onMouseEnter={(e) => metricCardHover(e, true)} onMouseLeave={(e) => metricCardHover(e, false)}>
+              <div style={metricNumStyle}>{contactsReached}</div>
+              <div style={metricLabelStyle}>Contacts Reached</div>
+            </div>
           </div>
-          <div className="rounded-lg bg-white shadow-sm p-4">
-            <div className="text-[24px] font-bold leading-none text-foreground" style={{ fontFamily: "Sora, sans-serif" }}>{contactsReached}</div>
-            <div className="text-[12px] text-muted-foreground mt-1.5">Contacts Reached</div>
+        )}
+      </div>
+
+      {/* Urgent deadline alert */}
+      {!deadlineAlertDismissed && urgentDeadlineJobs.length > 0 && (
+        <div style={{ padding: "0 32px 16px" }}>
+          <div
+            className="flex items-start justify-between gap-3 rounded-lg border p-3"
+            style={{ backgroundColor: "#FFF5F5", borderColor: "#950606" }}
+          >
+            <div className="flex items-start gap-2.5">
+              <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "#950606" }} />
+              <div className="text-sm">
+                <p className="font-semibold" style={{ color: "#950606" }}>
+                  You have {urgentDeadlineJobs.length} application deadline{urgentDeadlineJobs.length === 1 ? "" : "s"} in the next 7 days
+                </p>
+                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                  {urgentDeadlineJobs.map((j) => {
+                    const s = computeDeadlineState(j.application_deadline, j.status);
+                    const days = s.kind === "red" || s.kind === "orange" ? s.days : 0;
+                    return (
+                      <button
+                        key={j.id}
+                        onClick={() => navigate(`/jobs/${j.id}`)}
+                        className="text-xs underline-offset-2 hover:underline text-foreground"
+                      >
+                        <span className="font-medium">{j.company_name || "–"}</span>
+                        <span className="text-muted-foreground"> · {j.job_title || "–"}</span>
+                        <span className="ml-1 font-semibold" style={{ color: "#950606" }}>({days}d)</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => setDeadlineAlertDismissed(true)}
+              className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
+              aria-label="Dismiss"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
         </div>
       )}
 
-      {/* Urgent deadline alert */}
-      {!deadlineAlertDismissed && urgentDeadlineJobs.length > 0 && (
-        <div
-          className="flex items-start justify-between gap-3 rounded-lg border p-3"
-          style={{ backgroundColor: '#FFF5F5', borderColor: '#950606' }}
-        >
-          <div className="flex items-start gap-2.5">
-            <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" style={{ color: '#950606' }} />
-            <div className="text-sm">
-              <p className="font-semibold" style={{ color: '#950606' }}>
-                You have {urgentDeadlineJobs.length} application deadline{urgentDeadlineJobs.length === 1 ? "" : "s"} in the next 7 days
-              </p>
-              <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
-                {urgentDeadlineJobs.map(j => {
-                  const s = computeDeadlineState(j.application_deadline, j.status);
-                  const days = s.kind === "red" || s.kind === "orange" ? s.days : 0;
-                  return (
-                    <button
-                      key={j.id}
-                      onClick={() => navigate(`/jobs/${j.id}`)}
-                      className="text-xs underline-offset-2 hover:underline text-foreground"
-                    >
-                      <span className="font-medium">{j.company_name || "–"}</span>
-                      <span className="text-muted-foreground"> · {j.job_title || "–"}</span>
-                      <span className="ml-1 font-semibold" style={{ color: '#950606' }}>({days}d)</span>
-                    </button>
-                  );
-                })}
-              </div>
+      {/* Filters */}
+      {showTable && (
+        <div style={{ padding: "0 32px 12px" }}>
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="ml-auto flex items-center gap-2">
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="h-8 w-auto gap-1 px-3 text-xs border rounded-lg">
+                  <SelectValue placeholder="Status" />
+                  {filterStatus !== "All" && (
+                    <span className="ml-1 inline-flex items-center justify-center h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
+                      {jobs.filter(j => j.status === filterStatus).length}
+                    </span>
+                  )}
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All Statuses</SelectItem>
+                  {STATUS_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.value}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={filterFunction} onValueChange={setFilterFunction}>
+                <SelectTrigger className="h-8 w-auto gap-1 px-3 text-xs border rounded-lg">
+                  <SelectValue placeholder="Function" />
+                  {filterFunction !== "All" && (
+                    <span className="ml-1 inline-flex items-center justify-center h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
+                      {jobs.filter(j => j.function === filterFunction).length}
+                    </span>
+                  )}
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All Functions</SelectItem>
+                  {FUNCTION_VALUES.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={filterPriority} onValueChange={setFilterPriority}>
+                <SelectTrigger className="h-8 w-auto gap-1 px-3 text-xs border rounded-lg">
+                  <SelectValue placeholder="Priority" />
+                  {filterPriority !== "All" && (
+                    <span className="ml-1 inline-flex items-center justify-center h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
+                      {jobs.filter(j => j.priority === filterPriority).length}
+                    </span>
+                  )}
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All Priorities</SelectItem>
+                  {PRIORITY_OPTIONS.map(p => <SelectItem key={p.value} value={p.value}>{p.value}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {filtersActive && (
+                <button
+                  onClick={() => { setFilterStatus("All"); setFilterFunction("All"); setFilterPriority("All"); }}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Clear filters
+                </button>
+              )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Table card wrapper */}
+      <div style={{ padding: "0 32px 32px" }}>
+        <div
+          style={{
+            background: "var(--color-bg-white)",
+            borderRadius: "var(--radius-lg)",
+            border: "1px solid var(--color-border)",
+            overflow: "hidden",
+            boxShadow: "var(--shadow-sm)",
+          }}
+        >
           <button
             onClick={() => setDeadlineAlertDismissed(true)}
             className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
