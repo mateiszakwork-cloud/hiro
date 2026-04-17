@@ -652,7 +652,48 @@ const JobTracker = () => {
                         </TooltipProvider>
                       </td>
                       <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
-                        <Select value={job.status} onValueChange={(v) => handleStatusChange(job.id, v)}>
+                        {(() => {
+                          const state = computeDeadlineState(job.application_deadline, job.status);
+                          if (state.kind === "none") {
+                            return (
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <button className="inline-flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors text-xs">
+                                    <span>–</span>
+                                    <Pencil className="h-3 w-3" />
+                                  </button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                  <Calendar
+                                    mode="single"
+                                    selected={undefined}
+                                    onSelect={(d) => handleDeadlineChange(job.id, d)}
+                                    className={cn("p-3 pointer-events-auto")}
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                            );
+                          }
+                          return (
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <button className="hover:opacity-80 transition-opacity">
+                                  <DeadlineBadge state={state} />
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                  mode="single"
+                                  selected={job.application_deadline ? new Date(job.application_deadline) : undefined}
+                                  onSelect={(d) => handleDeadlineChange(job.id, d)}
+                                  className={cn("p-3 pointer-events-auto")}
+                                />
+                              </PopoverContent>
+                            </Popover>
+                          );
+                        })()}
+                      </td>
+                      <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                           <SelectTrigger className={`h-7 w-auto border-0 gap-1 px-2 rounded-full text-xs font-medium ${getStatusColor(job.status)}`}>
                             <SelectValue />
                           </SelectTrigger>
