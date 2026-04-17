@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertTriangle } from "lucide-react";
+import { Loader2, AlertTriangle, Check } from "lucide-react";
+import { Fragment } from "react";
 import StepWorkExperience from "@/components/onboarding/StepWorkExperience";
 import StepEducation from "@/components/onboarding/StepEducation";
 import StepSkills from "@/components/onboarding/StepSkills";
@@ -14,7 +13,15 @@ import StepVolunteering from "@/components/onboarding/StepVolunteering";
 import StepInterests from "@/components/onboarding/StepInterests";
 import type { ParsedCVData } from "@/types/cv";
 
-const TOTAL_STEPS = 7;
+const STEPS = [
+  { n: 1, label: "Experience" },
+  { n: 2, label: "Education" },
+  { n: 3, label: "Skills" },
+  { n: 4, label: "Languages" },
+  { n: 5, label: "Awards" },
+  { n: 6, label: "Volunteer" },
+  { n: 7, label: "Interests" },
+];
 
 const Onboarding = () => {
   const navigate = useNavigate();
@@ -24,8 +31,7 @@ const Onboarding = () => {
 
   const cvData = (location.state as { cvData?: ParsedCVData } | null)?.cvData || null;
 
-  const progressValue = (currentStep / TOTAL_STEPS) * 100;
-  const handleNext = () => { if (currentStep < TOTAL_STEPS) setCurrentStep(s => s + 1); };
+  const handleNext = () => { if (currentStep < STEPS.length) setCurrentStep(s => s + 1); };
   const handleBack = () => { if (currentStep > 1) setCurrentStep(s => s - 1); };
 
   if (!isReady) {
@@ -52,12 +58,29 @@ const Onboarding = () => {
   const userId = user.id;
 
   return (
-    <div className="min-h-screen bg-background px-4 py-10">
-      <div className="mx-auto max-w-[720px]">
-        <div className="mb-2 flex items-center justify-between text-sm text-muted-foreground">
-          <span>Step {currentStep} of {TOTAL_STEPS}</span>
+    <div className="hiro-onboarding-bg">
+      <div className="hiro-onboarding-container">
+        {/* Stepper */}
+        <div className="mb-8">
+          <div className="hiro-stepper">
+            {STEPS.map((step, idx) => {
+              const isComplete = step.n < currentStep;
+              const isActive = step.n === currentStep;
+              const cls = isComplete ? "hiro-step-circle--complete" : isActive ? "hiro-step-circle--active" : "hiro-step-circle--upcoming";
+              return (
+                <Fragment key={step.n}>
+                  <div className="hiro-stepper-item">
+                    <div className={`hiro-step-circle ${cls}`}>
+                      {isComplete ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : step.n}
+                    </div>
+                    <span className="hiro-step-label">{step.label}</span>
+                  </div>
+                  {idx < STEPS.length - 1 && <div className="hiro-step-line" />}
+                </Fragment>
+              );
+            })}
+          </div>
         </div>
-        <Progress value={progressValue} className="mb-8 h-2" />
 
         {currentStep === 1 && (
           <StepWorkExperience
