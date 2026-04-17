@@ -2212,3 +2212,27 @@ select:focus-visible,
   .hiro-auth-right { padding: 32px 20px; }
   .hiro-auth-heading { font-size: 24px; }
 }
+
+/* ============================================
+   JOB TRACKER table — fixed layout, ellipsis cells
+   ============================================ */
+.hiro-table-row > td {
+  padding: 0 14px !important;
+  height: 48px;
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hiro-table-row > td > * {
+  max-width: 100%;
+}
+.hiro-table-row .truncate,
+.hiro-table-row span.truncate {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}

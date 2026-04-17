@@ -132,20 +132,20 @@ const isValidUrl = (str: string): boolean => {
 type SortKey = "company_name" | "job_title" | "function" | "location" | "duration" | "status" | "match_score" | "priority" | "created_at" | "applied_date" | "application_deadline";
 type SortDir = "asc" | "desc";
 
-const COLUMNS: { label: string; key: SortKey | null; minWidth: string }[] = [
-  { label: "", key: null, minWidth: "40px" },
-  { label: "Company", key: "company_name", minWidth: "130px" },
-  { label: "Job Title", key: "job_title", minWidth: "150px" },
-  { label: "Function", key: "function", minWidth: "90px" },
-  { label: "Location", key: "location", minWidth: "110px" },
-  { label: "Duration", key: "duration", minWidth: "80px" },
-  { label: "Deadline", key: "application_deadline", minWidth: "100px" },
-  { label: "Status", key: "status", minWidth: "95px" },
-  { label: "Match", key: "match_score", minWidth: "65px" },
-  { label: "Kit", key: null, minWidth: "45px" },
-  { label: "Outreach", key: null, minWidth: "75px" },
-  { label: "Priority", key: "priority", minWidth: "75px" },
-  { label: "Applied", key: "applied_date", minWidth: "85px" },
+const COLUMNS: { label: string; key: SortKey | null; width: string }[] = [
+  { label: "", key: null, width: "36px" },
+  { label: "Company", key: "company_name", width: "15%" },
+  { label: "Job Title", key: "job_title", width: "18%" },
+  { label: "Function", key: "function", width: "90px" },
+  { label: "Location", key: "location", width: "12%" },
+  { label: "Duration", key: "duration", width: "80px" },
+  { label: "Deadline", key: "application_deadline", width: "100px" },
+  { label: "Status", key: "status", width: "100px" },
+  { label: "Match", key: "match_score", width: "64px" },
+  { label: "Kit", key: null, width: "44px" },
+  { label: "Outreach", key: null, width: "80px" },
+  { label: "Priority", key: "priority", width: "80px" },
+  { label: "Applied", key: "applied_date", width: "90px" },
 ];
 
 const FUNCTION_VALUES = ["Strategy", "Finance", "Marketing", "Product", "Operations", "HR", "Consulting", "Other"];
@@ -527,12 +527,12 @@ const JobTracker = () => {
     background: "var(--color-bg-white)",
     borderRadius: "var(--radius-lg)",
     border: "1px solid var(--color-border)",
-    padding: "16px 20px",
+    padding: "12px 16px",
     transition: "var(--transition)",
   };
   const metricNumStyle: React.CSSProperties = {
     fontFamily: "var(--font-data)",
-    fontSize: "26px",
+    fontSize: "22px",
     fontWeight: 700,
     color: "var(--color-text-primary)",
     letterSpacing: "-0.02em",
@@ -540,11 +540,11 @@ const JobTracker = () => {
   };
   const metricLabelStyle: React.CSSProperties = {
     fontFamily: "var(--font-body)",
-    fontSize: "11px",
+    fontSize: "10px",
     color: "var(--color-text-muted)",
     textTransform: "uppercase",
     letterSpacing: "0.08em",
-    marginTop: "8px",
+    marginTop: "6px",
   };
   const metricCardHover = (e: React.MouseEvent<HTMLDivElement>, hover: boolean) => {
     e.currentTarget.style.boxShadow = hover ? "var(--shadow-md)" : "none";
@@ -557,7 +557,7 @@ const JobTracker = () => {
       <div
         style={{
           background: "var(--color-bg-white)",
-          padding: "20px 32px",
+          padding: "20px 28px",
           borderBottom: "1px solid var(--color-border)",
           display: "flex",
           alignItems: "flex-start",
@@ -570,7 +570,7 @@ const JobTracker = () => {
           <h1
             style={{
               fontFamily: "var(--font-heading)",
-              fontSize: "26px",
+              fontSize: "22px",
               fontWeight: 800,
               color: "var(--color-text-primary)",
               letterSpacing: "-0.02em",
@@ -658,7 +658,7 @@ const JobTracker = () => {
       </div>
 
       {/* Metrics bar */}
-      <div style={{ padding: "20px 32px" }}>
+      <div style={{ padding: "16px 28px" }}>
         {stats.total === 0 ? (
           <div
             style={{
@@ -727,7 +727,7 @@ const JobTracker = () => {
 
       {/* Urgent deadline alert */}
       {!deadlineAlertDismissed && urgentDeadlineJobs.length > 0 && (
-        <div style={{ padding: "0 32px 16px" }}>
+        <div style={{ padding: "0 28px 16px" }}>
           <div
             className="flex items-start justify-between gap-3 rounded-lg border p-3"
             style={{ backgroundColor: "#FFF5F5", borderColor: "#950606" }}
@@ -770,7 +770,7 @@ const JobTracker = () => {
 
       {/* Filters */}
       {showTable && (
-        <div style={{ padding: "0 32px 12px" }}>
+        <div style={{ padding: "0 28px 12px" }}>
           <div className="flex items-center gap-3 flex-wrap">
             <div className="ml-auto flex items-center gap-2">
               <Select value={filterStatus} onValueChange={setFilterStatus}>
@@ -829,7 +829,7 @@ const JobTracker = () => {
       )}
 
       {/* Table card wrapper */}
-      <div style={{ padding: "0 32px 32px" }}>
+      <div style={{ padding: "0 28px 24px" }}>
         <div
           style={{
             background: "var(--color-bg-white)",
@@ -867,24 +867,30 @@ const JobTracker = () => {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm" style={{ tableLayout: 'auto' }}>
+            <div style={{ width: "100%", overflowX: "hidden" }}>
+              <table className="text-sm" style={{ tableLayout: "fixed", width: "100%" }}>
+                <colgroup>
+                  {COLUMNS.map((col) => (
+                    <col key={`col-${col.label || "_open"}`} style={{ width: col.width }} />
+                  ))}
+                </colgroup>
                 <thead>
                    <tr style={{ background: "#F9FAFB", borderBottom: "2px solid var(--color-border)" }}>
                      {COLUMNS.map((col) => (
                        <th
                          key={col.label || "_open"}
                          style={{
-                           minWidth: col.minWidth,
                            fontFamily: "var(--font-body)",
                            fontSize: "11px",
                            fontWeight: 600,
                            color: "var(--color-text-muted)",
                            textTransform: "uppercase",
                            letterSpacing: "0.08em",
-                           padding: "12px 16px",
+                           padding: "10px 14px",
                            textAlign: "left",
                            whiteSpace: "nowrap",
+                           overflow: "hidden",
+                           textOverflow: "ellipsis",
                          }}
                          className={cn(
                            col.key && "cursor-pointer select-none hover:text-foreground transition-colors group/th"
@@ -1064,15 +1070,16 @@ const JobTracker = () => {
                           );
                         })()}
                       </td>
-                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      <td onClick={(e) => e.stopPropagation()}>
                         <Select value={job.status} onValueChange={(v) => handleStatusChange(job.id, v)}>
                           <SelectTrigger
-                            className="h-7 w-auto border-0 gap-1 px-2.5 rounded-full"
+                            className="h-6 w-auto border-0 gap-1 rounded-full"
                             style={{
                               ...getStatusPillStyle(job.status),
                               fontFamily: "var(--font-body)",
-                              fontSize: "12px",
+                              fontSize: "11px",
                               fontWeight: 600,
+                              padding: "3px 8px",
                             }}
                           >
                             <SelectValue />
@@ -1082,7 +1089,7 @@ const JobTracker = () => {
                           </SelectContent>
                         </Select>
                       </td>
-                      <td className="px-4 py-3">
+                      <td>
                         {job.match_score !== null ? (
                           <span
                             style={{
@@ -1090,11 +1097,11 @@ const JobTracker = () => {
                               display: "inline-flex",
                               alignItems: "center",
                               justifyContent: "center",
-                              width: "36px",
-                              height: "36px",
+                              width: "30px",
+                              height: "30px",
                               borderRadius: "50%",
                               fontFamily: "var(--font-data)",
-                              fontSize: "11px",
+                              fontSize: "10px",
                               fontWeight: 700,
                             }}
                           >

@@ -59,7 +59,7 @@ const DashboardLayout = () => {
           borderBottom: "1px solid var(--color-border-dark)",
         }}
       >
-        <div className="flex flex-col">
+        <div className="flex flex-col" style={{ marginLeft: 0 }}>
           <div className="flex items-start">
             <span
               style={{
