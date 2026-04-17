@@ -24,7 +24,7 @@ type Job = {
   id: string; url: string | null; company_name: string | null; job_title: string | null;
   function: string | null; location: string | null; work_mode: string | null;
   duration: string | null; status: string; match_score: number | null; created_at: string;
-  priority: string; applied_date: string | null;
+  priority: string; applied_date: string | null; application_deadline: string | null;
 };
 
 type CvOutput = {
