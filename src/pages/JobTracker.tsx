@@ -145,6 +145,7 @@ const JobTracker = () => {
   const [generatingKit, setGeneratingKit] = useState<string | null>(null);
   const [kitModalJobId, setKitModalJobId] = useState<string | null>(null);
   const [outreachMap, setOutreachMap] = useState<Record<string, { count: number; maxStatus: string }>>({});
+  const [contactsReached, setContactsReached] = useState(0);
   const [deadlineAlertDismissed, setDeadlineAlertDismissed] = useState(false);
 
   // Compute urgent deadline jobs (within 7 days, status Saved or Applied)
@@ -155,6 +156,35 @@ const JobTracker = () => {
       return state.kind === "red" || state.kind === "orange";
     });
   }, [jobs]);
+
+  // Compute summary stats
+  const stats = useMemo(() => {
+    const total = jobs.length;
+    const appliedStatuses = new Set(["Applied", "Screening", "Interview", "Offer"]);
+    const inProgressStatuses = new Set(["Screening", "Interview"]);
+    const applied = jobs.filter(j => appliedStatuses.has(j.status)).length;
+    const inProgress = jobs.filter(j => inProgressStatuses.has(j.status)).length;
+    const interviews = jobs.filter(j => j.status === "Interview").length;
+    const scored = jobs.filter(j => j.match_score !== null);
+    const avgScore = scored.length
+      ? Math.round(scored.reduce((s, j) => s + (j.match_score || 0), 0) / scored.length)
+      : null;
+
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const appliedThisWeek = jobs.filter(j =>
+      appliedStatuses.has(j.status) && new Date(j.created_at) >= sevenDaysAgo
+    ).length;
+
+    return { total, applied, inProgress, interviews, avgScore, appliedThisWeek };
+  }, [jobs]);
+
+  const getAvgScoreColor = (score: number | null) => {
+    if (score === null) return "text-foreground";
+    if (score > 70) return "text-green-600";
+    if (score >= 40) return "text-amber-600";
+    return "text-red-600";
+  };
 
   // Sort & filter state
   const [sortKey, setSortKey] = useState<SortKey>("created_at");
@@ -239,14 +269,17 @@ const JobTracker = () => {
       if (contactData) {
         const STATUS_ORDER = ["Not contacted", "Connection sent", "Connected", "Replied", "Meeting booked"];
         const oMap: Record<string, { count: number; maxStatus: string }> = {};
+        let reached = 0;
         for (const row of contactData) {
           if (!oMap[row.job_id]) oMap[row.job_id] = { count: 0, maxStatus: "Not contacted" };
           oMap[row.job_id].count++;
+          if (row.outreach_status && row.outreach_status !== "Not contacted") reached++;
           const currentIdx = STATUS_ORDER.indexOf(oMap[row.job_id].maxStatus);
           const newIdx = STATUS_ORDER.indexOf(row.outreach_status);
           if (newIdx > currentIdx) oMap[row.job_id].maxStatus = row.outreach_status;
         }
         setOutreachMap(oMap);
+        setContactsReached(reached);
       }
     };
     init();
@@ -443,6 +476,44 @@ const JobTracker = () => {
         <h1 className="text-[28px] font-bold text-primary">Job Tracker</h1>
         <p className="text-muted-foreground mt-1">Paste a job URL below to automatically fill in all details.</p>
       </div>
+
+      {/* Summary stats */}
+      {stats.total === 0 ? (
+        <div className="rounded-lg bg-white shadow-sm p-5 text-sm text-muted-foreground">
+          <span className="font-semibold text-foreground" style={{ fontFamily: "Sora, sans-serif" }}>Welcome to Hiro.</span>{" "}
+          Paste your first job URL above to get started.
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+          <div className="rounded-lg bg-white shadow-sm p-4">
+            <div className="text-[24px] font-bold leading-none text-foreground" style={{ fontFamily: "Sora, sans-serif" }}>{stats.total}</div>
+            <div className="text-[12px] text-muted-foreground mt-1.5">Total Tracked</div>
+          </div>
+          <div className="rounded-lg bg-white shadow-sm p-4 border-l-4" style={{ borderLeftColor: "#950606" }}>
+            <div className="text-[24px] font-bold leading-none text-foreground" style={{ fontFamily: "Sora, sans-serif" }}>{stats.applied}</div>
+            <div className="text-[12px] text-muted-foreground mt-1.5">Applied</div>
+            <div className="text-[11px] text-muted-foreground mt-0.5">({stats.appliedThisWeek} this week)</div>
+          </div>
+          <div className="rounded-lg bg-white shadow-sm p-4">
+            <div className="text-[24px] font-bold leading-none text-foreground" style={{ fontFamily: "Sora, sans-serif" }}>{stats.inProgress}</div>
+            <div className="text-[12px] text-muted-foreground mt-1.5">In Progress</div>
+          </div>
+          <div className="rounded-lg bg-white shadow-sm p-4 border-l-4" style={{ borderLeftColor: "#950606" }}>
+            <div className="text-[24px] font-bold leading-none text-foreground" style={{ fontFamily: "Sora, sans-serif" }}>{stats.interviews}</div>
+            <div className="text-[12px] text-muted-foreground mt-1.5">Interviews</div>
+          </div>
+          <div className="rounded-lg bg-white shadow-sm p-4">
+            <div className={cn("text-[24px] font-bold leading-none", getAvgScoreColor(stats.avgScore))} style={{ fontFamily: "Sora, sans-serif" }}>
+              {stats.avgScore !== null ? `${stats.avgScore}%` : "–"}
+            </div>
+            <div className="text-[12px] text-muted-foreground mt-1.5">Avg Match Score</div>
+          </div>
+          <div className="rounded-lg bg-white shadow-sm p-4">
+            <div className="text-[24px] font-bold leading-none text-foreground" style={{ fontFamily: "Sora, sans-serif" }}>{contactsReached}</div>
+            <div className="text-[12px] text-muted-foreground mt-1.5">Contacts Reached</div>
+          </div>
+        </div>
+      )}
 
       {/* Urgent deadline alert */}
       {!deadlineAlertDismissed && urgentDeadlineJobs.length > 0 && (
