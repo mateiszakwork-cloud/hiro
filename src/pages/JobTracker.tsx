@@ -442,7 +442,47 @@ const JobTracker = () => {
       <div>
         <h1 className="text-[28px] font-bold text-primary">Job Tracker</h1>
         <p className="text-muted-foreground mt-1">Paste a job URL below to automatically fill in all details.</p>
-      </div>
+
+      {/* Urgent deadline alert */}
+      {!deadlineAlertDismissed && urgentDeadlineJobs.length > 0 && (
+        <div
+          className="flex items-start justify-between gap-3 rounded-lg border p-3"
+          style={{ backgroundColor: '#FFF5F5', borderColor: '#950606' }}
+        >
+          <div className="flex items-start gap-2.5">
+            <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" style={{ color: '#950606' }} />
+            <div className="text-sm">
+              <p className="font-semibold" style={{ color: '#950606' }}>
+                You have {urgentDeadlineJobs.length} application deadline{urgentDeadlineJobs.length === 1 ? "" : "s"} in the next 7 days
+              </p>
+              <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                {urgentDeadlineJobs.map(j => {
+                  const s = computeDeadlineState(j.application_deadline, j.status);
+                  const days = s.kind === "red" || s.kind === "orange" ? s.days : 0;
+                  return (
+                    <button
+                      key={j.id}
+                      onClick={() => navigate(`/jobs/${j.id}`)}
+                      className="text-xs underline-offset-2 hover:underline text-foreground"
+                    >
+                      <span className="font-medium">{j.company_name || "–"}</span>
+                      <span className="text-muted-foreground"> · {j.job_title || "–"}</span>
+                      <span className="ml-1 font-semibold" style={{ color: '#950606' }}>({days}d)</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => setDeadlineAlertDismissed(true)}
+            className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
+            aria-label="Dismiss"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       <div>
         <div className="flex gap-3">
