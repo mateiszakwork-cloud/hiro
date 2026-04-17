@@ -653,7 +653,7 @@ const OutreachTab = ({
           onClick={() => setManualOpen(true)}
           className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1 transition-colors"
         >
-          <Plus className="h-3 w-3" /> Add contact manually
+          <Plus className="h-3 w-3" /> Add contact manually by LinkedIn URL
         </button>
       ) : (
         <div className="flex items-center gap-2">
