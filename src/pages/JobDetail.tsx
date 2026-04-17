@@ -826,34 +826,43 @@ const JobDetail = () => {
     (job.status === "Saved" || job.status === "Applied");
 
   return (
-    <div className="space-y-6">
+    <div className="-m-8">
       {/* Deadline banner */}
       {showDeadlineBanner && (
         <div
           className={cn(
-            "flex items-center gap-2.5 rounded-lg border p-3 text-sm",
+            "flex items-center gap-2.5 border-b p-3 text-sm",
             deadlineState.kind === "red" ? "text-white" : "text-orange-800 bg-orange-50 border-orange-300",
           )}
           style={deadlineState.kind === "red" ? { backgroundColor: "#950606", borderColor: "#950606" } : undefined}
         >
-          <AlertCircle className="h-4 w-4 shrink-0" />
+          <AlertCircle className="h-4 w-4 shrink-0 ml-8" />
           <p className="font-semibold">
             Deadline approaching: {(deadlineState as any).days} day{(deadlineState as any).days === 1 ? "" : "s"} left to apply
           </p>
         </div>
       )}
 
-      {/* Header */}
-      <div>
-        <button onClick={() => navigate("/dashboard")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors">
+      {/* Hero Banner */}
+      <div className="hiro-job-hero">
+        <button onClick={() => navigate("/dashboard")} className="hiro-job-back">
           <ArrowLeft className="h-4 w-4" /> Back to Job Tracker
         </button>
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-[28px] font-bold text-primary">{job.job_title || "Untitled Position"}</h1>
-            <p className="text-lg text-muted-foreground">{job.company_name || "Unknown Company"}</p>
+        <div className="flex items-start justify-between gap-6 flex-wrap">
+          <div className="min-w-0 flex-1">
+            <p className="hiro-job-company">{job.company_name || "Unknown Company"}</p>
+            <h1 className="hiro-job-title">{job.job_title || "Untitled Position"}</h1>
+            {/* Meta pills */}
+            <div className="flex flex-wrap gap-2 mt-4">
+              {job.location && (
+                <span className="hiro-job-meta-pill"><MapPin className="h-3 w-3" /> {job.location}</span>
+              )}
+              {job.work_mode && <span className="hiro-job-meta-pill">{job.work_mode}</span>}
+              {job.duration && <span className="hiro-job-meta-pill">{job.duration}</span>}
+              {job.function && <span className="hiro-job-meta-pill">{job.function}</span>}
+            </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 flex-wrap justify-end">
             {deadlineState.kind !== "none" && (
               <Popover>
                 <PopoverTrigger asChild>
@@ -873,10 +882,10 @@ const JobDetail = () => {
             )}
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className={cn("gap-1.5 text-sm", !job.applied_date && "text-muted-foreground")}>
+                <button className="hiro-job-action-btn">
                   <CalendarIcon className="h-3.5 w-3.5" />
                   {job.applied_date ? `Applied ${format(new Date(job.applied_date), "MMM d, yyyy")}` : "Set applied date"}
-                </Button>
+                </button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="end">
                 <Calendar
@@ -901,12 +910,12 @@ const JobDetail = () => {
 
       {/* Tabs */}
       <Tabs defaultValue={defaultTab}>
-        <TabsList className="w-full justify-start border-b rounded-none bg-transparent p-0 h-auto">
+        <TabsList className="hiro-tabs-bar h-auto justify-start rounded-none p-0">
           {["overview", "cv", "interview", "outreach", "notes"].map(tab => (
             <TabsTrigger
               key={tab}
               value={tab}
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 capitalize"
+              className="hiro-tab-trigger capitalize"
             >
               {tab}
             </TabsTrigger>
@@ -914,7 +923,7 @@ const JobDetail = () => {
         </TabsList>
 
         {/* Overview Tab */}
-        <TabsContent value="overview" className="mt-6">
+        <TabsContent value="overview" className="hiro-tab-content mt-0">
           <Card>
             <CardContent className="p-6">
               <div className="flex justify-end mb-4">
@@ -1197,7 +1206,7 @@ const JobDetail = () => {
         </TabsContent>
 
         {/* Outreach Tab */}
-        <TabsContent value="outreach" className="mt-6">
+        <TabsContent value="outreach" className="hiro-tab-content mt-0">
           {job && userId && (
             <OutreachTab
               jobId={job.id}
@@ -1212,7 +1221,7 @@ const JobDetail = () => {
         </TabsContent>
 
         {/* CV Tab — Application Kit */}
-        <TabsContent value="cv" className="mt-6 space-y-6">
+        <TabsContent value="cv" className="hiro-tab-content mt-0 space-y-6">
           {/* Generate / Regenerate button */}
           <div className="flex items-center justify-between">
             <div>
@@ -1705,7 +1714,7 @@ const JobDetail = () => {
         </TabsContent>
 
         {/* Interview Prep Tab */}
-        <TabsContent value="interview" className="mt-6 space-y-6">
+        <TabsContent value="interview" className="hiro-tab-content mt-0 space-y-6">
           {/* Interview banner */}
           {job && ["Interview", "Offer"].includes(job.status) && !interviewPrep && (
             <div className="flex items-center gap-3 p-4 rounded-xl border-2 border-[#950606] bg-[#950606]/5">
@@ -1863,24 +1872,22 @@ const JobDetail = () => {
         </TabsContent>
 
         {/* Notes Tab */}
-        <TabsContent value="notes" className="mt-6">
-          <Card>
-            <CardContent className="p-6 space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-foreground">Notes</h3>
-                <span className={`text-xs transition-opacity ${notesSaved ? "text-muted-foreground opacity-100" : "opacity-0"}`}>
-                  {notesSaved && notes ? "✓ Saved" : ""}
-                </span>
-              </div>
-              <Textarea
-                value={notes}
-                onChange={(e) => handleNotesChange(e.target.value)}
-                placeholder="Write any notes about this application..."
-                rows={12}
-                className="resize-none"
-              />
-            </CardContent>
-          </Card>
+        <TabsContent value="notes" className="hiro-tab-content mt-0">
+          <h2 className="hiro-section-heading mb-4">Notes</h2>
+          <textarea
+            value={notes}
+            onChange={(e) => handleNotesChange(e.target.value)}
+            placeholder="Write any notes about this application..."
+            className="hiro-notes-textarea"
+          />
+          <div className="flex items-center justify-end gap-1.5 mt-2 text-xs text-muted-foreground">
+            {notesSaved && notes && (
+              <>
+                <span className="hiro-saved-dot" />
+                <span>Saved</span>
+              </>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
     </div>

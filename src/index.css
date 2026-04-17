@@ -265,3 +265,274 @@
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 }
+
+/* ── Hiro Job Detail page ── */
+.hiro-job-hero {
+  background: var(--color-bg-dark);
+  padding: 32px;
+  color: #fff;
+}
+.hiro-job-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-family: var(--font-body);
+  font-size: 13px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.hiro-job-back:hover {
+  color: rgba(255, 255, 255, 0.9);
+}
+.hiro-job-company {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 20px;
+}
+.hiro-job-title {
+  font-family: var(--font-heading);
+  font-size: 32px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.02em;
+  margin-top: 6px;
+  line-height: 1.2;
+}
+.hiro-job-action-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 13px;
+  border-radius: var(--radius-md);
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.hiro-job-action-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+.hiro-job-meta-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-full);
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  padding: 5px 12px;
+}
+
+/* Tab nav */
+.hiro-tabs-bar {
+  background: #fff;
+  border-bottom: 1px solid var(--color-border);
+  padding: 0 32px;
+  display: flex;
+  gap: 24px;
+}
+.hiro-tab-trigger {
+  display: inline-flex !important;
+  align-items: center;
+  height: 52px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  padding: 0 4px !important;
+  border-bottom: 2px solid transparent !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  cursor: pointer;
+  transition: var(--transition);
+  box-shadow: none !important;
+}
+.hiro-tab-trigger:hover {
+  color: var(--color-text-primary);
+}
+.hiro-tab-trigger[data-state="active"] {
+  color: var(--color-primary) !important;
+  border-bottom: 2px solid var(--color-primary) !important;
+  font-weight: 600 !important;
+  background: transparent !important;
+}
+
+.hiro-tab-content {
+  background: var(--color-bg-page);
+  padding: 32px;
+}
+
+/* Info card */
+.hiro-info-card {
+  background: #fff;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+}
+.hiro-card-label {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+  margin-bottom: 8px;
+}
+.hiro-card-value {
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+.hiro-skill-tag {
+  display: inline-flex;
+  background: #F3F4F6;
+  border-radius: var(--radius-full);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+  padding: 4px 10px;
+}
+.hiro-skill-tag-nice {
+  display: inline-flex;
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  border-radius: var(--radius-full);
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: #92400E;
+  padding: 4px 10px;
+}
+
+/* Match analysis dark card */
+.hiro-match-card {
+  background: var(--color-bg-dark);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  color: #fff;
+  border: none;
+}
+.hiro-match-card h3,
+.hiro-match-card h4 {
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 20px;
+}
+.hiro-match-score {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 3px solid var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-data);
+  font-size: 26px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+.hiro-match-bar-track {
+  background: rgba(255, 255, 255, 0.08);
+  height: 5px;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.hiro-match-bar-fill {
+  background: var(--color-primary);
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+.hiro-match-summary {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Pitch card */
+.hiro-pitch-card {
+  background: #fff;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-primary);
+  padding: 20px;
+}
+.hiro-pitch-number {
+  font-family: var(--font-data);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-primary);
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+/* Section heading editorial */
+.hiro-section-heading {
+  font-family: var(--font-heading);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  letter-spacing: -0.01em;
+}
+
+/* Gap card */
+.hiro-gap-card {
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+}
+
+/* Question accordion category badges */
+.hiro-cat-behavioral { background: #EFF6FF; color: #1D4ED8; }
+.hiro-cat-technical { background: #F5F3FF; color: #5B21B6; }
+.hiro-cat-motivational { background: #F0FDF4; color: #166534; }
+.hiro-cat-situational { background: #FFF7ED; color: #9A3412; }
+
+/* Notes textarea */
+.hiro-notes-textarea {
+  width: 100%;
+  min-height: 320px;
+  background: #fff;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.8;
+  color: var(--color-text-primary);
+  padding: 20px;
+  resize: vertical;
+  outline: none;
+  transition: var(--transition);
+}
+.hiro-notes-textarea:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+.hiro-saved-dot {
+  width: 6px;
+  height: 6px;
+  background: #22C55E;
+  border-radius: 50%;
+  display: inline-block;
+}
