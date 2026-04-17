@@ -972,9 +972,22 @@ const JobTracker = () => {
                           </Tooltip>
                         </TooltipProvider>
                       </td>
-                      <td className="px-3 py-3">
+                      <td className="px-4 py-3">
                         {job.function ? (
-                          <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium truncate max-w-full ${FUNCTION_COLORS[job.function] || FUNCTION_COLORS.Other}`}>{job.function}</span>
+                          <span
+                            style={{
+                              display: "inline-block",
+                              borderRadius: "var(--radius-full)",
+                              padding: "4px 10px",
+                              fontFamily: "var(--font-body)",
+                              fontSize: "11px",
+                              fontWeight: 600,
+                              background: (FUNCTION_PILL[job.function] || FUNCTION_PILL.Other).bg,
+                              color: (FUNCTION_PILL[job.function] || FUNCTION_PILL.Other).color,
+                            }}
+                          >
+                            {job.function}
+                          </span>
                         ) : <span className="text-muted-foreground">–</span>}
                       </td>
                       <td className="px-3 py-3">
