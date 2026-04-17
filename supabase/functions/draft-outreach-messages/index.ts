@@ -31,6 +31,7 @@ serve(async (req) => {
     });
     const { data: { user }, error: authErr } = await userClient.auth.getUser();
     if (authErr || !user) return json({ success: false, error: "Authentication failed." });
+    console.log('draft-outreach-messages called');
 
     const supabase = createClient(supabaseUrl, serviceKey);
     const body = await req.json();
