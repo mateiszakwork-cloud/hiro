@@ -136,39 +136,50 @@ const Settings = () => {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-muted rounded w-48" />
-          <div className="h-64 bg-muted rounded" />
+      <div className="-m-8">
+        <div className="hiro-page-header">
+          <h1 className="hiro-page-title">Settings</h1>
+          <p className="hiro-page-subtext">Manage your LinkedIn connection and account preferences</p>
+        </div>
+        <div className="hiro-page-content">
+          <div className="hiro-page-content-inner animate-pulse space-y-4">
+            <div className="h-64 bg-muted rounded-lg" />
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground" style={{ fontFamily: "Sora, sans-serif" }}>Settings</h1>
+    <div className="-m-8">
+      {/* Page Header */}
+      <div className="hiro-page-header">
+        <h1 className="hiro-page-title">Settings</h1>
+        <p className="hiro-page-subtext">Manage your LinkedIn connection and account preferences</p>
       </div>
 
-      <Card className="border-0 shadow-md">
-        <CardContent className="p-6 space-y-6">
-          {/* Header + status */}
-          <div className="flex items-start justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-foreground" style={{ fontFamily: "Sora, sans-serif" }}>
-                Connect your LinkedIn
-              </h2>
-              <p className="text-sm text-muted-foreground mt-1 max-w-md">
-                Hiro uses your LinkedIn session to search for contacts at target companies, see your connection degrees, and identify alumni from your own schools.
-              </p>
+      <div className="hiro-page-content">
+        <div className="hiro-page-content-inner">
+          <div className="hiro-section-card">
+            <div className="hiro-section-card-header">
+              <div className="hiro-section-card-title-wrap">
+                <span className="hiro-section-accent-bar" />
+                <h2 className="hiro-section-card-title">LinkedIn Connection</h2>
+              </div>
             </div>
-            <div className="flex flex-col items-end gap-1 shrink-0 mt-1">
-              <div className="flex items-center gap-2">
+
+            <div className="p-6 space-y-6">
+              {/* Status row */}
+              <div className="hiro-li-status-row">
                 {isFullyConnected ? (
                   <>
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
-                    <span className="text-sm font-medium text-green-700">LinkedIn connected</span>
+                    <span className="hiro-li-dot-connected" />
+                    <span className="text-sm font-semibold" style={{ color: "#15803D" }}>LinkedIn connected</span>
+                    {updatedAt && (
+                      <span className="text-xs text-muted-foreground ml-auto">
+                        Last updated: {formatUpdatedAt(updatedAt)}
+                      </span>
+                    )}
                   </>
                 ) : isPartial ? (
                   <>
@@ -177,118 +188,114 @@ const Settings = () => {
                   </>
                 ) : (
                   <>
-                    <Circle className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm text-muted-foreground">Not connected</span>
+                    <span className="hiro-li-dot-disconnected" />
+                    <span className="text-sm font-medium text-muted-foreground">Not connected</span>
                   </>
                 )}
               </div>
-              {isFullyConnected && updatedAt && (
-                <span className="text-[11px] text-muted-foreground">
-                  Last updated: {formatUpdatedAt(updatedAt)}
-                </span>
-              )}
-            </div>
-          </div>
 
-          {isPartial && missingField && (
-            <div className="flex gap-3 items-start rounded-lg p-3" style={{ backgroundColor: "#FFFBEB" }}>
-              <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" style={{ color: "#D97706" }} />
-              <p className="text-sm" style={{ color: "#92400E" }}>
-                Please also add your {missingField} to enable LinkedIn search.
+              <p className="text-sm text-muted-foreground -mt-2">
+                Hiro uses your LinkedIn session to search for contacts at target companies, see your connection degrees, and identify alumni from your own schools.
               </p>
-            </div>
-          )}
 
-          {/* Instructions */}
-          <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-            <p className="text-sm font-medium text-foreground mb-3">How to find your LinkedIn session cookies:</p>
-            <ol className="text-sm text-muted-foreground space-y-1.5 list-decimal list-inside">
-              <li>Open <strong>linkedin.com</strong> in Chrome and make sure you are logged in</li>
-              <li>Right click anywhere on the page and click <strong>Inspect</strong> (or press F12)</li>
-              <li>In the DevTools panel that opens, click the <strong>Application</strong> tab at the top</li>
-              <li>In the left sidebar, click <strong>Cookies</strong>, then click <strong>https://www.linkedin.com</strong></li>
-              <li>Find the cookie named <strong>li_at</strong> in the list. Click on it and copy the entire <strong>Value</strong> — it is a long string starting with AQED</li>
-              <li>In the same list, find the cookie named <strong>JSESSIONID</strong>. Copy its entire <strong>Value</strong> — it starts with <strong>ajax:</strong> followed by numbers and letters</li>
-            </ol>
-          </div>
-
-          {/* Tip */}
-          <div className="bg-muted/30 rounded-lg p-3">
-            <p className="text-sm text-muted-foreground">
-              💡 Tip: The cookie list can be long. Use Ctrl+F (or Cmd+F on Mac) to search for 'li_at' and 'JSESSIONID' to find them quickly.
-            </p>
-          </div>
-
-          {/* li_at Input */}
-          <div className="space-y-2">
-            <Label htmlFor="li-cookie" className="text-sm font-medium">
-              li_at Cookie
-            </Label>
-            <Textarea
-              id="li-cookie"
-              rows={4}
-              value={cookie}
-              onChange={(e) => setCookie(e.target.value)}
-              placeholder="Paste your li_at value here — starts with AQED..."
-              className="text-sm"
-            />
-          </div>
-
-          {/* JSESSIONID Input */}
-          <div className="space-y-2">
-            <Label htmlFor="jsessionid" className="text-sm font-medium">
-              JSESSIONID Cookie
-            </Label>
-            <Input
-              id="jsessionid"
-              type="text"
-              value={jsessionid}
-              onChange={(e) => setJsessionid(e.target.value)}
-              placeholder="Paste your JSESSIONID value here — starts with ajax:..."
-              className="text-sm"
-            />
-            <p className="text-xs text-muted-foreground">
-              This is required for LinkedIn to accept Hiro's requests. Without it, searches will fail.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3 flex-wrap">
-            <Button
-              onClick={handleSave}
-              disabled={saving || (!cookie.trim() && !jsessionid.trim())}
-              className="text-white"
-              style={{ backgroundColor: "#950606" }}
-            >
-              {saving ? "Saving…" : "Save"}
-            </Button>
-            <Button
-              onClick={handleTest}
-              disabled={testing || !isFullyConnected}
-              variant="outline"
-            >
-              {testing ? (
-                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Testing…</>
-              ) : (
-                "Test LinkedIn Connection"
+              {isPartial && missingField && (
+                <div className="hiro-warning-card">
+                  <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" style={{ color: "#D97706" }} />
+                  <p>Please also add your {missingField} to enable LinkedIn search.</p>
+                </div>
               )}
-            </Button>
-            {testResult && (
-              <span className={`flex items-center gap-1.5 text-sm font-medium ${testResult.ok ? "text-green-700" : "text-red-600"}`}>
-                {testResult.ok ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
-                {testResult.message}
-              </span>
-            )}
-          </div>
 
-          {/* Warning */}
-          <div className="flex gap-3 items-start rounded-lg p-4" style={{ backgroundColor: "#FFFBEB" }}>
-            <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" style={{ color: "#D97706" }} />
-            <p className="text-sm" style={{ color: "#92400E" }}>
-              For personal use only. Avoid running more than 50 searches per day to keep your LinkedIn account safe.
-            </p>
+              {/* Instructions */}
+              <div className="hiro-instructions-panel">
+                <p className="hiro-instructions-heading">
+                  How to find your LinkedIn session cookies
+                </p>
+                <ol className="hiro-instructions-list">
+                  <li><span className="hiro-step-num">1</span><span>Open <code>linkedin.com</code> in Chrome and make sure you are logged in</span></li>
+                  <li><span className="hiro-step-num">2</span><span>Right click anywhere on the page and click <strong>Inspect</strong> (or press F12)</span></li>
+                  <li><span className="hiro-step-num">3</span><span>In the DevTools panel that opens, click the <strong>Application</strong> tab at the top</span></li>
+                  <li><span className="hiro-step-num">4</span><span>In the left sidebar, click <strong>Cookies</strong>, then click <code>https://www.linkedin.com</code></span></li>
+                  <li><span className="hiro-step-num">5</span><span>Find the cookie named <code>li_at</code>. Click on it and copy the entire <strong>Value</strong> — a long string starting with <code>AQED</code></span></li>
+                  <li><span className="hiro-step-num">6</span><span>In the same list, find the cookie named <code>JSESSIONID</code>. Copy its entire <strong>Value</strong> — it starts with <code>ajax:</code></span></li>
+                </ol>
+                <div className="hiro-warning-card mt-1">
+                  <span>💡</span>
+                  <p>Tip: Use Ctrl+F (or Cmd+F on Mac) to search for 'li_at' and 'JSESSIONID' to find them quickly.</p>
+                </div>
+              </div>
+
+              {/* li_at Input */}
+              <div>
+                <label htmlFor="li-cookie" className="hiro-field-label" style={{ marginBottom: 8 }}>
+                  li_at Cookie
+                </label>
+                <textarea
+                  id="li-cookie"
+                  rows={4}
+                  value={cookie}
+                  onChange={(e) => setCookie(e.target.value)}
+                  placeholder="Paste your li_at value here — starts with AQED..."
+                  className="hiro-cookie-textarea"
+                />
+              </div>
+
+              {/* JSESSIONID Input */}
+              <div>
+                <label htmlFor="jsessionid" className="hiro-field-label" style={{ marginBottom: 8 }}>
+                  JSESSIONID Cookie
+                </label>
+                <textarea
+                  id="jsessionid"
+                  rows={2}
+                  value={jsessionid}
+                  onChange={(e) => setJsessionid(e.target.value)}
+                  placeholder="Paste your JSESSIONID value here — starts with ajax:..."
+                  className="hiro-cookie-textarea"
+                  style={{ minHeight: 56 }}
+                />
+                <p className="text-xs text-muted-foreground mt-1.5">
+                  This is required for LinkedIn to accept Hiro's requests. Without it, searches will fail.
+                </p>
+              </div>
+
+              {/* Save / Test row */}
+              <div className="flex items-center gap-2.5 flex-wrap pt-5 border-t" style={{ borderColor: "var(--color-border)" }}>
+                <button
+                  onClick={handleSave}
+                  disabled={saving || (!cookie.trim() && !jsessionid.trim())}
+                  className="hiro-next-btn"
+                  style={{ padding: "10px 28px" }}
+                >
+                  {saving ? "Saving…" : "Save"}
+                </button>
+                <button
+                  onClick={handleTest}
+                  disabled={testing || !isFullyConnected}
+                  className="hiro-test-btn"
+                >
+                  {testing ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" /> Testing…</>
+                  ) : (
+                    "Test LinkedIn Connection"
+                  )}
+                </button>
+                {testResult && (
+                  <span className={`flex items-center gap-1.5 text-sm font-medium ml-auto ${testResult.ok ? "" : ""}`} style={{ color: testResult.ok ? "#15803D" : "#991B1B" }}>
+                    {testResult.ok ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                    {testResult.message}
+                  </span>
+                )}
+              </div>
+
+              {/* Warning */}
+              <div className="hiro-warning-card">
+                <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" style={{ color: "#D97706" }} />
+                <p>For personal use only. Avoid running more than 50 searches per day to keep your LinkedIn account safe.</p>
+              </div>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 };
