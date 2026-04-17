@@ -818,3 +818,256 @@
 .hiro-build-manual-link:hover {
   color: var(--color-primary);
 }
+
+/* ── Hiro page header (Profile/Settings) ── */
+.hiro-page-header {
+  background: #fff;
+  padding: 28px 32px;
+  border-bottom: 1px solid var(--color-border);
+}
+.hiro-page-title {
+  font-family: var(--font-heading);
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--color-text-primary);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+.hiro-page-subtext {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+}
+.hiro-email-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #F3F4F6;
+  border-radius: var(--radius-full);
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  padding: 4px 12px;
+  margin-top: 12px;
+}
+.hiro-email-dot {
+  width: 6px;
+  height: 6px;
+  background: #22C55E;
+  border-radius: 50%;
+}
+
+.hiro-page-content {
+  background: var(--color-bg-page);
+  padding: 32px;
+  min-height: calc(100vh - 120px);
+}
+.hiro-page-content-inner {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* ── Section card (Profile/Settings) ── */
+.hiro-section-card {
+  background: #fff;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-sm);
+}
+.hiro-section-card-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.hiro-section-card-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.hiro-section-accent-bar {
+  width: 3px;
+  height: 18px;
+  background: var(--color-primary);
+  border-radius: 2px;
+}
+.hiro-section-card-title {
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+.hiro-edit-btn {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  background: #fff;
+  border-radius: var(--radius-md);
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.hiro-edit-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+/* ── CV import card on Profile ── */
+.hiro-cv-card {
+  background: #fff;
+  border-radius: var(--radius-lg);
+  border: 2px dashed var(--color-border);
+  padding: 28px;
+  margin-bottom: 20px;
+  transition: var(--transition);
+}
+.hiro-cv-card:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+/* ── Settings: LinkedIn instructions ── */
+.hiro-instructions-panel {
+  background: #F9FAFB;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  padding: 20px;
+}
+.hiro-instructions-heading {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.hiro-instructions-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.hiro-instructions-list li {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+.hiro-step-num {
+  width: 22px;
+  height: 22px;
+  background: var(--color-primary);
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.hiro-instructions-list code {
+  background: #F3F4F6;
+  border-radius: 4px;
+  font-family: ui-monospace, Menlo, Monaco, monospace;
+  font-size: 13px;
+  color: var(--color-primary);
+  padding: 1px 6px;
+}
+.hiro-li-status-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 20px;
+}
+.hiro-li-dot-connected {
+  width: 10px;
+  height: 10px;
+  background: #22C55E;
+  border-radius: 50%;
+  animation: hiro-pulse 1.5s ease-in-out infinite;
+}
+.hiro-li-dot-disconnected {
+  width: 10px;
+  height: 10px;
+  background: #D1D5DB;
+  border-radius: 50%;
+}
+@keyframes hiro-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.9); }
+}
+.hiro-cookie-textarea {
+  width: 100%;
+  min-height: 80px;
+  font-family: ui-monospace, Menlo, Monaco, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  background: #F9FAFB;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  letter-spacing: 0.02em;
+  color: var(--color-text-primary);
+  resize: vertical;
+  outline: none;
+  transition: var(--transition);
+}
+.hiro-cookie-textarea:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+.hiro-warning-card {
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: #92400E;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  line-height: 1.5;
+}
+.hiro-test-btn {
+  background: transparent;
+  border: 1.5px solid var(--color-border);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-md);
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.hiro-test-btn:hover:not(:disabled) {
+  border-color: #22C55E;
+  color: #15803D;
+}
+.hiro-test-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
