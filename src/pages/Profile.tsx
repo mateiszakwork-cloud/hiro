@@ -340,35 +340,47 @@ const Profile = () => {
   };
 
   const sectionHeader = (title: string, section: string) => (
-    <CardHeader className="flex flex-row items-center justify-between pb-4">
-      <CardTitle className="text-lg text-primary">{title}</CardTitle>
+    <div className="hiro-section-card-header">
+      <div className="hiro-section-card-title-wrap">
+        <span className="hiro-section-accent-bar" />
+        <h2 className="hiro-section-card-title">{title}</h2>
+      </div>
       {editSection !== section && (
-        <Button variant="outline" size="sm" className="gap-1.5" onClick={() => startEdit(section)}><Pencil className="h-3.5 w-3.5" /> Edit</Button>
+        <button type="button" onClick={() => startEdit(section)} className="hiro-edit-btn">
+          <Pencil className="h-3.5 w-3.5" /> Edit
+        </button>
       )}
-    </CardHeader>
+    </div>
   );
 
   const editFooter = (onSave: () => void) => (
-    <div className="flex gap-3 justify-end pt-4 border-t mt-4">
-      <Button variant="outline" size="sm" onClick={cancel}>Cancel</Button>
-      <Button size="sm" onClick={onSave} disabled={saving}>{saving ? "Saving..." : "Save"}</Button>
+    <div className="flex gap-2.5 justify-end pt-4 border-t mt-5">
+      <button type="button" onClick={cancel} className="hiro-back-btn" style={{ padding: "10px 20px" }}>Cancel</button>
+      <button type="button" onClick={onSave} disabled={saving} className="hiro-next-btn" style={{ padding: "10px 24px" }}>
+        {saving ? "Saving..." : "Save"}
+      </button>
     </div>
   );
 
   return (
-    <div className="space-y-6">
-      <div>
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-[28px] font-bold text-primary">{fullName || "Profile"}</h1>
-            <p className="text-muted-foreground mt-0.5">{email}</p>
-          </div>
-        </div>
+    <div className="-m-8">
+      {/* Page Header */}
+      <div className="hiro-page-header">
+        <h1 className="hiro-page-title">{fullName || "Profile"}</h1>
+        <p className="hiro-page-subtext">Your professional profile and base CV — used to tailor every application.</p>
+        {email && (
+          <span className="hiro-email-chip">
+            <span className="hiro-email-dot" />
+            {email}
+          </span>
+        )}
       </div>
 
+      <div className="hiro-page-content">
+        <div className="hiro-page-content-inner">
+
       {/* ─── Unified CV Card ─── */}
-      <Card className="border-2 border-dashed" style={{ borderColor: '#950606', backgroundColor: '#FFF5F5' }}>
-        <CardContent className="p-6">
+      <div className="hiro-cv-card">
           <input ref={importCvInputRef} type="file" accept="application/pdf" onChange={handleImportCvUpload} className="hidden" />
           <input ref={cvInputRef} type="file" accept="application/pdf" onChange={handleCvReimport} className="hidden" />
 
