@@ -765,8 +765,29 @@ const JobDetail = () => {
 
   if (!job) return null;
 
+  const deadlineState = computeDeadlineState(job.application_deadline, job.status);
+  const showDeadlineBanner =
+    (deadlineState.kind === "red" || deadlineState.kind === "orange") &&
+    (job.status === "Saved" || job.status === "Applied");
+
   return (
     <div className="space-y-6">
+      {/* Deadline banner */}
+      {showDeadlineBanner && (
+        <div
+          className={cn(
+            "flex items-center gap-2.5 rounded-lg border p-3 text-sm",
+            deadlineState.kind === "red" ? "text-white" : "text-orange-800 bg-orange-50 border-orange-300",
+          )}
+          style={deadlineState.kind === "red" ? { backgroundColor: "#950606", borderColor: "#950606" } : undefined}
+        >
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <p className="font-semibold">
+            Deadline approaching: {(deadlineState as any).days} day{(deadlineState as any).days === 1 ? "" : "s"} left to apply
+          </p>
+        </div>
+      )}
+
       {/* Header */}
       <div>
         <button onClick={() => navigate("/dashboard")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors">
@@ -778,6 +799,23 @@ const JobDetail = () => {
             <p className="text-lg text-muted-foreground">{job.company_name || "Unknown Company"}</p>
           </div>
           <div className="flex items-center gap-3">
+            {deadlineState.kind !== "none" && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button className="hover:opacity-80 transition-opacity">
+                    <DeadlineBadge state={deadlineState} size="md" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar
+                    mode="single"
+                    selected={job.application_deadline ? new Date(job.application_deadline) : undefined}
+                    onSelect={handleDeadlineInline}
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            )}
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className={cn("gap-1.5 text-sm", !job.applied_date && "text-muted-foreground")}>
