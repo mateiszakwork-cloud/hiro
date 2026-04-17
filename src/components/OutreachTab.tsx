@@ -321,31 +321,14 @@ const OutreachTab = ({
     }
   }, [rateLimitUntil]);
 
-  const upsertSearchResults = async (results: SearchResult[]) => {
-    if (!results.length) return;
-    const existingUrls = new Set(contacts.map((c) => c.linkedin_url).filter(Boolean));
-    const fresh = results.filter((r) => !existingUrls.has(r.profile_url));
-    if (!fresh.length) return;
-
-    const rows = fresh.map((r) => ({
-      job_id: jobId,
-      user_id: userId,
-      linkedin_url: r.profile_url,
-      name: r.full_name,
-      headline: r.headline,
-      current_title: r.current_title,
-      current_company: r.current_company || null,
-      profile_picture_url: r.profile_picture_url,
-      is_alumni: r.is_alumni,
-      shared_connections_count: r.shared_connections_count || null,
-      category: r.category,
-      priority_score: r.priority_score,
-      outreach_status: "Not contacted",
-    }));
-
-    const { data, error } = await supabase.from("contacts").insert(rows as any).select("*");
+  const refreshContactsFromDb = async () => {
+    const { data, error } = await supabase
+      .from("contacts")
+      .select("*")
+      .eq("job_id", jobId)
+      .order("priority_score", { ascending: false, nullsFirst: false });
     if (!error && data) {
-      setContacts((prev) => [...prev, ...(data as any)]);
+      setContacts(data as any);
     }
   };
 
