@@ -931,7 +931,17 @@ const JobTracker = () => {
                     </tr>
                   )}
                   {filteredAndSorted.map((job) => (
-                    <tr key={job.id} onClick={() => navigate(`/jobs/${job.id}`)} className="group border-b last:border-0 hover:bg-[#fff5f5] cursor-pointer transition-colors">
+                    <tr
+                      key={job.id}
+                      onClick={() => navigate(`/jobs/${job.id}`)}
+                      className="group hiro-table-row"
+                      style={{
+                        borderBottom: "1px solid #F3F4F6",
+                        cursor: "pointer",
+                        transition: "var(--transition)",
+                        minHeight: "56px",
+                      }}
+                    >
                       {/* Open Full Page arrow - first column */}
                       <td className="px-3 py-3" onClick={(e) => { e.stopPropagation(); navigate(`/jobs/${job.id}`); }}>
                         <TooltipProvider delayDuration={200}>
