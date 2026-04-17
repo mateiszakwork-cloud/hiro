@@ -479,8 +479,7 @@ const Profile = () => {
               )}
             </>
           )}
-        </CardContent>
-      </Card>
+      </div>
 
       <Card>
         {sectionHeader("Work Experience", "work")}
