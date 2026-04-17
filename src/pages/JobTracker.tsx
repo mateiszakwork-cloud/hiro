@@ -36,6 +36,17 @@ type CvOutput = {
   updated_at: string;
 };
 
+const FUNCTION_PILL: Record<string, { bg: string; color: string }> = {
+  Strategy:   { bg: "#EFF6FF", color: "#1D4ED8" },
+  Finance:    { bg: "#F0FDF4", color: "#166534" },
+  Marketing:  { bg: "#FDF2F8", color: "#9D174D" },
+  Product:    { bg: "#F5F3FF", color: "#5B21B6" },
+  Operations: { bg: "#FFF7ED", color: "#9A3412" },
+  HR:         { bg: "#F0FDFA", color: "#0F766E" },
+  Consulting: { bg: "#EEF2FF", color: "#3730A3" },
+  Other:      { bg: "#F3F4F6", color: "#6B7280" },
+};
+
 const FUNCTION_COLORS: Record<string, string> = {
   Strategy: "bg-primary text-primary-foreground",
   Finance: "bg-[#16A34A]/15 text-[#16A34A]",
@@ -53,6 +64,15 @@ const WORK_MODE_COLORS: Record<string, string> = {
   Remote: "bg-green-100 text-green-700",
 };
 
+const STATUS_PILL: Record<string, { bg: string; color: string }> = {
+  Saved:     { bg: "#F3F4F6", color: "#6B7280" },
+  Applied:   { bg: "#EFF6FF", color: "#1D4ED8" },
+  Screening: { bg: "#FFFBEB", color: "#92400E" },
+  Interview: { bg: "#FFF7ED", color: "#C2410C" },
+  Offer:     { bg: "#F0FDF4", color: "#15803D" },
+  Rejected:  { bg: "#FEF2F2", color: "#991B1B" },
+};
+
 const STATUS_OPTIONS = [
   { value: "Saved", color: "bg-gray-200 text-gray-700" },
   { value: "Applied", color: "bg-blue-100 text-blue-700" },
@@ -62,6 +82,11 @@ const STATUS_OPTIONS = [
   { value: "Rejected", color: "bg-red-100 text-red-700" },
 ];
 
+const getStatusPillStyle = (status: string): React.CSSProperties => {
+  const p = STATUS_PILL[status] || { bg: "#F3F4F6", color: "#6B7280" };
+  return { background: p.bg, color: p.color };
+};
+
 const getStatusColor = (status: string) =>
   STATUS_OPTIONS.find((s) => s.value === status)?.color || "bg-muted text-muted-foreground";
 
@@ -70,6 +95,13 @@ const getScoreColor = (score: number | null) => {
   if (score >= 70) return "text-green-600 border-green-300 bg-green-50";
   if (score >= 40) return "text-amber-600 border-amber-300 bg-amber-50";
   return "text-red-600 border-red-300 bg-red-50";
+};
+
+const getScoreBadgeStyle = (score: number | null): React.CSSProperties => {
+  if (score === null) return { background: "#F3F4F6", color: "#9CA3AF", border: "2px solid #E5E7EB" };
+  if (score >= 70) return { background: "#F0FDF4", color: "#15803D", border: "2px solid #BBF7D0" };
+  if (score >= 40) return { background: "#FFFBEB", color: "#92400E", border: "2px solid #FDE68A" };
+  return { background: "#FEF2F2", color: "#991B1B", border: "2px solid #FECACA" };
 };
 
 const PRIORITY_OPTIONS = [
