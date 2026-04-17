@@ -658,6 +658,80 @@ serve(async (req) => {
 
     console.log(`Returning ${topContacts.length} categorized contacts`);
 
+    // Step 6.5: Persist contacts to database (upsert by linkedin_url + job_id)
+    if (job_id && topContacts.length > 0) {
+      try {
+        const { data: existing } = await supabase
+          .from("contacts")
+          .select("id, linkedin_url")
+          .eq("job_id", job_id)
+          .eq("user_id", userId);
+
+        const existingByUrl = new Map<string, string>();
+        for (const row of existing ?? []) {
+          if (row.linkedin_url) existingByUrl.set(row.linkedin_url, row.id);
+        }
+
+        const toInsert: any[] = [];
+        const toUpdate: { id: string; patch: any }[] = [];
+
+        for (const c of topContacts) {
+          const row = {
+            job_id,
+            user_id: userId,
+            linkedin_url: c.profile_url,
+            name: c.full_name,
+            headline: c.headline,
+            current_title: c.current_title,
+            current_company: c.current_company,
+            connection_degree: c.connection_degree,
+            is_alumni: c.is_alumni,
+            category: c.category,
+            profile_picture_url: c.profile_picture_url,
+            shared_connections_count: c.shared_connections_count,
+            priority_score: c.priority_score,
+          };
+          const existingId = existingByUrl.get(c.profile_url);
+          if (existingId) {
+            // Update only enrichment fields, never overwrite outreach_status / drafts
+            toUpdate.push({
+              id: existingId,
+              patch: {
+                name: row.name,
+                headline: row.headline,
+                current_title: row.current_title,
+                current_company: row.current_company,
+                connection_degree: row.connection_degree,
+                is_alumni: row.is_alumni,
+                category: row.category,
+                profile_picture_url: row.profile_picture_url,
+                shared_connections_count: row.shared_connections_count,
+                priority_score: row.priority_score,
+              },
+            });
+          } else {
+            toInsert.push(row);
+          }
+        }
+
+        if (toInsert.length > 0) {
+          const { error: insErr } = await supabase.from("contacts").insert(toInsert);
+          if (insErr) console.error("Contact insert error:", insErr);
+          else console.log(`Inserted ${toInsert.length} new contacts`);
+        }
+        for (const u of toUpdate) {
+          const { error: updErr } = await supabase
+            .from("contacts")
+            .update(u.patch)
+            .eq("id", u.id);
+          if (updErr) console.error(`Contact update error (${u.id}):`, updErr);
+        }
+        if (toUpdate.length > 0) console.log(`Updated ${toUpdate.length} existing contacts`);
+      } catch (persistErr) {
+        console.error("Contact persistence failed:", persistErr);
+      }
+    }
+
     // Step 7: Return
     return json({
       success: true,
