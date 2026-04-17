@@ -442,6 +442,7 @@ const JobTracker = () => {
       <div>
         <h1 className="text-[28px] font-bold text-primary">Job Tracker</h1>
         <p className="text-muted-foreground mt-1">Paste a job URL below to automatically fill in all details.</p>
+      </div>
 
       {/* Urgent deadline alert */}
       {!deadlineAlertDismissed && urgentDeadlineJobs.length > 0 && (
