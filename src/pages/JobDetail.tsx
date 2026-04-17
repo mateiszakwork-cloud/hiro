@@ -80,10 +80,11 @@ const getStatusColor = (status: string) =>
   STATUS_OPTIONS.find((s) => s.value === status)?.color || "bg-muted text-muted-foreground";
 
 const getScoreColor = (score: number | null) => {
-  if (score === null) return "border-muted text-muted-foreground bg-muted/30";
-  if (score >= 70) return "text-green-600 border-green-300 bg-green-50";
-  if (score >= 40) return "text-amber-600 border-amber-300 bg-amber-50";
-  return "text-red-600 border-red-300 bg-red-50";
+  // Border always uses brand primary; text/bg shifts by score band
+  if (score === null) return "text-muted-foreground bg-muted/30 border-[var(--color-primary)]";
+  if (score >= 70) return "text-green-700 bg-green-50 border-[var(--color-primary)]";
+  if (score >= 40) return "text-amber-700 bg-amber-50 border-[var(--color-primary)]";
+  return "text-[var(--color-primary)] bg-[#FFF5F5] border-[var(--color-primary)]";
 };
 
 const FUNCTION_VALUES = ["Strategy", "Finance", "Marketing", "Product", "Operations", "HR", "Consulting", "Other"];
