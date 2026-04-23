@@ -91,6 +91,57 @@ const FUNCTION_VALUES = ["Strategy", "Finance", "Marketing", "Product", "Operati
 const WORK_MODE_VALUES = ["Onsite", "Hybrid", "Remote"];
 const PRIORITY_OPTIONS_EDIT = ["High", "Medium", "Low"];
 
+/* ── Outreach summary widget ── */
+const OutreachSummary = ({
+  summary,
+  onJump,
+}: {
+  summary: { total: number; not_contacted: number; messaged: number; replied: number; meeting_booked: number };
+  onJump: () => void;
+}) => {
+  if (summary.total === 0) {
+    return (
+      <div className="mt-3 inline-flex items-center gap-2 text-xs text-muted-foreground">
+        <span className="inline-block h-1.5 w-1.5 rounded-full bg-gray-300" />
+        No outreach yet ·{" "}
+        <button
+          onClick={onJump}
+          className="underline underline-offset-2 hover:text-[#950606] font-medium"
+        >
+          Add contacts
+        </button>
+      </div>
+    );
+  }
+  const parts: { label: string; count: number; dot: string }[] = [
+    { label: "messaged", count: summary.messaged, dot: "bg-blue-500" },
+    { label: "replied", count: summary.replied, dot: "bg-amber-500" },
+    { label: "meeting booked", count: summary.meeting_booked, dot: "bg-green-500" },
+    { label: "not contacted", count: summary.not_contacted, dot: "bg-gray-400" },
+  ].filter((p) => p.count > 0);
+
+  return (
+    <button
+      onClick={onJump}
+      className="mt-3 inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors group"
+      title="Jump to Outreach tab"
+    >
+      <span className="font-semibold text-foreground">
+        {summary.total} {summary.total === 1 ? "contact" : "contacts"}
+      </span>
+      <span className="text-gray-300">·</span>
+      <span className="inline-flex items-center gap-2.5 flex-wrap">
+        {parts.map((p) => (
+          <span key={p.label} className="inline-flex items-center gap-1">
+            <span className={`inline-block h-1.5 w-1.5 rounded-full ${p.dot}`} />
+            {p.count} {p.label}
+          </span>
+        ))}
+      </span>
+    </button>
+  );
+};
+
 /* ── Tag list renderer ── */
 const TagList = ({ tags, className = "", soft = false }: { tags: string[] | null; className?: string; soft?: boolean }) => {
   if (!tags?.length) return <span className="text-muted-foreground">–</span>;
