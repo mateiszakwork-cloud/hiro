@@ -570,6 +570,38 @@ const JobDetail = () => {
     }, 1000);
   }, [jobId]);
 
+  // Outreach summary — count contacts grouped by status for this job
+  const fetchOutreachSummary = useCallback(async () => {
+    if (!jobId) return;
+    const { data } = await supabase
+      .from("outreach_contacts" as any)
+      .select("status")
+      .eq("job_id", jobId);
+    const rows = (data || []) as { status: string }[];
+    const summary = { total: rows.length, not_contacted: 0, messaged: 0, replied: 0, meeting_booked: 0 };
+    for (const r of rows) {
+      if (r.status === "messaged") summary.messaged++;
+      else if (r.status === "replied") summary.replied++;
+      else if (r.status === "meeting_booked") summary.meeting_booked++;
+      else summary.not_contacted++;
+    }
+    setOutreachSummary(summary);
+  }, [jobId]);
+
+  useEffect(() => {
+    fetchOutreachSummary();
+    if (!jobId) return;
+    const channel = supabase
+      .channel(`outreach-summary-${jobId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "outreach_contacts", filter: `job_id=eq.${jobId}` },
+        () => fetchOutreachSummary()
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [jobId, fetchOutreachSummary]);
+
   const updateInterviewData = useCallback((patch: Partial<InterviewUserData>) => {
     setInterviewData(prev => {
       const next = { ...prev, ...patch };
