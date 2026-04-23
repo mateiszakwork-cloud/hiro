@@ -960,12 +960,13 @@ const JobTracker = () => {
                              </span>
                            )}
                            {col.resizable && (
-                             <span
+                              <div
                                role="separator"
                                aria-orientation="vertical"
                                aria-label={`Resize ${col.label} column`}
                                onMouseDown={(e) => handleResizeStart(e, key)}
                                onClick={(e) => e.stopPropagation()}
+                                onDoubleClick={(e) => e.stopPropagation()}
                                className="hiro-col-resize-handle"
                              />
                            )}
