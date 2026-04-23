@@ -599,6 +599,27 @@ const LinkedInSearchPanel = ({
           </Button>
         </div>
 
+        <div className="space-y-2">
+          <div className="space-y-1">
+            <label className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Recruiter URL preview</label>
+            <Input
+              value={recruiterUrl}
+              readOnly
+              onFocus={(e) => e.currentTarget.select()}
+              className="text-[11px] font-mono text-gray-600 bg-gray-50"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Talent Acquisition URL preview</label>
+            <Input
+              value={taUrl}
+              readOnly
+              onFocus={(e) => e.currentTarget.select()}
+              className="text-[11px] font-mono text-gray-600 bg-gray-50"
+            />
+          </div>
+        </div>
+
         <p className="text-xs text-muted-foreground italic border-t pt-3">
           Find someone relevant, copy their LinkedIn profile URL, and add them to your contact tracker below.
         </p>
