@@ -938,8 +938,6 @@ const JobTracker = () => {
                              padding: "10px 14px",
                              textAlign: "left",
                              whiteSpace: "nowrap",
-                             overflow: "hidden",
-                             textOverflow: "ellipsis",
                              position: "relative",
                              width: `${colWidths[key] ?? col.width}px`,
                              minWidth: `${colWidths[key] ?? col.width}px`,
@@ -951,7 +949,7 @@ const JobTracker = () => {
                            onClick={() => handleSort(col.key)}
                          >
                            {col.label && (
-                             <span className="inline-flex items-center gap-1">
+                              <span className="inline-flex items-center gap-1 overflow-hidden text-ellipsis max-w-full">
                                {col.label}
                                {col.key && (
                                  sortKey === col.key ? (
