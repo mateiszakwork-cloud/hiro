@@ -15,6 +15,9 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ContactTracker from "@/components/ContactTracker";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 
 /* ── Types ── */
 export type OutreachContact = {
