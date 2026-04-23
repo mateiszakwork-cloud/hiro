@@ -188,8 +188,9 @@ const JobTracker = () => {
   const [cvMap, setCvMap] = useState<Record<string, CvOutput>>({});
   const [generatingKit, setGeneratingKit] = useState<string | null>(null);
   const [kitModalJobId, setKitModalJobId] = useState<string | null>(null);
-  const [outreachMap, setOutreachMap] = useState<Record<string, { count: number; maxStatus: string }>>({});
+  const [outreachMap, setOutreachMap] = useState<Record<string, { count: number; maxStatus: string; counts: Record<string, number>; lastActivity: string | null }>>({});
   const [contactsReached, setContactsReached] = useState(0);
+  const [onlyOutreach, setOnlyOutreach] = useState(false);
   const [deadlineAlertDismissed, setDeadlineAlertDismissed] = useState(false);
 
   // Compute urgent deadline jobs (within 7 days, status Saved or Applied)
