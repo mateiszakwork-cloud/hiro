@@ -91,6 +91,57 @@ const FUNCTION_VALUES = ["Strategy", "Finance", "Marketing", "Product", "Operati
 const WORK_MODE_VALUES = ["Onsite", "Hybrid", "Remote"];
 const PRIORITY_OPTIONS_EDIT = ["High", "Medium", "Low"];
 
+/* ── Outreach summary widget ── */
+const OutreachSummary = ({
+  summary,
+  onJump,
+}: {
+  summary: { total: number; not_contacted: number; messaged: number; replied: number; meeting_booked: number };
+  onJump: () => void;
+}) => {
+  if (summary.total === 0) {
+    return (
+      <div className="mt-3 inline-flex items-center gap-2 text-xs text-muted-foreground">
+        <span className="inline-block h-1.5 w-1.5 rounded-full bg-gray-300" />
+        No outreach yet ·{" "}
+        <button
+          onClick={onJump}
+          className="underline underline-offset-2 hover:text-[#950606] font-medium"
+        >
+          Add contacts
+        </button>
+      </div>
+    );
+  }
+  const parts: { label: string; count: number; dot: string }[] = [
+    { label: "messaged", count: summary.messaged, dot: "bg-blue-500" },
+    { label: "replied", count: summary.replied, dot: "bg-amber-500" },
+    { label: "meeting booked", count: summary.meeting_booked, dot: "bg-green-500" },
+    { label: "not contacted", count: summary.not_contacted, dot: "bg-gray-400" },
+  ].filter((p) => p.count > 0);
+
+  return (
+    <button
+      onClick={onJump}
+      className="mt-3 inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors group"
+      title="Jump to Outreach tab"
+    >
+      <span className="font-semibold text-foreground">
+        {summary.total} {summary.total === 1 ? "contact" : "contacts"}
+      </span>
+      <span className="text-gray-300">·</span>
+      <span className="inline-flex items-center gap-2.5 flex-wrap">
+        {parts.map((p) => (
+          <span key={p.label} className="inline-flex items-center gap-1">
+            <span className={`inline-block h-1.5 w-1.5 rounded-full ${p.dot}`} />
+            {p.count} {p.label}
+          </span>
+        ))}
+      </span>
+    </button>
+  );
+};
+
 /* ── Tag list renderer ── */
 const TagList = ({ tags, className = "", soft = false }: { tags: string[] | null; className?: string; soft?: boolean }) => {
   if (!tags?.length) return <span className="text-muted-foreground">–</span>;
@@ -292,6 +343,10 @@ const JobDetail = () => {
   }, [jobId, navigate]);
 
   const defaultTab = searchParams.get("tab") || "overview";
+  const [activeTab, setActiveTab] = useState<string>(defaultTab);
+  const [outreachSummary, setOutreachSummary] = useState<{
+    total: number; not_contacted: number; messaged: number; replied: number; meeting_booked: number;
+  }>({ total: 0, not_contacted: 0, messaged: 0, replied: 0, meeting_booked: 0 });
   const [job, setJob] = useState<Job | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [linkedinUrl, setLinkedinUrl] = useState("");
@@ -565,6 +620,38 @@ const JobDetail = () => {
       }
     }, 1000);
   }, [jobId]);
+
+  // Outreach summary — count contacts grouped by status for this job
+  const fetchOutreachSummary = useCallback(async () => {
+    if (!jobId) return;
+    const { data } = await supabase
+      .from("outreach_contacts" as any)
+      .select("status")
+      .eq("job_id", jobId);
+    const rows = (data as unknown as { status: string }[]) || [];
+    const summary = { total: rows.length, not_contacted: 0, messaged: 0, replied: 0, meeting_booked: 0 };
+    for (const r of rows) {
+      if (r.status === "messaged") summary.messaged++;
+      else if (r.status === "replied") summary.replied++;
+      else if (r.status === "meeting_booked") summary.meeting_booked++;
+      else summary.not_contacted++;
+    }
+    setOutreachSummary(summary);
+  }, [jobId]);
+
+  useEffect(() => {
+    fetchOutreachSummary();
+    if (!jobId) return;
+    const channel = supabase
+      .channel(`outreach-summary-${jobId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "outreach_contacts", filter: `job_id=eq.${jobId}` },
+        () => fetchOutreachSummary()
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [jobId, fetchOutreachSummary]);
 
   const updateInterviewData = useCallback((patch: Partial<InterviewUserData>) => {
     setInterviewData(prev => {
@@ -918,6 +1005,11 @@ const JobDetail = () => {
               {job.duration && <span className="hiro-job-meta-pill">{job.duration}</span>}
               {job.function && <span className="hiro-job-meta-pill">{job.function}</span>}
             </div>
+            {/* Outreach summary widget */}
+            <OutreachSummary
+              summary={outreachSummary}
+              onJump={() => setActiveTab("outreach")}
+            />
           </div>
           <div className="flex items-center gap-2 flex-wrap justify-end">
             {deadlineState.kind !== "none" && (
@@ -966,7 +1058,7 @@ const JobDetail = () => {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue={defaultTab}>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="hiro-tabs-bar h-auto justify-start rounded-none p-0">
           {["overview", "cv", "outreach", "notes", "interview"].map(tab => (
             <TabsTrigger
