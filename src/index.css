@@ -264,13 +264,13 @@
 .hiro-col-resize-handle {
   position: absolute;
   top: 0;
-  right: 0;
-  width: 8px;
+  right: -4px;
+  width: 10px;
   height: 100%;
   cursor: col-resize;
   user-select: none;
   background: transparent;
-  z-index: 5;
+  z-index: 20;
   transition: background 120ms ease;
   touch-action: none;
 }

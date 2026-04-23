@@ -941,6 +941,9 @@ const JobTracker = () => {
                              overflow: "hidden",
                              textOverflow: "ellipsis",
                              position: "relative",
+                             width: `${colWidths[key] ?? col.width}px`,
+                             minWidth: `${colWidths[key] ?? col.width}px`,
+                             maxWidth: `${colWidths[key] ?? col.width}px`,
                            }}
                            className={cn(
                              col.key && "cursor-pointer select-none hover:text-foreground transition-colors group/th"
