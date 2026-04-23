@@ -14,6 +14,7 @@ import {
   Loader2, AlertTriangle, Plus, ExternalLink,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import ContactTracker from "@/components/ContactTracker";
 
 /* ── Types ── */
 export type OutreachContact = {
@@ -533,6 +534,9 @@ const OutreachTab = ({
 
       {/* LinkedIn Search Panel — manual search URLs */}
       <LinkedInSearchPanel companyName={companyName} jobTitle={jobTitle} />
+
+      {/* Contact Tracker — outreach_contacts table */}
+      <ContactTracker jobId={jobId} userId={userId} companyName={companyName} />
 
       {/* Alerts */}
       {noCookie && (
