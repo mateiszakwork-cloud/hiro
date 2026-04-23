@@ -264,19 +264,32 @@
 .hiro-col-resize-handle {
   position: absolute;
   top: 0;
-  right: 0;
-  width: 6px;
+  right: -4px;
+  width: 8px;
   height: 100%;
   cursor: col-resize;
   user-select: none;
   background: transparent;
-  z-index: 2;
+  z-index: 5;
   transition: background 120ms ease;
+  touch-action: none;
 }
 .hiro-col-resize-handle:hover,
 .hiro-col-resize-handle:active {
   background: var(--color-primary);
-  opacity: 0.6;
+  opacity: 0.5;
+}
+/* Subtle vertical divider so users can see the handle exists */
+.hiro-col-resize-handle::after {
+  content: "";
+  position: absolute;
+  top: 25%;
+  bottom: 25%;
+  left: 50%;
+  width: 1px;
+  background: var(--color-border, #E5E7EB);
+  transform: translateX(-0.5px);
+  pointer-events: none;
 }
 
 /* Hiro responsive metrics grid: 6 cols desktop, 2 cols on small screens */
