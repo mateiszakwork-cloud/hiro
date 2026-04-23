@@ -205,15 +205,34 @@ const Settings = () => {
               {/* Status row */}
               <div className="hiro-li-status-row">
                 {isFullyConnected ? (
-                  <>
-                    <span className="hiro-li-dot-connected" />
-                    <span className="text-sm font-semibold" style={{ color: "#15803D" }}>LinkedIn connected</span>
-                    {updatedAt && (
-                      <span className="text-xs text-muted-foreground ml-auto">
-                        Last updated: {formatUpdatedAt(updatedAt)}
+                  validating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      <span className="text-sm font-medium text-muted-foreground">Checking LinkedIn session…</span>
+                    </>
+                  ) : sessionLive === false ? (
+                    <>
+                      <XCircle className="h-4 w-4" style={{ color: "#991B1B" }} />
+                      <span className="text-sm font-semibold" style={{ color: "#991B1B" }}>
+                        Session expired — please update your cookies
                       </span>
-                    )}
-                  </>
+                      {updatedAt && (
+                        <span className="text-xs text-muted-foreground ml-auto">
+                          Last updated: {formatUpdatedAt(updatedAt)}
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <span className="hiro-li-dot-connected" />
+                      <span className="text-sm font-semibold" style={{ color: "#15803D" }}>LinkedIn connected</span>
+                      {updatedAt && (
+                        <span className="text-xs text-muted-foreground ml-auto">
+                          Last updated: {formatUpdatedAt(updatedAt)}
+                        </span>
+                      )}
+                    </>
+                  )
                 ) : isPartial ? (
                   <>
                     <AlertTriangle className="h-4 w-4" style={{ color: "#D97706" }} />
