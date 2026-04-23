@@ -302,20 +302,24 @@ const NETWORK_OPTIONS: { value: "F" | "S" | "O"; label: string }[] = [
   { value: "O", label: "3rd+" },
 ];
 
-/* Suggest senior titles given a junior/intern role */
-const suggestTitle = (jobTitle: string | null): string => {
-  const t = (jobTitle || "").trim();
-  if (!t) return "Manager";
-  const lower = t.toLowerCase();
-  if (lower.includes("brand")) return "Brand Manager";
-  if (lower.includes("marketing")) return "Marketing Manager";
-  if (lower.includes("product")) return "Product Manager";
-  if (lower.includes("sales")) return "Sales Manager";
-  if (lower.includes("finance") || lower.includes("financial")) return "Finance Manager";
-  if (lower.includes("consulting") || lower.includes("consultant")) return "Consultant";
-  if (lower.includes("strategy")) return "Strategy Manager";
-  return "Manager";
+/* Derive hiring-manager title query from job title (boolean OR-style) */
+const deriveManagerTitle = (jobTitle: string | null): string => {
+  const t = (jobTitle || "").toLowerCase();
+  if (t.includes("brand")) return '"Brand Manager" OR "Marketing Manager" OR "Head of Brand"';
+  if (t.includes("market")) return '"Marketing Manager" OR "Head of Marketing" OR "CMO"';
+  if (t.includes("sales")) return '"Sales Manager" OR "Head of Sales" OR "Commercial Director"';
+  if (t.includes("finance") || t.includes("financial")) return '"Finance Manager" OR "CFO" OR "Head of Finance"';
+  if (t.includes("supply chain") || t.includes("logistics")) return '"Supply Chain Manager" OR "Head of Operations"';
+  if (t.includes("product")) return '"Product Manager" OR "Head of Product" OR "CPO"';
+  if (t.includes("engineer") || t.includes("software") || t.includes("developer")) return '"Engineering Manager" OR "Head of Engineering" OR "CTO"';
+  if (t.includes("data") || t.includes("analyst")) return '"Data Manager" OR "Head of Analytics"';
+  if (t.includes("strategy") || t.includes("consult")) return '"Strategy Director" OR "Head of Strategy" OR "VP Strategy"';
+  if (t.includes("hr") || t.includes("people") || t.includes("talent")) return '"HR Director" OR "Head of People" OR "CHRO"';
+  return '"Manager" OR "Director" OR "Head of"';
 };
+
+/* Default recruiter/HR title query */
+const RECRUITER_TITLE_QUERY = '"HR" OR "Recruiter" OR "Talent Acquisition" OR "People & Culture"';
 
 /* Detect country from a free-text location string */
 const detectGeoFromLocation = (location: string | null): string => {
