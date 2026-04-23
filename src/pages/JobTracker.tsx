@@ -913,50 +913,65 @@ const JobTracker = () => {
               </p>
             </div>
           ) : (
-            <div style={{ width: "100%", overflowX: "hidden" }}>
-              <table className="text-sm" style={{ tableLayout: "fixed", width: "100%" }}>
+            <div style={{ width: "100%", overflowX: "auto" }}>
+              <table className="text-sm" style={{ tableLayout: "fixed", width: "max-content", minWidth: "100%" }}>
                 <colgroup>
-                  {COLUMNS.map((col) => (
-                    <col key={`col-${col.label || "_open"}`} style={{ width: col.width }} />
-                  ))}
+                  {COLUMNS.map((col) => {
+                    const key = col.label || "_open";
+                    return <col key={`col-${key}`} style={{ width: `${colWidths[key] ?? col.width}px` }} />;
+                  })}
                 </colgroup>
                 <thead>
                    <tr style={{ background: "#F9FAFB", borderBottom: "2px solid var(--color-border)" }}>
-                     {COLUMNS.map((col) => (
-                       <th
-                         key={col.label || "_open"}
-                         style={{
-                           fontFamily: "var(--font-body)",
-                           fontSize: "11px",
-                           fontWeight: 600,
-                           color: "var(--color-text-muted)",
-                           textTransform: "uppercase",
-                           letterSpacing: "0.08em",
-                           padding: "10px 14px",
-                           textAlign: "left",
-                           whiteSpace: "nowrap",
-                           overflow: "hidden",
-                           textOverflow: "ellipsis",
-                         }}
-                         className={cn(
-                           col.key && "cursor-pointer select-none hover:text-foreground transition-colors group/th"
-                         )}
-                         onClick={() => handleSort(col.key)}
-                       >
-                         {col.label && (
-                           <span className="inline-flex items-center gap-1">
-                             {col.label}
-                             {col.key && (
-                               sortKey === col.key ? (
-                                 sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-                               ) : (
-                                 <ArrowUpDown className="h-3 w-3 opacity-0 group-hover/th:opacity-50 transition-opacity" />
-                               )
-                             )}
-                           </span>
-                         )}
-                       </th>
-                     ))}
+                     {COLUMNS.map((col) => {
+                       const key = col.label || "_open";
+                       return (
+                         <th
+                           key={key}
+                           style={{
+                             fontFamily: "var(--font-body)",
+                             fontSize: "11px",
+                             fontWeight: 600,
+                             color: "var(--color-text-muted)",
+                             textTransform: "uppercase",
+                             letterSpacing: "0.08em",
+                             padding: "10px 14px",
+                             textAlign: "left",
+                             whiteSpace: "nowrap",
+                             overflow: "hidden",
+                             textOverflow: "ellipsis",
+                             position: "relative",
+                           }}
+                           className={cn(
+                             col.key && "cursor-pointer select-none hover:text-foreground transition-colors group/th"
+                           )}
+                           onClick={() => handleSort(col.key)}
+                         >
+                           {col.label && (
+                             <span className="inline-flex items-center gap-1">
+                               {col.label}
+                               {col.key && (
+                                 sortKey === col.key ? (
+                                   sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                                 ) : (
+                                   <ArrowUpDown className="h-3 w-3 opacity-0 group-hover/th:opacity-50 transition-opacity" />
+                                 )
+                               )}
+                             </span>
+                           )}
+                           {col.resizable && (
+                             <span
+                               role="separator"
+                               aria-orientation="vertical"
+                               aria-label={`Resize ${col.label} column`}
+                               onMouseDown={(e) => handleResizeStart(e, key)}
+                               onClick={(e) => e.stopPropagation()}
+                               className="hiro-col-resize-handle"
+                             />
+                           )}
+                         </th>
+                       );
+                     })}
                    </tr>
                 </thead>
                 <tbody>
