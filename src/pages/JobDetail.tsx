@@ -913,7 +913,7 @@ const JobDetail = () => {
       {/* Tabs */}
       <Tabs defaultValue={defaultTab}>
         <TabsList className="hiro-tabs-bar h-auto justify-start rounded-none p-0">
-          {["overview", "cv", "interview", "outreach", "notes"].map(tab => (
+          {["overview", "cv", "outreach", "notes", "interview"].map(tab => (
             <TabsTrigger
               key={tab}
               value={tab}
