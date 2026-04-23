@@ -140,17 +140,70 @@ const ContactTracker = ({
   useEffect(() => {
     let cancelled = false;
     const checkCv = async () => {
-      const [w, e, p] = await Promise.all([
-        supabase.from("work_experiences").select("id", { count: "exact", head: true }).eq("user_id", userId),
-        supabase.from("education").select("id", { count: "exact", head: true }).eq("user_id", userId),
-        supabase.from("profiles").select("base_cv_text").eq("id", userId).maybeSingle(),
+      const [wRes, eRes, sRes, pRes] = await Promise.all([
+        supabase
+          .from("work_experiences")
+          .select("company_name, job_title, bullet_points, start_year")
+          .eq("user_id", userId)
+          .order("start_year", { ascending: false })
+          .limit(3),
+        supabase
+          .from("education")
+          .select("institution, degree, field_of_study, start_year")
+          .eq("user_id", userId)
+          .order("start_year", { ascending: false })
+          .limit(3),
+        supabase
+          .from("skills")
+          .select("hard_skills, soft_skills")
+          .eq("user_id", userId)
+          .maybeSingle(),
+        supabase
+          .from("profiles")
+          .select("full_name, base_cv_text")
+          .eq("id", userId)
+          .maybeSingle(),
       ]);
       if (cancelled) return;
+      const works = wRes.data ?? [];
+      const edus = eRes.data ?? [];
+      const skills = sRes.data as { hard_skills?: string[]; soft_skills?: string[] } | null;
+      const profile = pRes.data as { full_name?: string | null; base_cv_text?: string | null } | null;
+
       const has =
-        (w.count ?? 0) > 0 ||
-        (e.count ?? 0) > 0 ||
-        !!(p.data && (p.data as any).base_cv_text);
+        works.length > 0 ||
+        edus.length > 0 ||
+        !!profile?.base_cv_text;
       setHasCv(has);
+
+      // Build a compact CV summary used by the drafting Edge Function
+      const experiences = works
+        .map(
+          (w: any) =>
+            `- ${w.job_title} at ${w.company_name}: ${(w.bullet_points ?? []).slice(0, 2).join("; ")}`
+        )
+        .join("\n");
+      const schools = edus
+        .map(
+          (ed: any) =>
+            `${ed.institution} (${ed.degree}${ed.field_of_study ? `, ${ed.field_of_study}` : ""})`
+        )
+        .join("; ");
+      const skillsList = skills
+        ? [...(skills.hard_skills ?? []), ...(skills.soft_skills ?? [])].slice(0, 10).join(", ")
+        : "";
+      const summary = [
+        profile?.full_name ? `Name: ${profile.full_name}` : null,
+        schools ? `Education: ${schools}` : null,
+        experiences ? `Recent experience:\n${experiences}` : null,
+        skillsList ? `Key skills: ${skillsList}` : null,
+        profile?.base_cv_text
+          ? `Additional CV context: ${profile.base_cv_text.slice(0, 1500)}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join("\n");
+      setCvSummary(summary);
     };
     checkCv();
     return () => { cancelled = true; };
@@ -260,26 +313,35 @@ const ContactTracker = ({
     setDraftLoading(true);
     setDraftError(null);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      const { data, error } = await supabase.functions.invoke("draft-tracker-message", {
-        body: { job_id: jobId, message_type: type },
-        ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
+      if (!cvSummary) {
+        setDraftError("Add your CV in Settings to enable AI-drafted messages");
+        return;
+      }
+      const { data, error } = await supabase.functions.invoke("draft-outreach-messages", {
+        body: {
+          jobTitle: jobTitle ?? "",
+          companyName: companyName ?? "",
+          jobDescription: jobDescription ?? "",
+          cvSummary,
+          messageType: type,
+        },
       });
-      if (error) {
+      if (error || !data) {
         setDraftError("Could not generate draft. Please try again.");
         return;
       }
-      if (!data?.success) {
-        setDraftError(data?.error || "Could not generate draft. Please try again.");
-        return;
-      }
-      const msg = (data.message || "").toString();
-      if (!msg.trim()) {
+      if ((data as any).error) {
         setDraftError("Could not generate draft. Please try again.");
         return;
       }
-      setDraftText(msg);
+      const msg = ((data as any).message || "").toString().trim();
+      if (!msg) {
+        setDraftError("Could not generate draft. Please try again.");
+        return;
+      }
+      // Hard-enforce length cap
+      const cap = type === "connection_request" ? 300 : 800;
+      setDraftText(msg.length > cap ? msg.slice(0, cap - 1).trimEnd() + "\u2026" : msg);
     } catch {
       setDraftError("Could not generate draft. Please try again.");
     } finally {
