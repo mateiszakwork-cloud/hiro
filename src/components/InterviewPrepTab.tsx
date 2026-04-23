@@ -226,7 +226,10 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
         setLoading(false);
         return;
       }
-      setAnswers(data.answers as Answers);
+      const generated = data.answers as Answers;
+      setAnswers(generated);
+      // Persist immediately after successful generation
+      persistAnswers(generated);
       toast.success("Interview prep generated");
     } catch {
       setError("Generation failed. Please try again.");
