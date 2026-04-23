@@ -30,6 +30,27 @@ const Settings = () => {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [validating, setValidating] = useState(false);
+  const [sessionLive, setSessionLive] = useState<boolean | null>(null);
+
+  const validateSession = async () => {
+    setValidating(true);
+    setSessionLive(null);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const session = sessionData?.session;
+      if (!session) { setValidating(false); return; }
+      const { data, error } = await supabase.functions.invoke("test-linkedin-connection", {
+        body: { user_id: session.user.id },
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      setSessionLive(!error && !!data?.success);
+    } catch {
+      setSessionLive(false);
+    } finally {
+      setValidating(false);
+    }
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -52,6 +73,12 @@ const Settings = () => {
         setUpdatedAt((data as any).linkedin_updated_at);
       }
       setLoading(false);
+      // Auto-validate session if both cookies are present
+      const liAt = data?.linkedin_cookie;
+      const jsid = (data as any)?.linkedin_jsessionid;
+      if (liAt && liAt.trim().length >= 50 && jsid && jsid.trim().startsWith("ajax:")) {
+        validateSession();
+      }
     };
     load();
   }, []);
