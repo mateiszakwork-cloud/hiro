@@ -21,6 +21,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import OutreachTab from "@/components/OutreachTab";
+import InterviewPrepTab from "@/components/InterviewPrepTab";
 
 type BulletItem = { original: string; tailored: string; use_tailored: boolean };
 type BulletBlock = { company: string; job_title: string; bullets: BulletItem[] | string[] };
@@ -1060,7 +1061,7 @@ const JobDetail = () => {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="hiro-tabs-bar h-auto justify-start rounded-none p-0">
-          {["overview", "cv", "outreach", "notes", "interview"].map(tab => (
+          {["overview", "cv", "outreach", "interview", "notes"].map(tab => (
             <TabsTrigger
               key={tab}
               value={tab}
