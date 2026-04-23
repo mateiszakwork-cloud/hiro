@@ -900,7 +900,7 @@ const JobTracker = () => {
               </Select>
               {filtersActive && (
                 <button
-                  onClick={() => { setFilterStatus("All"); setFilterFunction("All"); setFilterPriority("All"); }}
+                  onClick={() => { setFilterStatus("All"); setFilterFunction("All"); setFilterPriority("All"); setOnlyOutreach(false); }}
                   className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Clear filters
