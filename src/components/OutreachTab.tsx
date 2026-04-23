@@ -428,6 +428,25 @@ const LinkedInSearchPanel = ({
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
+  const contactUrl = buildLinkedInUrl({
+    titleFreeText: targetTitle,
+    company: targetCompany,
+    geoUrnId: targetGeo,
+    network: targetNetwork,
+  });
+  const recruiterUrl = buildLinkedInUrl({
+    titleFreeText: "Recruiter",
+    company: recCompany,
+    geoUrnId: recGeo,
+    network: recNetwork,
+  });
+  const taUrl = buildLinkedInUrl({
+    titleFreeText: "Talent Acquisition Partner",
+    company: recCompany,
+    geoUrnId: recGeo,
+    network: recNetwork,
+  });
+
   const NetworkRadio = ({
     value, onChange, name,
   }: { value: "F" | "S" | "O"; onChange: (v: "F" | "S" | "O") => void; name: string }) => (
