@@ -406,55 +406,37 @@ const LinkedInSearchPanel = ({
   const company = (companyName || "").trim();
   const initialGeo = detectGeoFromLocation(jobLocation) || "102890719";
 
-  // Section 1 — Find a Contact
-  const [targetTitle, setTargetTitle] = useState<string>(suggestTitle(jobTitle));
-  const [targetCompany, setTargetCompany] = useState<string>(company);
-  const [targetGeo, setTargetGeo] = useState<string>(initialGeo);
-  const [targetNetwork, setTargetNetwork] = useState<"F" | "S" | "O">("S");
+  // Shared company / location / network for all three searches
+  const [sharedCompany, setSharedCompany] = useState<string>(company);
+  const [sharedGeo, setSharedGeo] = useState<string>(initialGeo);
+  const [sharedNetwork, setSharedNetwork] = useState<"F" | "S" | "O">("S");
 
-  // Section 2 — Find a Recruiter
-  const [recCompany, setRecCompany] = useState<string>(company);
-  const [recGeo, setRecGeo] = useState<string>(initialGeo);
-  const [recNetwork, setRecNetwork] = useState<"F" | "S" | "O">("S");
+  // Editable title queries
+  const [recruiterTitle, setRecruiterTitle] = useState<string>(RECRUITER_TITLE_QUERY);
+  const [managerTitle, setManagerTitle] = useState<string>(deriveManagerTitle(jobTitle));
 
-  const openContactSearch = () => {
-    const url = buildLinkedInUrl({
-      titleFreeText: targetTitle,
-      company: targetCompany,
-      geoUrnId: targetGeo,
-      network: targetNetwork,
-    });
-    window.open(url, "_blank", "noopener,noreferrer");
-  };
-
-  const openRecruiterSearch = (title: "Recruiter" | "Talent Acquisition Partner") => {
-    const url = buildLinkedInUrl({
-      titleFreeText: title,
-      company: recCompany,
-      geoUrnId: recGeo,
-      network: recNetwork,
-    });
-    window.open(url, "_blank", "noopener,noreferrer");
-  };
-
-  const contactUrl = buildLinkedInUrl({
-    titleFreeText: targetTitle,
-    company: targetCompany,
-    geoUrnId: targetGeo,
-    network: targetNetwork,
-  });
+  // Button 1 — HR / Recruiter
   const recruiterUrl = buildLinkedInUrl({
-    titleFreeText: "Recruiter",
-    company: recCompany,
-    geoUrnId: recGeo,
-    network: recNetwork,
+    titleFreeText: recruiterTitle,
+    company: sharedCompany,
+    geoUrnId: sharedGeo,
+    network: sharedNetwork,
   });
-  const taUrl = buildLinkedInUrl({
-    titleFreeText: "Talent Acquisition Partner",
-    company: recCompany,
-    geoUrnId: recGeo,
-    network: recNetwork,
+  // Button 2 — Hiring Manager
+  const managerUrl = buildLinkedInUrl({
+    titleFreeText: managerTitle,
+    company: sharedCompany,
+    geoUrnId: sharedGeo,
+    network: sharedNetwork,
   });
+  // Button 3 — Browse all people at company (no title filter)
+  const browseUrl = buildLinkedInUrl({
+    company: sharedCompany,
+    geoUrnId: sharedGeo,
+    network: sharedNetwork,
+  });
+
+  const openUrl = (url: string) => window.open(url, "_blank", "noopener,noreferrer");
 
   const NetworkRadio = ({
     value, onChange, name,
@@ -477,84 +459,14 @@ const LinkedInSearchPanel = ({
 
   return (
     <div className="space-y-4">
-      {/* Section 1 — Find a Contact */}
+      {/* Shared filters */}
       <div className="rounded-lg border bg-white p-5 space-y-4">
         <div>
           <h3 className="font-semibold text-foreground" style={{ fontFamily: "Sora, sans-serif", fontSize: 15 }}>
-            Find a Contact
+            LinkedIn Search
           </h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Search for someone in or one level above your target role at this company.
-          </p>
-        </div>
-
-        <div className="grid gap-3 md:grid-cols-2">
-          <div className="space-y-1">
-            <label className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Target Title</label>
-            <Input
-              value={targetTitle}
-              onChange={(e) => setTargetTitle(e.target.value)}
-              placeholder="e.g. Brand Manager"
-              className="text-sm"
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Company</label>
-            <Input
-              value={targetCompany}
-              onChange={(e) => setTargetCompany(e.target.value)}
-              placeholder="Company name"
-              className="text-sm"
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Location</label>
-            <Select value={targetGeo} onValueChange={setTargetGeo}>
-              <SelectTrigger className="text-sm">
-                <SelectValue placeholder="Select country" />
-              </SelectTrigger>
-              <SelectContent>
-                {GEO_URNS.map((g) => (
-                  <SelectItem key={g.id} value={g.id}>{g.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1">
-            <label className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Network</label>
-            <div className="h-10 flex items-center">
-              <NetworkRadio value={targetNetwork} onChange={setTargetNetwork} name="contact-network" />
-            </div>
-          </div>
-        </div>
-
-        <Button
-          onClick={openContactSearch}
-          className="gap-2 bg-[#950606] hover:bg-[#7a0505] text-white"
-        >
-          <ExternalLink className="h-4 w-4" />
-          Search on LinkedIn
-        </Button>
-
-        <div className="space-y-1">
-          <label className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">URL preview</label>
-          <Input
-            value={contactUrl}
-            readOnly
-            onFocus={(e) => e.currentTarget.select()}
-            className="text-[11px] font-mono text-gray-600 bg-gray-50"
-          />
-        </div>
-      </div>
-
-      {/* Section 2 — Find a Recruiter */}
-      <div className="rounded-lg border bg-white p-5 space-y-4">
-        <div>
-          <h3 className="font-semibold text-foreground" style={{ fontFamily: "Sora, sans-serif", fontSize: 15 }}>
-            Find a Recruiter
-          </h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Two separate searches — recruiters and talent acquisition partners.
+            Three targeted searches at this company — recruiters, hiring managers, and a free browse.
           </p>
         </div>
 
@@ -562,15 +474,15 @@ const LinkedInSearchPanel = ({
           <div className="space-y-1">
             <label className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Company</label>
             <Input
-              value={recCompany}
-              onChange={(e) => setRecCompany(e.target.value)}
+              value={sharedCompany}
+              onChange={(e) => setSharedCompany(e.target.value)}
               placeholder="Company name"
               className="text-sm"
             />
           </div>
           <div className="space-y-1">
             <label className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Location</label>
-            <Select value={recGeo} onValueChange={setRecGeo}>
+            <Select value={sharedGeo} onValueChange={setSharedGeo}>
               <SelectTrigger className="text-sm">
                 <SelectValue placeholder="Select country" />
               </SelectTrigger>
@@ -584,52 +496,114 @@ const LinkedInSearchPanel = ({
           <div className="space-y-1">
             <label className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Network</label>
             <div className="h-10 flex items-center">
-              <NetworkRadio value={recNetwork} onChange={setRecNetwork} name="recruiter-network" />
+              <NetworkRadio value={sharedNetwork} onChange={setSharedNetwork} name="shared-network" />
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="flex flex-wrap gap-2">
-          <Button
-            onClick={() => openRecruiterSearch("Recruiter")}
-            variant="outline"
-            className="gap-2 border-[#950606]/20 text-[#950606] hover:bg-[#FFF5F5] hover:text-[#950606]"
-          >
-            <ExternalLink className="h-4 w-4" />
-            Search Recruiters
-          </Button>
-          <Button
-            onClick={() => openRecruiterSearch("Talent Acquisition Partner")}
-            variant="outline"
-            className="gap-2 border-[#950606]/20 text-[#950606] hover:bg-[#FFF5F5] hover:text-[#950606]"
-          >
-            <ExternalLink className="h-4 w-4" />
-            Search Talent Acquisition
-          </Button>
+      {/* Button 1 — HR / Recruiter */}
+      <div className="rounded-lg border bg-white p-5 space-y-3">
+        <div>
+          <h4 className="font-semibold text-foreground text-sm" style={{ fontFamily: "Sora, sans-serif" }}>
+            Search on LinkedIn — HR & Recruiters
+          </h4>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Finds HR, recruiters, talent acquisition and people & culture roles at this company.
+          </p>
+        </div>
+        <div className="space-y-1">
+          <label className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Title query</label>
+          <Input
+            value={recruiterTitle}
+            onChange={(e) => setRecruiterTitle(e.target.value)}
+            className="text-sm"
+          />
+        </div>
+        <Button
+          onClick={() => openUrl(recruiterUrl)}
+          className="gap-2 bg-[#950606] hover:bg-[#7a0505] text-white"
+        >
+          <ExternalLink className="h-4 w-4" />
+          Search on LinkedIn
+        </Button>
+        <div className="space-y-1">
+          <label className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">URL preview</label>
+          <Input
+            value={recruiterUrl}
+            readOnly
+            onFocus={(e) => e.currentTarget.select()}
+            className="text-[11px] font-mono text-gray-600 bg-gray-50"
+          />
+        </div>
+      </div>
+
+      {/* Button 2 — Hiring Manager */}
+      <div className="rounded-lg border bg-white p-5 space-y-3">
+        <div>
+          <h4 className="font-semibold text-foreground text-sm" style={{ fontFamily: "Sora, sans-serif" }}>
+            Search hiring manager
+          </h4>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Suggested titles based on the role: <span className="font-medium">{jobTitle || "—"}</span>.
+          </p>
+        </div>
+        <div className="space-y-1">
+          <label className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Title query</label>
+          <Input
+            value={managerTitle}
+            onChange={(e) => setManagerTitle(e.target.value)}
+            className="text-sm"
+          />
+        </div>
+        <Button
+          onClick={() => openUrl(managerUrl)}
+          variant="outline"
+          className="gap-2 border-[#950606]/20 text-[#950606] hover:bg-[#FFF5F5] hover:text-[#950606]"
+        >
+          <ExternalLink className="h-4 w-4" />
+          Search hiring manager
+        </Button>
+        <div className="space-y-1">
+          <label className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">URL preview</label>
+          <Input
+            value={managerUrl}
+            readOnly
+            onFocus={(e) => e.currentTarget.select()}
+            className="text-[11px] font-mono text-gray-600 bg-gray-50"
+          />
+        </div>
+      </div>
+
+      {/* Button 3 — Find a Contact (free browse) */}
+      <div className="rounded-lg border bg-white p-5 space-y-3">
+        <div>
+          <h4 className="font-semibold text-foreground text-sm" style={{ fontFamily: "Sora, sans-serif" }}>
+            Find a Contact
+          </h4>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Browse all people at this company — no title filter applied.
+          </p>
+        </div>
+        <Button
+          onClick={() => openUrl(browseUrl)}
+          variant="outline"
+          className="gap-2 border-[#950606]/20 text-[#950606] hover:bg-[#FFF5F5] hover:text-[#950606]"
+        >
+          <ExternalLink className="h-4 w-4" />
+          Browse on LinkedIn
+        </Button>
+        <div className="space-y-1">
+          <label className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">URL preview</label>
+          <Input
+            value={browseUrl}
+            readOnly
+            onFocus={(e) => e.currentTarget.select()}
+            className="text-[11px] font-mono text-gray-600 bg-gray-50"
+          />
         </div>
 
-        <div className="space-y-2">
-          <div className="space-y-1">
-            <label className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Recruiter URL preview</label>
-            <Input
-              value={recruiterUrl}
-              readOnly
-              onFocus={(e) => e.currentTarget.select()}
-              className="text-[11px] font-mono text-gray-600 bg-gray-50"
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Talent Acquisition URL preview</label>
-            <Input
-              value={taUrl}
-              readOnly
-              onFocus={(e) => e.currentTarget.select()}
-              className="text-[11px] font-mono text-gray-600 bg-gray-50"
-            />
-          </div>
-        </div>
-
-        <p className="text-xs text-muted-foreground italic border-t pt-3">
+        <p className="text-xs text-muted-foreground italic border-t pt-3 mt-2">
           Find someone relevant, copy their LinkedIn profile URL, and add them to your contact tracker below.
         </p>
       </div>
