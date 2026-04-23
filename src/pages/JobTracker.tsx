@@ -188,8 +188,9 @@ const JobTracker = () => {
   const [cvMap, setCvMap] = useState<Record<string, CvOutput>>({});
   const [generatingKit, setGeneratingKit] = useState<string | null>(null);
   const [kitModalJobId, setKitModalJobId] = useState<string | null>(null);
-  const [outreachMap, setOutreachMap] = useState<Record<string, { count: number; maxStatus: string }>>({});
+  const [outreachMap, setOutreachMap] = useState<Record<string, { count: number; maxStatus: string; counts: Record<string, number>; lastActivity: string | null }>>({});
   const [contactsReached, setContactsReached] = useState(0);
+  const [onlyOutreach, setOnlyOutreach] = useState(false);
   const [deadlineAlertDismissed, setDeadlineAlertDismissed] = useState(false);
 
   // Compute urgent deadline jobs (within 7 days, status Saved or Applied)
@@ -281,13 +282,23 @@ const JobTracker = () => {
     }
   };
 
-  const filtersActive = filterStatus !== "All" || filterFunction !== "All" || filterPriority !== "All";
+  const filtersActive = filterStatus !== "All" || filterFunction !== "All" || filterPriority !== "All" || onlyOutreach;
 
   const filteredAndSorted = useMemo(() => {
     let result = [...jobs];
     if (filterStatus !== "All") result = result.filter(j => j.status === filterStatus);
     if (filterFunction !== "All") result = result.filter(j => j.function === filterFunction);
     if (filterPriority !== "All") result = result.filter(j => j.priority === filterPriority);
+    if (onlyOutreach) {
+      result = result.filter(j => (outreachMap[j.id]?.count || 0) > 0);
+      // When viewing outreach-only, sort by most recent outreach activity
+      result.sort((a, b) => {
+        const av = outreachMap[a.id]?.lastActivity || "";
+        const bv = outreachMap[b.id]?.lastActivity || "";
+        return bv.localeCompare(av);
+      });
+      return result;
+    }
 
     result.sort((a, b) => {
       if (sortKey === "match_score") {
@@ -313,7 +324,7 @@ const JobTracker = () => {
       return compareStr(a[sortKey] as string | null, b[sortKey] as string | null, sortDir);
     });
     return result;
-  }, [jobs, sortKey, sortDir, filterStatus, filterFunction, filterPriority]);
+  }, [jobs, sortKey, sortDir, filterStatus, filterFunction, filterPriority, onlyOutreach, outreachMap]);
 
   useEffect(() => {
     const init = async () => {
@@ -339,22 +350,30 @@ const JobTracker = () => {
         }
         setCvMap(map);
       }
-      // Fetch outreach summary per job
+      // Fetch outreach summary per job from outreach_contacts
       const { data: contactData } = await supabase
-        .from("contacts")
-        .select("job_id, outreach_status")
+        .from("outreach_contacts" as any)
+        .select("job_id, status, date_added, date_messaged")
         .eq("user_id", session.user.id);
       if (contactData) {
-        const STATUS_ORDER = ["Not contacted", "Connection sent", "Connected", "Replied", "Meeting booked"];
-        const oMap: Record<string, { count: number; maxStatus: string }> = {};
+        const STATUS_ORDER = ["not_contacted", "messaged", "replied", "meeting_booked"];
+        const oMap: Record<string, { count: number; maxStatus: string; counts: Record<string, number>; lastActivity: string | null }> = {};
         let reached = 0;
-        for (const row of contactData) {
-          if (!oMap[row.job_id]) oMap[row.job_id] = { count: 0, maxStatus: "Not contacted" };
-          oMap[row.job_id].count++;
-          if (row.outreach_status && row.outreach_status !== "Not contacted") reached++;
-          const currentIdx = STATUS_ORDER.indexOf(oMap[row.job_id].maxStatus);
-          const newIdx = STATUS_ORDER.indexOf(row.outreach_status);
-          if (newIdx > currentIdx) oMap[row.job_id].maxStatus = row.outreach_status;
+        for (const row of contactData as any[]) {
+          if (!oMap[row.job_id]) oMap[row.job_id] = {
+            count: 0, maxStatus: "not_contacted",
+            counts: { not_contacted: 0, messaged: 0, replied: 0, meeting_booked: 0 },
+            lastActivity: null,
+          };
+          const o = oMap[row.job_id];
+          o.count++;
+          o.counts[row.status] = (o.counts[row.status] || 0) + 1;
+          if (row.status && row.status !== "not_contacted") reached++;
+          const currentIdx = STATUS_ORDER.indexOf(o.maxStatus);
+          const newIdx = STATUS_ORDER.indexOf(row.status);
+          if (newIdx > currentIdx) o.maxStatus = row.status;
+          const ts = row.date_messaged || row.date_added;
+          if (ts && (!o.lastActivity || ts > o.lastActivity)) o.lastActivity = ts;
         }
         setOutreachMap(oMap);
         setContactsReached(reached);
@@ -819,6 +838,24 @@ const JobTracker = () => {
         <div style={{ padding: "0 28px 12px" }}>
           <div className="flex items-center gap-3 flex-wrap">
             <div className="ml-auto flex items-center gap-2">
+              <button
+                onClick={() => setOnlyOutreach(v => !v)}
+                className={cn(
+                  "h-8 inline-flex items-center gap-1.5 px-3 text-xs font-medium rounded-lg border transition-colors",
+                  onlyOutreach
+                    ? "bg-[#950606] border-[#950606] text-white hover:bg-[#7a0505]"
+                    : "bg-background border-input text-foreground hover:bg-muted"
+                )}
+                title="Show only jobs where outreach has started, sorted by most recent activity"
+              >
+                <Users className="h-3.5 w-3.5" />
+                Outreach only
+                {onlyOutreach && (
+                  <span className="ml-1 inline-flex items-center justify-center h-4 w-4 rounded-full bg-white/20 text-[10px] font-bold">
+                    {Object.values(outreachMap).filter((o) => o.count > 0).length}
+                  </span>
+                )}
+              </button>
               <Select value={filterStatus} onValueChange={setFilterStatus}>
                 <SelectTrigger className="h-8 w-auto gap-1 px-3 text-xs border rounded-lg">
                   <SelectValue placeholder="Status" />
@@ -863,7 +900,7 @@ const JobTracker = () => {
               </Select>
               {filtersActive && (
                 <button
-                  onClick={() => { setFilterStatus("All"); setFilterFunction("All"); setFilterPriority("All"); }}
+                  onClick={() => { setFilterStatus("All"); setFilterFunction("All"); setFilterPriority("All"); setOnlyOutreach(false); }}
                   className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Clear filters
@@ -1206,25 +1243,46 @@ const JobTracker = () => {
                       <td className="px-3 py-3" onClick={(e) => { e.stopPropagation(); navigate(`/jobs/${job.id}?tab=outreach`); }}>
                         {(() => {
                           const o = outreachMap[job.id];
-                          if (!o) return <span className="text-muted-foreground">–</span>;
-                          const dotColor: Record<string, string> = {
-                            "Not contacted": "bg-gray-400",
-                            "Connection sent": "bg-blue-500",
-                            "Connected": "bg-green-500",
-                            "Replied": "bg-amber-500",
-                            "Meeting booked": "bg-[#950606]",
+                          if (!o || o.count === 0) {
+                            return (
+                              <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                                <span className="h-1.5 w-1.5 rounded-full bg-gray-300" />
+                                No outreach
+                              </span>
+                            );
+                          }
+                          const STATUS_LABEL: Record<string, string> = {
+                            not_contacted: "not contacted",
+                            messaged: "messaged",
+                            replied: "replied",
+                            meeting_booked: "meeting booked",
                           };
+                          const STATUS_DOT: Record<string, string> = {
+                            not_contacted: "bg-gray-400",
+                            messaged: "bg-blue-500",
+                            replied: "bg-amber-500",
+                            meeting_booked: "bg-green-500",
+                          };
+                          // Pick the most advanced status with at least 1 contact for the badge label
+                          const ORDER = ["meeting_booked", "replied", "messaged", "not_contacted"];
+                          const headline = ORDER.find((s) => (o.counts[s] || 0) > 0) || "not_contacted";
+                          const headlineCount = o.counts[headline] || 0;
+                          const tooltipParts = ORDER
+                            .filter((s) => (o.counts[s] || 0) > 0)
+                            .map((s) => `${o.counts[s]} ${STATUS_LABEL[s]}`)
+                            .join(", ");
                           return (
                             <TooltipProvider delayDuration={200}>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <button className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">
-                                    <Users className="h-3.5 w-3.5" />
-                                    <span className="text-xs font-medium">{o.count}</span>
-                                    <span className={`h-2 w-2 rounded-full ${dotColor[o.maxStatus] || "bg-gray-400"}`} />
+                                  <button className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-gray-50 border border-gray-200 text-foreground hover:border-gray-300 transition-colors">
+                                    <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[headline]}`} />
+                                    {headlineCount} {STATUS_LABEL[headline]}
                                   </button>
                                 </TooltipTrigger>
-                                <TooltipContent>{o.count} contact{o.count !== 1 ? "s" : ""} — most advanced: {o.maxStatus}</TooltipContent>
+                                <TooltipContent>
+                                  {o.count} contact{o.count !== 1 ? "s" : ""} — {tooltipParts}
+                                </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
                           );
