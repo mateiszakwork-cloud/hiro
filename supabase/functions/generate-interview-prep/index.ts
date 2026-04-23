@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,169 +6,113 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    console.log(`[generate-interview-prep] Authorization header received: ${!!authHeader}`);
+    const apiKey = Deno.env.get("OPENAI_API_KEY");
+    if (!apiKey) return json({ success: false, error: "Missing OPENAI_API_KEY" }, 500);
 
-    if (!authHeader?.startsWith("Bearer ")) {
-      console.log("[generate-interview-prep] No Bearer token found, rejecting");
-      return new Response(JSON.stringify({ success: false, error: "Authentication failed. Please refresh the page and try again." }), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    const body = await req.json();
+    const { jobTitle, companyName, jobDescription, cvSummary, questions, regenerateOnly } = body || {};
+
+    if (!jobTitle || !companyName) {
+      return json({ success: false, error: "Missing required fields: jobTitle, companyName" }, 400);
     }
 
-    const token = authHeader.replace("Bearer ", "");
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
-    );
+    const systemPrompt =
+      "You are an expert interview coach helping a job applicant prepare for an interview. " +
+      "You will receive a job title, company name, job description, and the applicant's CV summary. " +
+      "Generate thorough, specific, actionable interview prep answers in bullet point format. " +
+      "Every bullet must start with the - character. Answers must be concise but complete — written for someone scanning bullet points during interview prep, not reading an essay. " +
+      "Never be generic. Always tie answers to the specific job, company, and applicant background provided. " +
+      "Return only a valid JSON object with no text outside it.";
 
-    // Use getClaims for reliable token validation (same pattern as tailor-cv)
-    let userId: string;
-    try {
-      const { data: claimsData, error: claimsError } = await (supabase.auth as any).getClaims(token);
-      if (claimsError || !claimsData?.claims?.sub) {
-        // Fallback: try getUser
-        console.log("[generate-interview-prep] getClaims failed, trying getUser fallback");
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError || !user) {
-          console.log("[generate-interview-prep] Both auth methods failed");
-          return new Response(JSON.stringify({ success: false, error: "Authentication failed. Please refresh the page and try again." }), {
-            status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-        userId = user.id;
-      } else {
-        userId = claimsData.claims.sub;
+    // Build user prompt
+    const isRegenerate = regenerateOnly && typeof regenerateOnly === "string";
+
+    let userPrompt = `JOB TITLE: ${jobTitle}
+COMPANY: ${companyName}
+
+JOB DESCRIPTION:
+${jobDescription || "(not provided)"}
+
+APPLICANT CV SUMMARY:
+${cvSummary || "(not provided)"}
+
+`;
+
+    if (isRegenerate) {
+      // Regenerate a single answer — return { answer: "...bullets..." }
+      const q = (questions || []).find((x: any) => x.id === regenerateOnly) || { id: regenerateOnly, label: regenerateOnly };
+      userPrompt += `Regenerate ONLY the bullet-point answer for this question:
+ID: ${q.id}
+QUESTION: ${q.label || q.question || regenerateOnly}
+
+Return JSON in this exact shape:
+{ "answer": "- bullet\\n- bullet\\n- bullet" }
+
+Each bullet starts with "- ". 3-7 bullets depending on the question type. Be specific to this job, company, and applicant.`;
+      if (q.newsDisclaimer || regenerateOnly === "q6" || regenerateOnly === "q7") {
+        userPrompt += `\nThe last bullet MUST be exactly: "- Note: verify with current sources before your interview"`;
       }
-    } catch {
-      // Fallback: try getUser
-      console.log("[generate-interview-prep] getClaims threw, trying getUser fallback");
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
-        return new Response(JSON.stringify({ success: false, error: "Authentication failed. Please refresh the page and try again." }), {
-          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      userId = user.id;
-    }
-    console.log(`[generate-interview-prep] Authenticated user: ${userId}`);
+    } else {
+      userPrompt += `Generate interview prep answers as a JSON object with this exact shape:
 
-    const { job_id, force } = await req.json();
-    if (!job_id) {
-      return new Response(JSON.stringify({ success: false, error: "job_id is required" }), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+{
+  "answers": {
+    "q1": "- bullet\\n- bullet\\n- bullet\\n- bullet\\n- bullet",
+    "q2": "- bullet\\n- bullet\\n- bullet\\n- bullet",
+    "q3": "- bullet\\n- bullet\\n- bullet\\n- bullet",
+    "q4": "- bullet\\n- bullet\\n- bullet",
+    "q5": "- bullet\\n- bullet\\n- bullet",
+    "q6": "- bullet\\n- bullet\\n- Note: verify with current sources before your interview",
+    "q7": "- bullet\\n- bullet\\n- Note: verify with current sources before your interview",
+    "q8": "- bullet\\n- bullet\\n- bullet\\n- bullet\\n- bullet",
+    "section1_extra": [
+      { "id": "extra1", "question": "...", "answer": "- bullet\\n- bullet", "insertAfter": "q3" }
+    ],
+    "role_specific": [
+      { "id": "rs1", "question": "...", "answer": "- bullet\\n- bullet\\n- bullet" }
+    ]
+  }
+}
 
-    // Skip generation if a recent prep already exists (< 24 hours old) — unless force regenerate
-    const serviceClientCheck = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
-    if (!force) {
-      const { data: existingPrep } = await serviceClientCheck
-        .from("interview_prep")
-        .select("*")
-        .eq("job_id", job_id)
-        .eq("user_id", userId)
-        .maybeSingle();
-      if (existingPrep) {
-        const ageMs = Date.now() - new Date(existingPrep.updated_at || existingPrep.created_at).getTime();
-        if (ageMs < 24 * 60 * 60 * 1000) {
-          console.log(`[generate-interview-prep] Returning cached prep (age: ${Math.round(ageMs / 1000 / 60)} min)`);
-          return new Response(JSON.stringify({ success: true, data: existingPrep, cached: true }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-      }
-    }
+Field instructions:
+- q1 (Tell me about the company): 5-7 bullets covering company overview, business model, key products or brands, market position, scale, notable facts from the job posting.
+- q2 (The role and its responsibilities, and how it fits in the big picture): 4-6 bullets on day-to-day responsibilities, team or department context, how the role connects to company strategy. Pull from the job description.
+- q3 (Tell me about yourself - 2-minute pitch): 4 bullets structured as: (1) who you are academically (degree, university, field of study), (2) most relevant past experience from CV (1-2 roles or projects), (3) key skill or achievement matching this role, (4) what you are looking for now.
+- q4 (Why are you applying for this role): 3-4 bullets specific to this role's responsibilities matched to the applicant's background. Never generic.
+- q5 (Why are you applying to this company): 3-4 bullets specific to this company — its mission, culture, product, or market position. Never generic.
+- q6 (Recent company news): 2 bullets on real or plausible company news up to your training cutoff, then the verify note bullet exactly as shown above.
+- q7 (Recent industry news): 2 bullets on real or plausible industry trends up to your training cutoff, then the verify note bullet exactly as shown above.
+- q8 (Questions to ask the interviewer): 5-7 specific questions covering role clarity, team culture, success metrics, and one strategic question about company direction. Never generic.
+- section1_extra: 0 to 3 objects ONLY if the role type warrants extra fixed questions (consulting → "structured problem", startup → "funding/growth stage", technical → relevant deep-dive). Each object has "insertAfter" set to the q-id it should come after (e.g. "q3" or "q5"). If none needed, return an empty array [].
+- role_specific: EXACTLY 3-5 objects with questions and answers specific to this job title and industry. Never generic. Each answer is 3-5 bullets.
 
-    const [jobRes, profileRes, workRes, skillsRes, eduRes, langRes] = await Promise.all([
-      supabase.from("jobs").select("*").eq("id", job_id).eq("user_id", userId).single(),
-      supabase.from("profiles").select("full_name, email").eq("id", userId).single(),
-      supabase.from("work_experiences").select("*").eq("user_id", userId).order("start_year", { ascending: false }),
-      supabase.from("skills").select("*").eq("user_id", userId).maybeSingle(),
-      supabase.from("education").select("*").eq("user_id", userId).order("start_year", { ascending: false }),
-      supabase.from("languages").select("*").eq("user_id", userId),
-    ]);
-
-    if (jobRes.error || !jobRes.data) {
-      return new Response(JSON.stringify({ success: false, error: "Job not found" }), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const job = jobRes.data;
-    const profile = profileRes.data;
-    const workExperiences = workRes.data || [];
-    const skills = skillsRes.data;
-    const education = eduRes.data || [];
-    const languages = langRes.data || [];
-
-    const candidateProfile = {
-      full_name: profile?.full_name || null,
-      work_experiences: workExperiences.map((w: any) => ({
-        company: w.company_name,
-        job_title: w.job_title,
-        location: w.location,
-        start_year: w.start_year,
-        end_year: w.end_year,
-        is_current: w.is_current,
-        bullet_points: w.bullet_points,
-      })),
-      education: education.map((e: any) => ({
-        institution: e.institution,
-        degree: e.degree,
-        field_of_study: e.field_of_study,
-        start_year: e.start_year,
-        end_year: e.end_year,
-      })),
-      hard_skills: skills?.hard_skills || [],
-      soft_skills: skills?.soft_skills || [],
-      languages: languages.map((l: any) => ({ language: l.language_name, proficiency: l.proficiency })),
-    };
-
-    const jobData = {
-      title: job.job_title,
-      company: job.company_name,
-      function: job.function,
-      location: job.location,
-      work_mode: job.work_mode,
-      duration: job.duration,
-      hard_skills: job.hard_skills,
-      soft_skills: job.soft_skills,
-      languages_required: job.languages_required,
-    };
-
-    const systemPrompt = `You are an expert interview coach and career advisor. You will receive a candidate's profile and a specific job description. Return ONLY valid JSON with these exact keys:
-- company_overview: string (3-4 sentences on what the company does and their current strategic positioning)
-- role_intelligence: string (why this role likely exists, what success looks like in the first 90 days, likely interview format for this function and seniority level)
-- your_pitch: array of 3 strings (specific talking points for this candidate for this role, grounded in their actual experience)
-- preparation_gaps: array of objects each with gap (string) and suggested_response (string explaining how to address it in interview)
-- interview_questions: array of 10 objects each with: question (string), category (exactly one of: Behavioral, Technical, Motivational, Situational), suggested_answer_framework (string using the candidate's real experience structured in STAR format)`;
-
-    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-    if (!OPENAI_API_KEY) {
-      return new Response(JSON.stringify({ success: false, error: "OpenAI API key not configured" }), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+Every bullet starts with "- " (hyphen + space). Output ONLY the JSON object, nothing else.`;
     }
 
     const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
-      headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
-        model: "gpt-4o",
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: JSON.stringify({ job: jobData, candidate: candidateProfile }) },
+          { role: "user", content: userPrompt },
         ],
-        temperature: 0.4,
+        temperature: 0.6,
+        max_tokens: 4000,
         response_format: { type: "json_object" },
       }),
     });
@@ -177,57 +120,63 @@ serve(async (req) => {
     if (!openaiRes.ok) {
       const errText = await openaiRes.text();
       console.error("OpenAI error:", openaiRes.status, errText);
-      return new Response(JSON.stringify({ success: false, error: `AI error (${openaiRes.status})` }), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json({ success: false, error: `AI error (${openaiRes.status})` }, 500);
     }
 
     const openaiData = await openaiRes.json();
+    const content = openaiData.choices?.[0]?.message?.content || "{}";
     let parsed: any;
     try {
-      parsed = JSON.parse(openaiData.choices?.[0]?.message?.content);
+      parsed = JSON.parse(content);
     } catch {
-      return new Response(JSON.stringify({ success: false, error: "AI returned invalid response. Please try again." }), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json({ success: false, error: "AI returned invalid JSON. Please try again." }, 500);
     }
 
-    const row = {
-      job_id,
-      user_id: userId,
-      company_overview: parsed.company_overview || null,
-      role_intelligence: parsed.role_intelligence || null,
-      your_pitch: parsed.your_pitch || [],
-      preparation_gaps: parsed.preparation_gaps || [],
-      interview_questions: parsed.interview_questions || [],
-      updated_at: new Date().toISOString(),
+    if (isRegenerate) {
+      return json({ success: true, answer: parsed.answer || "" });
+    }
+
+    // Normalize bullet symbols: ensure each line starts with "- "
+    const normalize = (s: any): string => {
+      if (typeof s !== "string") return "";
+      return s
+        .split("\n")
+        .map((l) => l.trim())
+        .filter(Boolean)
+        .map((l) => (l.startsWith("- ") ? l : l.startsWith("-") ? "- " + l.slice(1).trim() : l.startsWith("•") ? "- " + l.slice(1).trim() : "- " + l))
+        .join("\n");
     };
 
-    const serviceClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    const answers = parsed.answers || {};
+    const out: any = {
+      q1: normalize(answers.q1),
+      q2: normalize(answers.q2),
+      q3: normalize(answers.q3),
+      q4: normalize(answers.q4),
+      q5: normalize(answers.q5),
+      q6: normalize(answers.q6),
+      q7: normalize(answers.q7),
+      q8: normalize(answers.q8),
+      section1_extra: Array.isArray(answers.section1_extra)
+        ? answers.section1_extra.slice(0, 3).map((e: any, i: number) => ({
+            id: e.id || `extra${i + 1}`,
+            question: e.question || "",
+            answer: normalize(e.answer),
+            insertAfter: e.insertAfter || "q3",
+          }))
+        : [],
+      role_specific: Array.isArray(answers.role_specific)
+        ? answers.role_specific.slice(0, 5).map((r: any, i: number) => ({
+            id: r.id || `rs${i + 1}`,
+            question: r.question || "",
+            answer: normalize(r.answer),
+          }))
+        : [],
+    };
 
-    const { data: prepData, error: upsertError } = await serviceClient
-      .from("interview_prep")
-      .upsert(row, { onConflict: "job_id,user_id" })
-      .select()
-      .single();
-
-    if (upsertError) {
-      console.error("Upsert error:", upsertError);
-      return new Response(JSON.stringify({ success: false, error: `Database error: ${upsertError.message}` }), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    return new Response(JSON.stringify({ success: true, data: prepData }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  } catch (err) {
+    return json({ success: true, answers: out });
+  } catch (err: any) {
     console.error("generate-interview-prep error:", err);
-    return new Response(JSON.stringify({ success: false, error: String(err) }), {
-      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return json({ success: false, error: String(err?.message || err) }, 500);
   }
 });
