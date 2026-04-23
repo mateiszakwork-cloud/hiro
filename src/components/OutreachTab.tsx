@@ -277,6 +277,92 @@ const MessageCell = ({
   );
 };
 
+/* ── LinkedIn Search Panel ── */
+const LinkedInSearchPanel = ({
+  companyName,
+  jobTitle,
+}: {
+  companyName: string | null;
+  jobTitle: string | null;
+}) => {
+  const role = (jobTitle || "").trim();
+  const company = (companyName || "").trim();
+
+  const buildUrl = (keywords: string) =>
+    `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(
+      keywords.trim()
+    )}&origin=GLOBAL_SEARCH_HEADER`;
+
+  const searches = [
+    {
+      key: "in_role",
+      label: "In the role",
+      who: `People currently working as ${role || "this role"} at ${company || "this company"}.`,
+      why: "They've recently been where you want to be — ideal for a coffee chat or to ask about the team and interview process.",
+      keywords: `${role} ${company}`,
+    },
+    {
+      key: "hiring_manager",
+      label: "Likely hiring manager",
+      who: `Heads, directors, or managers one level above ${role || "the role"} at ${company || "the company"}.`,
+      why: "They're often the decision-maker for this hire. A warm intro here can move your application to the top of the stack.",
+      keywords: `head of director of manager ${role} ${company}`,
+    },
+    {
+      key: "recruiter",
+      label: "Recruiter / HR",
+      who: `Recruiters, talent acquisition, and HR partners at ${company || "the company"}.`,
+      why: "They can fast-track your CV, share role context, and tell you exactly what the team is screening for.",
+      keywords: `recruiter talent acquisition HR ${company}`,
+    },
+  ];
+
+  return (
+    <div className="rounded-lg border bg-white p-5 space-y-4">
+      <div>
+        <h3 className="font-semibold text-foreground" style={{ fontFamily: "Sora, sans-serif", fontSize: 15 }}>
+          LinkedIn Search
+        </h3>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          Three targeted searches for {company || "this company"} — open in a new tab.
+        </p>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-3">
+        {searches.map((s) => (
+          <div
+            key={s.key}
+            className="flex flex-col rounded-lg border border-gray-200 bg-[#FAFAFB] p-4"
+          >
+            <div className="text-sm font-semibold text-foreground">{s.label}</div>
+            <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+              <span className="font-medium text-foreground/80">Who:</span> {s.who}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+              <span className="font-medium text-foreground/80">Why:</span> {s.why}
+            </p>
+            <div className="mt-auto pt-3">
+              <a
+                href={buildUrl(s.keywords)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-[#950606] hover:text-[#7a0505] hover:underline"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                Open on LinkedIn
+              </a>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <p className="text-xs text-muted-foreground italic border-t pt-3">
+        Find someone relevant, copy their LinkedIn profile URL, and add them to your contact tracker below.
+      </p>
+    </div>
+  );
+};
+
 /* ── Main Component ── */
 const OutreachTab = ({
   jobId, userId, companyName, jobTitle, jobFunction, contacts, setContacts,
