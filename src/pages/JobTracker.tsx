@@ -132,21 +132,24 @@ const isValidUrl = (str: string): boolean => {
 type SortKey = "company_name" | "job_title" | "function" | "location" | "duration" | "status" | "match_score" | "priority" | "created_at" | "applied_date" | "application_deadline";
 type SortDir = "asc" | "desc";
 
-const COLUMNS: { label: string; key: SortKey | null; width: string }[] = [
-  { label: "", key: null, width: "36px" },
-  { label: "Company", key: "company_name", width: "15%" },
-  { label: "Job Title", key: "job_title", width: "18%" },
-  { label: "Function", key: "function", width: "90px" },
-  { label: "Location", key: "location", width: "12%" },
-  { label: "Duration", key: "duration", width: "80px" },
-  { label: "Deadline", key: "application_deadline", width: "100px" },
-  { label: "Status", key: "status", width: "100px" },
-  { label: "Match", key: "match_score", width: "64px" },
-  { label: "Kit", key: null, width: "44px" },
-  { label: "Outreach", key: null, width: "80px" },
-  { label: "Priority", key: "priority", width: "80px" },
-  { label: "Applied", key: "applied_date", width: "90px" },
+// Default column widths in pixels — generous so all columns fit a 1280px screen
+// without horizontal scroll (sidebar 240 + page padding ~64 = 304 reserved).
+const COLUMNS: { label: string; key: SortKey | null; width: number; resizable: boolean }[] = [
+  { label: "",         key: null,                   width: 36,  resizable: false },
+  { label: "Company",  key: "company_name",         width: 140, resizable: true  },
+  { label: "Job Title",key: "job_title",            width: 220, resizable: true  },
+  { label: "Function", key: "function",             width: 120, resizable: true  },
+  { label: "Location", key: "location",             width: 140, resizable: true  },
+  { label: "Duration", key: "duration",             width: 90,  resizable: true  },
+  { label: "Deadline", key: "application_deadline", width: 110, resizable: true  },
+  { label: "Status",   key: "status",               width: 110, resizable: true  },
+  { label: "Match",    key: "match_score",          width: 80,  resizable: true  },
+  { label: "Kit",      key: null,                   width: 44,  resizable: false },
+  { label: "Outreach", key: null,                   width: 90,  resizable: true  },
+  { label: "Priority", key: "priority",             width: 90,  resizable: true  },
+  { label: "Applied",  key: "applied_date",         width: 100, resizable: true  },
 ];
+const MIN_COL_WIDTH = 60;
 
 const FUNCTION_VALUES = ["Strategy", "Finance", "Marketing", "Product", "Operations", "HR", "Consulting", "Other"];
 
