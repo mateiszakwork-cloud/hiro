@@ -332,6 +332,7 @@ const Welcome = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 
