@@ -40,6 +40,7 @@ const REQUEST_QUESTIONS = [
 ];
 
 interface Props {
+  jobId: string;
   jobTitle: string;
   companyName: string;
   jobDescription: string;
