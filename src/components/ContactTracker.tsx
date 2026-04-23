@@ -8,11 +8,14 @@ import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter,
 } from "@/components/ui/sheet";
 import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from "@/components/ui/dialog";
+import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Plus, Trash2, MessageSquare, ExternalLink, Loader2 } from "lucide-react";
+import { Plus, Trash2, MessageSquare, ExternalLink, Loader2, Copy, RefreshCw, Check } from "lucide-react";
 import { format } from "date-fns";
 
 /* ── Types ── */
@@ -71,6 +74,16 @@ const ContactTracker = ({
   const [addOpen, setAddOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  // Draft modal state
+  const [draftContact, setDraftContact] = useState<OutreachContact | null>(null);
+  const [draftType, setDraftType] = useState<"connection_note" | "cold_message">("connection_note");
+  const [draftText, setDraftText] = useState("");
+  const [draftLoading, setDraftLoading] = useState(false);
+  const [draftSaving, setDraftSaving] = useState(false);
+  const [draftCopied, setDraftCopied] = useState(false);
+  const [confirmStatusOpen, setConfirmStatusOpen] = useState(false);
+  const [pendingSavedText, setPendingSavedText] = useState<string | null>(null);
 
   // Form state
   const [fLinkedin, setFLinkedin] = useState("");
@@ -204,6 +217,104 @@ const ContactTracker = ({
     setDeleteId(null);
   };
 
+  /* ── Draft message ── */
+  const openDraft = (c: OutreachContact) => {
+    setDraftContact(c);
+    setDraftType("connection_note");
+    setDraftText(c.drafted_message || "");
+    setDraftCopied(false);
+    if (!c.drafted_message) {
+      // auto-generate first draft
+      generateDraft(c, "connection_note", false);
+    }
+  };
+
+  const generateDraft = async (
+    c: OutreachContact,
+    type: "connection_note" | "cold_message",
+    vary: boolean
+  ) => {
+    setDraftLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const { data, error } = await supabase.functions.invoke("draft-tracker-message", {
+        body: { contact_id: c.id, job_id: jobId, message_type: type, vary },
+        ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
+      });
+      if (error) throw error;
+      if (!data?.success) {
+        toast.error(data?.error || "Could not generate draft");
+        return;
+      }
+      setDraftText(data.message || "");
+    } catch {
+      toast.error("Draft generation failed — try again.");
+    } finally {
+      setDraftLoading(false);
+    }
+  };
+
+  const handleSwitchType = (next: "connection_note" | "cold_message") => {
+    if (next === draftType || !draftContact) return;
+    setDraftType(next);
+    setDraftText("");
+    generateDraft(draftContact, next, false);
+  };
+
+  const handleCopyDraft = async () => {
+    try {
+      await navigator.clipboard.writeText(draftText);
+      setDraftCopied(true);
+      toast.success("Copied to clipboard");
+      setTimeout(() => setDraftCopied(false), 1500);
+    } catch {
+      toast.error("Could not copy");
+    }
+  };
+
+  const persistDraft = async (alsoMarkMessaged: boolean) => {
+    if (!draftContact) return;
+    setDraftSaving(true);
+    const patch: Partial<OutreachContact> = { drafted_message: draftText };
+    if (alsoMarkMessaged) {
+      patch.status = "messaged";
+      if (!draftContact.date_messaged) patch.date_messaged = new Date().toISOString();
+    }
+    const { error } = await supabase
+      .from("outreach_contacts" as any)
+      .update(patch)
+      .eq("id", draftContact.id);
+    setDraftSaving(false);
+    if (error) {
+      toast.error("Could not save draft");
+      return;
+    }
+    setContacts((cs) => cs.map((x) => (x.id === draftContact.id ? { ...x, ...patch } : x)));
+    toast.success(alsoMarkMessaged ? "Draft saved · marked as messaged" : "Draft saved");
+    setConfirmStatusOpen(false);
+    setDraftContact(null);
+  };
+
+  const handleSaveDraft = () => {
+    if (!draftContact) return;
+    if (draftContact.status === "not_contacted") {
+      setConfirmStatusOpen(true);
+    } else {
+      persistDraft(false);
+    }
+  };
+
+  const isConnNote = draftType === "connection_note";
+  const charCount = draftText.length;
+  const counterColor = isConnNote
+    ? charCount >= 290
+      ? "text-red-600"
+      : charCount >= 260
+      ? "text-amber-600"
+      : "text-muted-foreground"
+    : "text-muted-foreground";
+
   return (
     <div className="rounded-lg border bg-white p-5 space-y-4">
       <div className="flex items-center justify-between gap-4">
@@ -314,11 +425,20 @@ const ContactTracker = ({
                     </td>
                     <td className="py-2.5 pr-3">
                       <div className="flex items-center justify-end gap-1.5">
+                        {c.drafted_message && (
+                          <span
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-50 text-green-700 border border-green-200"
+                            title="A draft message is saved"
+                          >
+                            <Check className="h-2.5 w-2.5" />
+                            Draft saved
+                          </span>
+                        )}
                         <Button
                           size="sm"
                           variant="outline"
                           className="h-7 text-xs gap-1.5"
-                          onClick={() => onDraftMessage?.(c)}
+                          onClick={() => { onDraftMessage?.(c); openDraft(c); }}
                         >
                           <MessageSquare className="h-3 w-3" />
                           Draft message
@@ -478,6 +598,130 @@ const ContactTracker = ({
               className="bg-red-600 hover:bg-red-700 text-white"
             >
               Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Draft message modal */}
+      <Dialog open={!!draftContact} onOpenChange={(v) => { if (!v) { setDraftContact(null); setDraftText(""); } }}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle style={{ fontFamily: "Sora, sans-serif" }}>
+              Draft message
+            </DialogTitle>
+            {draftContact && (
+              <DialogDescription>
+                <span className="font-medium text-foreground">{draftContact.name || "Unnamed contact"}</span>
+                {draftContact.title && <> · {draftContact.title}</>}
+                {draftContact.company && <> · {draftContact.company}</>}
+              </DialogDescription>
+            )}
+          </DialogHeader>
+
+          {/* Type toggle */}
+          <div className="inline-flex rounded-md border border-gray-200 bg-gray-50 p-0.5 self-start">
+            <button
+              type="button"
+              onClick={() => handleSwitchType("connection_note")}
+              className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                isConnNote ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Connection request note
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSwitchType("cold_message")}
+              className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                !isConnNote ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Cold message / InMail
+            </button>
+          </div>
+
+          {/* Textarea */}
+          <div className="space-y-1.5">
+            <Textarea
+              value={draftText}
+              onChange={(e) => setDraftText(e.target.value)}
+              rows={isConnNote ? 6 : 10}
+              maxLength={isConnNote ? 300 : 2000}
+              placeholder={draftLoading ? "Generating draft…" : "Your draft will appear here."}
+              disabled={draftLoading}
+              className="resize-none text-sm leading-relaxed"
+            />
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">
+                {isConnNote ? "LinkedIn connection notes are limited to 300 characters." : "Aim for 130–180 words."}
+              </span>
+              <span className={`font-medium tabular-nums ${counterColor}`}>
+                {charCount}{isConnNote ? " / 300" : ""}
+              </span>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:justify-between">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => draftContact && generateDraft(draftContact, draftType, true)}
+              disabled={draftLoading || draftSaving}
+              className="gap-1.5"
+            >
+              {draftLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+              Regenerate
+            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCopyDraft}
+                disabled={!draftText.trim() || draftLoading}
+                className="gap-1.5"
+              >
+                {draftCopied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
+                {draftCopied ? "Copied" : "Copy"}
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleSaveDraft}
+                disabled={!draftText.trim() || draftLoading || draftSaving}
+                className="bg-[#950606] hover:bg-[#7a0505] text-white gap-1.5"
+              >
+                {draftSaving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                Save draft
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm status update on save */}
+      <AlertDialog open={confirmStatusOpen} onOpenChange={setConfirmStatusOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mark this contact as messaged?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You can save the draft only, or also update the contact's status to "Messaged" and stamp today's date.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel disabled={draftSaving}>Cancel</AlertDialogCancel>
+            <Button
+              variant="outline"
+              onClick={() => persistDraft(false)}
+              disabled={draftSaving}
+            >
+              Save draft only
+            </Button>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); persistDraft(true); }}
+              disabled={draftSaving}
+              className="bg-[#950606] hover:bg-[#7a0505] text-white"
+            >
+              Save & mark messaged
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
