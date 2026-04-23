@@ -343,6 +343,39 @@ export type Database = {
           },
         ]
       }
+      interview_prep_answers: {
+        Row: {
+          answers: Json
+          created_at: string
+          id: string
+          job_id: string
+          role_specific: Json
+          section1_extra: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          answers?: Json
+          created_at?: string
+          id?: string
+          job_id: string
+          role_specific?: Json
+          section1_extra?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          answers?: Json
+          created_at?: string
+          id?: string
+          job_id?: string
+          role_specific?: Json
+          section1_extra?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       jobs: {
         Row: {
           application_deadline: string | null

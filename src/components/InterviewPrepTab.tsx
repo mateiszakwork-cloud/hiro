@@ -40,6 +40,7 @@ const REQUEST_QUESTIONS = [
 ];
 
 interface Props {
+  jobId: string;
   jobTitle: string;
   companyName: string;
   jobDescription: string;
@@ -128,13 +129,80 @@ const CAT_COLORS: Record<string, string> = {
   Situational: "bg-orange-100 text-orange-700",
 };
 
-export default function InterviewPrepTab({ jobTitle, companyName, jobDescription, cvSummary, questionBank = [] }: Props) {
+export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDescription, cvSummary, questionBank = [] }: Props) {
   const [answers, setAnswers] = useState<Answers | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [regenerating, setRegenerating] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(false);
+  const saveTimer = useRef<number | null>(null);
+  const userIdRef = useRef<string | null>(null);
 
   const hasGenerated = !!answers;
+
+  /* ── Load saved answers on mount / jobId change ── */
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const uid = sessionData?.session?.user?.id;
+      if (!uid || !jobId) {
+        setHydrated(true);
+        return;
+      }
+      userIdRef.current = uid;
+      const { data, error: loadErr } = await supabase
+        .from("interview_prep_answers")
+        .select("answers, section1_extra, role_specific")
+        .eq("user_id", uid)
+        .eq("job_id", jobId)
+        .maybeSingle();
+      if (cancelled) return;
+      if (!loadErr && data && data.answers && Object.keys(data.answers as object).length > 0) {
+        const a = (data.answers ?? {}) as Partial<Answers>;
+        setAnswers({
+          q1: a.q1 || "", q2: a.q2 || "", q3: a.q3 || "", q4: a.q4 || "",
+          q5: a.q5 || "", q6: a.q6 || "", q7: a.q7 || "", q8: a.q8 || "",
+          section1_extra: (data.section1_extra as ExtraQ[]) || [],
+          role_specific: (data.role_specific as RoleQ[]) || [],
+        });
+      }
+      setHydrated(true);
+    })();
+    return () => { cancelled = true; };
+  }, [jobId]);
+
+  /* ── Persist answers (immediate after generate, debounced on edit) ── */
+  const persistAnswers = async (a: Answers) => {
+    const uid = userIdRef.current;
+    if (!uid || !jobId) return;
+    const { q1, q2, q3, q4, q5, q6, q7, q8, section1_extra, role_specific } = a;
+    await supabase
+      .from("interview_prep_answers")
+      .upsert(
+        {
+          user_id: uid,
+          job_id: jobId,
+          answers: { q1, q2, q3, q4, q5, q6, q7, q8 },
+          section1_extra,
+          role_specific,
+        },
+        { onConflict: "user_id,job_id" }
+      );
+  };
+
+  /* ── Debounced auto-save on edits ── */
+  useEffect(() => {
+    if (!hydrated || !answers) return;
+    if (saveTimer.current) window.clearTimeout(saveTimer.current);
+    saveTimer.current = window.setTimeout(() => {
+      persistAnswers(answers);
+    }, 1000);
+    return () => {
+      if (saveTimer.current) window.clearTimeout(saveTimer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [answers, hydrated]);
 
   const callFn = async (body: any) => {
     const { data: sessionData } = await supabase.auth.getSession();
@@ -158,7 +226,10 @@ export default function InterviewPrepTab({ jobTitle, companyName, jobDescription
         setLoading(false);
         return;
       }
-      setAnswers(data.answers as Answers);
+      const generated = data.answers as Answers;
+      setAnswers(generated);
+      // Persist immediately after successful generation
+      persistAnswers(generated);
       toast.success("Interview prep generated");
     } catch {
       setError("Generation failed. Please try again.");

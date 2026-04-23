@@ -1904,6 +1904,7 @@ const JobDetail = () => {
 
             return (
               <InterviewPrepTab
+                jobId={job.id}
                 jobTitle={job.job_title || ""}
                 companyName={job.company_name || ""}
                 jobDescription={jdParts.join("\n")}
