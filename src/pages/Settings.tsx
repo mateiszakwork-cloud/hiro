@@ -30,6 +30,27 @@ const Settings = () => {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [validating, setValidating] = useState(false);
+  const [sessionLive, setSessionLive] = useState<boolean | null>(null);
+
+  const validateSession = async () => {
+    setValidating(true);
+    setSessionLive(null);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const session = sessionData?.session;
+      if (!session) { setValidating(false); return; }
+      const { data, error } = await supabase.functions.invoke("test-linkedin-connection", {
+        body: { user_id: session.user.id },
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      setSessionLive(!error && !!data?.success);
+    } catch {
+      setSessionLive(false);
+    } finally {
+      setValidating(false);
+    }
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -52,6 +73,12 @@ const Settings = () => {
         setUpdatedAt((data as any).linkedin_updated_at);
       }
       setLoading(false);
+      // Auto-validate session if both cookies are present
+      const liAt = data?.linkedin_cookie;
+      const jsid = (data as any)?.linkedin_jsessionid;
+      if (liAt && liAt.trim().length >= 50 && jsid && jsid.trim().startsWith("ajax:")) {
+        validateSession();
+      }
     };
     load();
   }, []);
@@ -97,6 +124,12 @@ const Settings = () => {
       setUpdatedAt(now);
       setTestResult(null);
       toast("LinkedIn connected");
+      // Re-validate freshly saved cookies
+      if (trimmedCookie && isLiAtValid(trimmedCookie) && trimmedSession && isJsessionValid(trimmedSession)) {
+        validateSession();
+      } else {
+        setSessionLive(null);
+      }
     }
   };
 
@@ -172,15 +205,34 @@ const Settings = () => {
               {/* Status row */}
               <div className="hiro-li-status-row">
                 {isFullyConnected ? (
-                  <>
-                    <span className="hiro-li-dot-connected" />
-                    <span className="text-sm font-semibold" style={{ color: "#15803D" }}>LinkedIn connected</span>
-                    {updatedAt && (
-                      <span className="text-xs text-muted-foreground ml-auto">
-                        Last updated: {formatUpdatedAt(updatedAt)}
+                  validating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      <span className="text-sm font-medium text-muted-foreground">Checking LinkedIn session…</span>
+                    </>
+                  ) : sessionLive === false ? (
+                    <>
+                      <XCircle className="h-4 w-4" style={{ color: "#991B1B" }} />
+                      <span className="text-sm font-semibold" style={{ color: "#991B1B" }}>
+                        Session expired — please update your cookies
                       </span>
-                    )}
-                  </>
+                      {updatedAt && (
+                        <span className="text-xs text-muted-foreground ml-auto">
+                          Last updated: {formatUpdatedAt(updatedAt)}
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <span className="hiro-li-dot-connected" />
+                      <span className="text-sm font-semibold" style={{ color: "#15803D" }}>LinkedIn connected</span>
+                      {updatedAt && (
+                        <span className="text-xs text-muted-foreground ml-auto">
+                          Last updated: {formatUpdatedAt(updatedAt)}
+                        </span>
+                      )}
+                    </>
+                  )
                 ) : isPartial ? (
                   <>
                     <AlertTriangle className="h-4 w-4" style={{ color: "#D97706" }} />
