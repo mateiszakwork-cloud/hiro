@@ -64,44 +64,70 @@ const Landing = () => {
               <Link to="/register" className="hiro-cta-primary">Start for free</Link>
               <a href="#how" className="hiro-cta-secondary">See how it works</a>
             </div>
-            <div className="hiro-social-proof">
-              <div className="hiro-avatars">
-                <div className="hiro-avatar" />
-                <div className="hiro-avatar" />
-                <div className="hiro-avatar" />
-              </div>
-              <span className="hiro-social-text">Used by students at CEMS, RSM, and Nova SBE</span>
-            </div>
           </div>
 
           {/* Mock product UI */}
           <div className="hiro-mock" aria-hidden="true">
             <div className="hiro-mock-urlbar">
               <Link2 className="h-4 w-4" style={{ color: "rgba(255,255,255,0.4)" }} />
-              <span className="hiro-mock-url">https://careers.pernodricard.com/strategy-intern...</span>
+              <span className="hiro-mock-url">https://careers.mckinsey.com/strategy-analyst...</span>
               <span className="hiro-mock-add">+ Add</span>
             </div>
             <div className="hiro-mock-row">
-              <span className="hiro-mock-company">Pernod Ricard</span>
-              <span className="hiro-mock-role">Strategy Intern</span>
+              <span className="hiro-mock-company">McKinsey &amp; Co.</span>
+              <span className="hiro-mock-role">Strategy Analyst</span>
               <span className="hiro-mock-spacer" />
-              <span className="hiro-mock-match hiro-mock-match-green">87%</span>
               <span className="hiro-mock-status hiro-mock-status-applied">Applied</span>
             </div>
             <div className="hiro-mock-row">
-              <span className="hiro-mock-company">Danone</span>
-              <span className="hiro-mock-role">Marketing Intern</span>
+              <span className="hiro-mock-company">Unilever</span>
+              <span className="hiro-mock-role">Brand Manager</span>
               <span className="hiro-mock-spacer" />
-              <span className="hiro-mock-match hiro-mock-match-amber">72%</span>
-              <span className="hiro-mock-status hiro-mock-status-screening">Screening</span>
+              <span className="hiro-mock-status hiro-mock-status-progress">In Progress</span>
             </div>
             <div className="hiro-mock-row">
-              <span className="hiro-mock-company">Estée Lauder</span>
-              <span className="hiro-mock-role">Brand Intern</span>
+              <span className="hiro-mock-company">Spotify</span>
+              <span className="hiro-mock-role">Product Manager</span>
               <span className="hiro-mock-spacer" />
-              <span className="hiro-mock-match hiro-mock-match-green">91%</span>
-              <span className="hiro-mock-status hiro-mock-status-interview">Interview</span>
+              <span className="hiro-mock-status hiro-mock-status-saved">Saved</span>
             </div>
+            <div className="hiro-mock-row">
+              <span className="hiro-mock-company">Goldman Sachs</span>
+              <span className="hiro-mock-role">Corporate Finance Analyst</span>
+              <span className="hiro-mock-spacer" />
+              <span className="hiro-mock-status hiro-mock-status-applied">Applied</span>
+            </div>
+            <div className="hiro-mock-row">
+              <span className="hiro-mock-company">Nestlé</span>
+              <span className="hiro-mock-role">Sustainability Coordinator</span>
+              <span className="hiro-mock-spacer" />
+              <span className="hiro-mock-status hiro-mock-status-progress">In Progress</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <hr className="hiro-divider-line" />
+
+      {/* ABOUT — personal note */}
+      <section id="about" className="hiro-about">
+        <div className="hiro-about-inner">
+          <p className="hiro-about-eyebrow">A note from the person who built this</p>
+          <h2 className="hiro-about-h">Why Hiro exists.</h2>
+          <div className="hiro-about-body">
+            <p>
+              I'm Máté, 24, MSc student. Before my Masters I spent a gap year doing internships, and
+              those two positions took over 6 months of applying combined.
+            </p>
+            <p className="hiro-about-stat">
+              <span className="hiro-about-stat-num">130+</span>
+              <span className="hiro-about-stat-label">applications, custom CVs for every role, cold outreach on LinkedIn.</span>
+            </p>
+            <p>
+              I know how exhausting and disorganised it gets. I built Hiro because I wanted a tool
+              that actually helps students apply and save time.
+            </p>
+            <p className="hiro-about-sign">— Máté</p>
           </div>
         </div>
       </section>
