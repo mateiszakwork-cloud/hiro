@@ -217,6 +217,104 @@ const ContactTracker = ({
     setDeleteId(null);
   };
 
+  /* ── Draft message ── */
+  const openDraft = (c: OutreachContact) => {
+    setDraftContact(c);
+    setDraftType("connection_note");
+    setDraftText(c.drafted_message || "");
+    setDraftCopied(false);
+    if (!c.drafted_message) {
+      // auto-generate first draft
+      generateDraft(c, "connection_note", false);
+    }
+  };
+
+  const generateDraft = async (
+    c: OutreachContact,
+    type: "connection_note" | "cold_message",
+    vary: boolean
+  ) => {
+    setDraftLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const { data, error } = await supabase.functions.invoke("draft-tracker-message", {
+        body: { contact_id: c.id, job_id: jobId, message_type: type, vary },
+        ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
+      });
+      if (error) throw error;
+      if (!data?.success) {
+        toast.error(data?.error || "Could not generate draft");
+        return;
+      }
+      setDraftText(data.message || "");
+    } catch {
+      toast.error("Draft generation failed — try again.");
+    } finally {
+      setDraftLoading(false);
+    }
+  };
+
+  const handleSwitchType = (next: "connection_note" | "cold_message") => {
+    if (next === draftType || !draftContact) return;
+    setDraftType(next);
+    setDraftText("");
+    generateDraft(draftContact, next, false);
+  };
+
+  const handleCopyDraft = async () => {
+    try {
+      await navigator.clipboard.writeText(draftText);
+      setDraftCopied(true);
+      toast.success("Copied to clipboard");
+      setTimeout(() => setDraftCopied(false), 1500);
+    } catch {
+      toast.error("Could not copy");
+    }
+  };
+
+  const persistDraft = async (alsoMarkMessaged: boolean) => {
+    if (!draftContact) return;
+    setDraftSaving(true);
+    const patch: Partial<OutreachContact> = { drafted_message: draftText };
+    if (alsoMarkMessaged) {
+      patch.status = "messaged";
+      if (!draftContact.date_messaged) patch.date_messaged = new Date().toISOString();
+    }
+    const { error } = await supabase
+      .from("outreach_contacts" as any)
+      .update(patch)
+      .eq("id", draftContact.id);
+    setDraftSaving(false);
+    if (error) {
+      toast.error("Could not save draft");
+      return;
+    }
+    setContacts((cs) => cs.map((x) => (x.id === draftContact.id ? { ...x, ...patch } : x)));
+    toast.success(alsoMarkMessaged ? "Draft saved · marked as messaged" : "Draft saved");
+    setConfirmStatusOpen(false);
+    setDraftContact(null);
+  };
+
+  const handleSaveDraft = () => {
+    if (!draftContact) return;
+    if (draftContact.status === "not_contacted") {
+      setConfirmStatusOpen(true);
+    } else {
+      persistDraft(false);
+    }
+  };
+
+  const isConnNote = draftType === "connection_note";
+  const charCount = draftText.length;
+  const counterColor = isConnNote
+    ? charCount >= 290
+      ? "text-red-600"
+      : charCount >= 260
+      ? "text-amber-600"
+      : "text-muted-foreground"
+    : "text-muted-foreground";
+
   return (
     <div className="rounded-lg border bg-white p-5 space-y-4">
       <div className="flex items-center justify-between gap-4">
