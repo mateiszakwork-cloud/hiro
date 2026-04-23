@@ -1223,7 +1223,7 @@ const JobTracker = () => {
             <>
               <DialogHeader className="px-6 pt-6 pb-0">
                 <DialogTitle className="text-lg font-bold text-foreground flex items-center gap-2" style={{ fontFamily: 'Sora, sans-serif' }}>
-                  {modalJob.job_title || "Job"}
+                  {safeText(modalJob.job_title) === "–" ? "Job" : safeText(modalJob.job_title)}
                   <button
                     onClick={() => { setKitModalJobId(null); navigate(`/jobs/${modalJob.id}?tab=overview&edit=true`); }}
                     className="text-muted-foreground hover:text-primary transition-colors"
@@ -1232,7 +1232,7 @@ const JobTracker = () => {
                     <Pencil className="h-4 w-4" />
                   </button>
                 </DialogTitle>
-                <p className="text-sm" style={{ color: '#950606' }}>{modalJob.company_name}</p>
+                <p className="text-sm" style={{ color: '#950606' }}>{safeText(modalJob.company_name)}</p>
                 <button
                   onClick={() => { setKitModalJobId(null); navigate(`/jobs/${kitModalJobId}`); }}
                   className="mt-2 inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-lg border-2 transition-colors hover:bg-[#950606] hover:text-white"
