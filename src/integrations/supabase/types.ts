@@ -461,6 +461,65 @@ export type Database = {
           },
         ]
       }
+      outreach_contacts: {
+        Row: {
+          category: string | null
+          company: string | null
+          connection_degree: string | null
+          date_added: string
+          date_messaged: string | null
+          drafted_message: string | null
+          id: string
+          job_id: string
+          linkedin_url: string | null
+          name: string | null
+          notes: string | null
+          status: string
+          title: string | null
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          company?: string | null
+          connection_degree?: string | null
+          date_added?: string
+          date_messaged?: string | null
+          drafted_message?: string | null
+          id?: string
+          job_id: string
+          linkedin_url?: string | null
+          name?: string | null
+          notes?: string | null
+          status?: string
+          title?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          company?: string | null
+          connection_degree?: string | null
+          date_added?: string
+          date_messaged?: string | null
+          drafted_message?: string | null
+          id?: string
+          job_id?: string
+          linkedin_url?: string | null
+          name?: string | null
+          notes?: string | null
+          status?: string
+          title?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outreach_contacts_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           base_cv_text: string | null
