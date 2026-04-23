@@ -1772,6 +1772,249 @@ const JobDetail = () => {
 
         {/* Interview Prep Tab */}
         <TabsContent value="interview" className="hiro-tab-content mt-0 space-y-6">
+          {/* ── Your Interview (editable, collapsible) ── */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="hiro-section-heading">Your Interview</h3>
+              <span className="text-xs text-muted-foreground">
+                {interviewDataSaved ? "Saved" : "Saving…"}
+              </span>
+            </div>
+            <Accordion type="multiple" className="space-y-2">
+              {/* Format */}
+              <AccordionItem value="format" className="border rounded-lg px-4">
+                <AccordionTrigger className="hover:no-underline py-3">
+                  <div className="flex items-center justify-between w-full pr-3">
+                    <span className="text-sm font-medium text-foreground">Interview format</span>
+                    <span className="text-xs text-muted-foreground">{interviewData.format || "Not set"}</span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="pb-4 space-y-3">
+                  <Select value={interviewData.format} onValueChange={(v) => updateInterviewData({ format: v })}>
+                    <SelectTrigger className="w-full sm:w-[280px]"><SelectValue placeholder="Select format" /></SelectTrigger>
+                    <SelectContent>
+                      {["Phone screen", "Video call", "In-person", "Assessment centre", "Case interview", "Multiple rounds"].map(o => (
+                        <SelectItem key={o} value={o}>{o}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Textarea
+                    placeholder="Notes on the format (e.g. 45 mins, 2 interviewers, technical first half)…"
+                    value={interviewData.format_notes}
+                    onChange={(e) => updateInterviewData({ format_notes: e.target.value })}
+                    rows={3}
+                  />
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* Interview date */}
+              <AccordionItem value="date" className="border rounded-lg px-4">
+                <AccordionTrigger className="hover:no-underline py-3">
+                  <div className="flex items-center justify-between w-full pr-3">
+                    <span className="text-sm font-medium text-foreground">Interview date</span>
+                    <span className="text-xs text-muted-foreground">
+                      {interviewData.interview_date ? format(new Date(interviewData.interview_date), "PPP") : "Not set"}
+                    </span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="pb-4">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className={cn("w-[260px] justify-start text-left font-normal", !interviewData.interview_date && "text-muted-foreground")}>
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {interviewData.interview_date ? format(new Date(interviewData.interview_date), "PPP") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={interviewData.interview_date ? new Date(interviewData.interview_date) : undefined}
+                        onSelect={(d) => updateInterviewData({ interview_date: d ? d.toISOString() : null })}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  {interviewData.interview_date && (
+                    <Button variant="ghost" size="sm" className="ml-2" onClick={() => updateInterviewData({ interview_date: null })}>
+                      Clear
+                    </Button>
+                  )}
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* Key talking points */}
+              <AccordionItem value="talking" className="border rounded-lg px-4">
+                <AccordionTrigger className="hover:no-underline py-3">
+                  <span className="text-sm font-medium text-foreground">Key talking points</span>
+                </AccordionTrigger>
+                <AccordionContent className="pb-4">
+                  <Textarea
+                    placeholder="What to emphasise from your background — projects, results, why this company…"
+                    value={interviewData.talking_points}
+                    onChange={(e) => updateInterviewData({ talking_points: e.target.value })}
+                    rows={6}
+                  />
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* Questions to prepare */}
+              <AccordionItem value="prepare" className="border rounded-lg px-4">
+                <AccordionTrigger className="hover:no-underline py-3">
+                  <div className="flex items-center justify-between w-full pr-3">
+                    <span className="text-sm font-medium text-foreground">Questions to prepare</span>
+                    <span className="text-xs text-muted-foreground">{interviewData.questions_to_prepare.length}</span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="pb-4 space-y-2">
+                  {interviewData.questions_to_prepare.length === 0 && (
+                    <p className="text-xs text-muted-foreground italic">No questions added yet.</p>
+                  )}
+                  {interviewData.questions_to_prepare.map((q, i) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <Textarea
+                        value={q}
+                        onChange={(e) => {
+                          const next = [...interviewData.questions_to_prepare];
+                          next[i] = e.target.value;
+                          updateInterviewData({ questions_to_prepare: next });
+                        }}
+                        rows={2}
+                        className="flex-1"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => updateInterviewData({ questions_to_prepare: interviewData.questions_to_prepare.filter((_, j) => j !== i) })}
+                        aria-label="Remove question"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <div className="flex items-start gap-2 pt-1">
+                    <Input
+                      placeholder="Add a question to prepare…"
+                      value={newPrepQuestion}
+                      onChange={(e) => setNewPrepQuestion(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && newPrepQuestion.trim()) {
+                          e.preventDefault();
+                          updateInterviewData({ questions_to_prepare: [...interviewData.questions_to_prepare, newPrepQuestion.trim()] });
+                          setNewPrepQuestion("");
+                        }
+                      }}
+                    />
+                    <Button
+                      onClick={() => {
+                        if (!newPrepQuestion.trim()) return;
+                        updateInterviewData({ questions_to_prepare: [...interviewData.questions_to_prepare, newPrepQuestion.trim()] });
+                        setNewPrepQuestion("");
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-1" /> Add
+                    </Button>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* Questions to ask them */}
+              <AccordionItem value="ask" className="border rounded-lg px-4">
+                <AccordionTrigger className="hover:no-underline py-3">
+                  <div className="flex items-center justify-between w-full pr-3">
+                    <span className="text-sm font-medium text-foreground">Questions to ask them</span>
+                    <span className="text-xs text-muted-foreground">{interviewData.questions_to_ask.length}</span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="pb-4 space-y-2">
+                  {interviewData.questions_to_ask.length === 0 && (
+                    <p className="text-xs text-muted-foreground italic">No questions added yet.</p>
+                  )}
+                  {interviewData.questions_to_ask.map((q, i) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <Textarea
+                        value={q}
+                        onChange={(e) => {
+                          const next = [...interviewData.questions_to_ask];
+                          next[i] = e.target.value;
+                          updateInterviewData({ questions_to_ask: next });
+                        }}
+                        rows={2}
+                        className="flex-1"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => updateInterviewData({ questions_to_ask: interviewData.questions_to_ask.filter((_, j) => j !== i) })}
+                        aria-label="Remove question"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <div className="flex items-start gap-2 pt-1">
+                    <Input
+                      placeholder="Add a question to ask the interviewer…"
+                      value={newAskQuestion}
+                      onChange={(e) => setNewAskQuestion(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && newAskQuestion.trim()) {
+                          e.preventDefault();
+                          updateInterviewData({ questions_to_ask: [...interviewData.questions_to_ask, newAskQuestion.trim()] });
+                          setNewAskQuestion("");
+                        }
+                      }}
+                    />
+                    <Button
+                      onClick={() => {
+                        if (!newAskQuestion.trim()) return;
+                        updateInterviewData({ questions_to_ask: [...interviewData.questions_to_ask, newAskQuestion.trim()] });
+                        setNewAskQuestion("");
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-1" /> Add
+                    </Button>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* Post-interview notes */}
+              <AccordionItem value="post" className="border rounded-lg px-4">
+                <AccordionTrigger className="hover:no-underline py-3">
+                  <span className="text-sm font-medium text-foreground">Post-interview notes</span>
+                </AccordionTrigger>
+                <AccordionContent className="pb-4">
+                  <Textarea
+                    placeholder="Reflections after the interview — what went well, what to improve, signals…"
+                    value={interviewData.post_notes}
+                    onChange={(e) => updateInterviewData({ post_notes: e.target.value })}
+                    rows={6}
+                  />
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* Outcome */}
+              <AccordionItem value="outcome" className="border rounded-lg px-4">
+                <AccordionTrigger className="hover:no-underline py-3">
+                  <div className="flex items-center justify-between w-full pr-3">
+                    <span className="text-sm font-medium text-foreground">Outcome</span>
+                    <span className="text-xs text-muted-foreground">{interviewData.outcome}</span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="pb-4">
+                  <Select value={interviewData.outcome} onValueChange={(v) => updateInterviewData({ outcome: v })}>
+                    <SelectTrigger className="w-full sm:w-[260px]"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {["Pending", "Passed", "Rejected", "Offer received"].map(o => (
+                        <SelectItem key={o} value={o}>{o}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </div>
+
           {/* Interview banner */}
           {job && ["Interview", "Offer"].includes(job.status) && !interviewPrep && (
             <div className="flex items-center gap-3 p-4 rounded-xl border-2 border-[#950606] bg-[#950606]/5">
