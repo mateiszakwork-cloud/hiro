@@ -124,6 +124,12 @@ const Settings = () => {
       setUpdatedAt(now);
       setTestResult(null);
       toast("LinkedIn connected");
+      // Re-validate freshly saved cookies
+      if (trimmedCookie && isLiAtValid(trimmedCookie) && trimmedSession && isJsessionValid(trimmedSession)) {
+        validateSession();
+      } else {
+        setSessionLive(null);
+      }
     }
   };
 
