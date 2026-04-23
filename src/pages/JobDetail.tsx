@@ -566,6 +566,21 @@ const JobDetail = () => {
     }, 1000);
   }, [jobId]);
 
+  const updateInterviewData = useCallback((patch: Partial<InterviewUserData>) => {
+    setInterviewData(prev => {
+      const next = { ...prev, ...patch };
+      setInterviewDataSaved(false);
+      if (interviewSaveTimer.current) clearTimeout(interviewSaveTimer.current);
+      interviewSaveTimer.current = setTimeout(async () => {
+        if (jobId) {
+          await supabase.from("jobs").update({ interview_user_data: next as any } as any).eq("id", jobId);
+          setInterviewDataSaved(true);
+        }
+      }, 800);
+      return next;
+    });
+  }, [jobId]);
+
   const addContact = async () => {
     if (!userId || !jobId) return;
     const url = linkedinUrl.trim();
