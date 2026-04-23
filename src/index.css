@@ -260,6 +260,25 @@
   background: #FFF8F8;
 }
 
+/* Column resize handle on table headers */
+.hiro-col-resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  user-select: none;
+  background: transparent;
+  z-index: 2;
+  transition: background 120ms ease;
+}
+.hiro-col-resize-handle:hover,
+.hiro-col-resize-handle:active {
+  background: var(--color-primary);
+  opacity: 0.6;
+}
+
 /* Hiro responsive metrics grid: 6 cols desktop, 2 cols on small screens */
 @media (max-width: 900px) {
   .hiro-metrics-grid {
