@@ -237,6 +237,40 @@ const JobTracker = () => {
   const [filterFunction, setFilterFunction] = useState("All");
   const [filterPriority, setFilterPriority] = useState("All");
 
+  // In-memory column widths (persists for the session, resets on refresh)
+  const [colWidths, setColWidths] = useState<Record<string, number>>(() =>
+    Object.fromEntries(COLUMNS.map(c => [c.label || "_open", c.width]))
+  );
+  const resizingRef = useRef<{ label: string; startX: number; startWidth: number } | null>(null);
+
+  const handleResizeStart = (e: React.MouseEvent, label: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    resizingRef.current = {
+      label,
+      startX: e.clientX,
+      startWidth: colWidths[label] ?? 100,
+    };
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+
+    const onMove = (ev: MouseEvent) => {
+      const r = resizingRef.current;
+      if (!r) return;
+      const next = Math.max(MIN_COL_WIDTH, r.startWidth + (ev.clientX - r.startX));
+      setColWidths(prev => ({ ...prev, [r.label]: next }));
+    };
+    const onUp = () => {
+      resizingRef.current = null;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
+
   const handleSort = (key: SortKey | null) => {
     if (!key) return;
     if (sortKey === key) {
