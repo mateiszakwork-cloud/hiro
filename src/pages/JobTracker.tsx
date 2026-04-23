@@ -161,6 +161,15 @@ const copyToClipboard = (text: string, label: string) => {
   toast.success(`${label} copied to clipboard`);
 };
 
+// Returns a safe display value, replacing null / undefined / empty / literal "null" with em-dash
+const safeText = (v: unknown): string => {
+  if (v === null || v === undefined) return "–";
+  const s = String(v).trim();
+  if (!s || s.toLowerCase() === "null" || s.toLowerCase() === "undefined") return "–";
+  return s;
+};
+const isBlank = (v: unknown): boolean => safeText(v) === "–";
+
 const JobTracker = () => {
   const navigate = useNavigate();
   const [jobs, setJobs] = useState<Job[]>([]);
