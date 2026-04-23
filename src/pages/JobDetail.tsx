@@ -577,7 +577,7 @@ const JobDetail = () => {
       .from("outreach_contacts" as any)
       .select("status")
       .eq("job_id", jobId);
-    const rows = (data || []) as { status: string }[];
+    const rows = (data as unknown as { status: string }[]) || [];
     const summary = { total: rows.length, not_contacted: 0, messaged: 0, replied: 0, meeting_booked: 0 };
     for (const r of rows) {
       if (r.status === "messaged") summary.messaged++;
