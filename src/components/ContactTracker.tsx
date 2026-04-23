@@ -75,6 +75,16 @@ const ContactTracker = ({
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
+  // Draft modal state
+  const [draftContact, setDraftContact] = useState<OutreachContact | null>(null);
+  const [draftType, setDraftType] = useState<"connection_note" | "cold_message">("connection_note");
+  const [draftText, setDraftText] = useState("");
+  const [draftLoading, setDraftLoading] = useState(false);
+  const [draftSaving, setDraftSaving] = useState(false);
+  const [draftCopied, setDraftCopied] = useState(false);
+  const [confirmStatusOpen, setConfirmStatusOpen] = useState(false);
+  const [pendingSavedText, setPendingSavedText] = useState<string | null>(null);
+
   // Form state
   const [fLinkedin, setFLinkedin] = useState("");
   const [fName, setFName] = useState("");
