@@ -305,19 +305,16 @@ const NETWORK_OPTIONS: { value: "F" | "S" | "O"; label: string }[] = [
 /* Suggest senior titles given a junior/intern role */
 const suggestTitle = (jobTitle: string | null): string => {
   const t = (jobTitle || "").trim();
-  if (!t) return "";
+  if (!t) return "Manager";
   const lower = t.toLowerCase();
-  // Strip common junior qualifiers
-  const stripped = lower
-    .replace(/\b(intern|internship|graduate|trainee|junior|jr\.?|associate|entry[-\s]?level|assistant)\b/gi, "")
-    .replace(/\s+/g, " ")
-    .trim();
-  if (!stripped) return t;
-  // Capitalize words
-  const cap = stripped.replace(/\b\w/g, (c) => c.toUpperCase());
-  // If it already contains a senior title, return as-is
-  if (/\b(manager|lead|director|head|principal|senior|sr\.?)\b/i.test(stripped)) return cap;
-  return `${cap} Manager`;
+  if (lower.includes("brand")) return "Brand Manager";
+  if (lower.includes("marketing")) return "Marketing Manager";
+  if (lower.includes("product")) return "Product Manager";
+  if (lower.includes("sales")) return "Sales Manager";
+  if (lower.includes("finance") || lower.includes("financial")) return "Finance Manager";
+  if (lower.includes("consulting") || lower.includes("consultant")) return "Consultant";
+  if (lower.includes("strategy")) return "Strategy Manager";
+  return "Manager";
 };
 
 /* Detect country from a free-text location string */
