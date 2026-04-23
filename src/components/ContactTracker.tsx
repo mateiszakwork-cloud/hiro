@@ -62,11 +62,15 @@ const ContactTracker = ({
   jobId,
   userId,
   companyName,
+  jobTitle,
+  jobDescription,
   onDraftMessage,
 }: {
   jobId: string;
   userId: string;
   companyName: string | null;
+  jobTitle: string | null;
+  jobDescription: string | null;
   onDraftMessage?: (contact: OutreachContact) => void;
 }) => {
   const [contacts, setContacts] = useState<OutreachContact[]>([]);
@@ -84,6 +88,7 @@ const ContactTracker = ({
   const [draftCopied, setDraftCopied] = useState(false);
   const [draftError, setDraftError] = useState<string | null>(null);
   const [hasCv, setHasCv] = useState<boolean | null>(null);
+  const [cvSummary, setCvSummary] = useState<string>("");
   const [confirmStatusOpen, setConfirmStatusOpen] = useState(false);
 
   // Form state
