@@ -757,8 +757,8 @@ const JobTracker = () => {
                         onClick={() => navigate(`/jobs/${j.id}`)}
                         className="text-xs underline-offset-2 hover:underline text-foreground"
                       >
-                        <span className="font-medium">{j.company_name || "–"}</span>
-                        <span className="text-muted-foreground"> · {j.job_title || "–"}</span>
+                        <span className="font-medium">{safeText(j.company_name)}</span>
+                        <span className="text-muted-foreground"> · {safeText(j.job_title)}</span>
                         <span className="ml-1 font-semibold" style={{ color: "#950606" }}>({days}d)</span>
                       </button>
                     );
