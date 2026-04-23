@@ -838,6 +838,24 @@ const JobTracker = () => {
         <div style={{ padding: "0 28px 12px" }}>
           <div className="flex items-center gap-3 flex-wrap">
             <div className="ml-auto flex items-center gap-2">
+              <button
+                onClick={() => setOnlyOutreach(v => !v)}
+                className={cn(
+                  "h-8 inline-flex items-center gap-1.5 px-3 text-xs font-medium rounded-lg border transition-colors",
+                  onlyOutreach
+                    ? "bg-[#950606] border-[#950606] text-white hover:bg-[#7a0505]"
+                    : "bg-background border-input text-foreground hover:bg-muted"
+                )}
+                title="Show only jobs where outreach has started, sorted by most recent activity"
+              >
+                <Users className="h-3.5 w-3.5" />
+                Outreach only
+                {onlyOutreach && (
+                  <span className="ml-1 inline-flex items-center justify-center h-4 w-4 rounded-full bg-white/20 text-[10px] font-bold">
+                    {Object.values(outreachMap).filter((o) => o.count > 0).length}
+                  </span>
+                )}
+              </button>
               <Select value={filterStatus} onValueChange={setFilterStatus}>
                 <SelectTrigger className="h-8 w-auto gap-1 px-3 text-xs border rounded-lg">
                   <SelectValue placeholder="Status" />
