@@ -425,11 +425,20 @@ const ContactTracker = ({
                     </td>
                     <td className="py-2.5 pr-3">
                       <div className="flex items-center justify-end gap-1.5">
+                        {c.drafted_message && (
+                          <span
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-50 text-green-700 border border-green-200"
+                            title="A draft message is saved"
+                          >
+                            <Check className="h-2.5 w-2.5" />
+                            Draft saved
+                          </span>
+                        )}
                         <Button
                           size="sm"
                           variant="outline"
                           className="h-7 text-xs gap-1.5"
-                          onClick={() => onDraftMessage?.(c)}
+                          onClick={() => { onDraftMessage?.(c); openDraft(c); }}
                         >
                           <MessageSquare className="h-3 w-3" />
                           Draft message
