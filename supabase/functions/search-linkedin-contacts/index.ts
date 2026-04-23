@@ -14,8 +14,10 @@ const json = (body: unknown, status = 200) =>
   });
 
 const RAPIDAPI_HOST = "fresh-linkedin-profile-data.p.rapidapi.com";
-const SEARCH_URL = `https://${RAPIDAPI_HOST}/search-employees`;
-const PROFILE_URL = `https://${RAPIDAPI_HOST}/get-linkedin-profile`;
+const COMPANY_BY_DOMAIN_URL = `https://${RAPIDAPI_HOST}/get-company-by-domain`;
+const SEARCH_COMPANIES_URL = `https://${RAPIDAPI_HOST}/search-companies`;
+const SEARCH_EMPLOYEES_URL = `https://${RAPIDAPI_HOST}/search-employees`;
+const EXTRA_PROFILE_URL = `https://${RAPIDAPI_HOST}/get-extra-profile-data`;
 
 interface Contact {
   full_name: string;
@@ -23,6 +25,7 @@ interface Contact {
   current_title: string;
   current_company: string;
   profile_url: string;
+  profile_urn: string;
   connection_degree: string;
   profile_picture_url: string;
   shared_connections_count: number;
@@ -31,22 +34,35 @@ interface Contact {
   priority_score: number;
 }
 
-type SearchOutcome =
-  | { ok: true; profiles: any[] }
-  | { ok: false; status: number; error: string };
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function rapidSearch(
+function deriveDomain(companyName: string): string {
+  const cleaned = companyName
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+  return `${cleaned}.com`;
+}
+
+function pick(obj: any, ...keys: string[]): string {
+  for (const k of keys) {
+    const v = obj?.[k];
+    if (typeof v === "string" && v.trim()) return v.trim();
+    if (typeof v === "number") return String(v);
+  }
+  return "";
+}
+
+function normalizeProfileUrl(url: string): string {
+  if (!url) return "";
+  return url.split("?")[0].replace(/\/+$/, "");
+}
+
+async function getCompanyIdByDomain(
   apiKey: string,
-  companyName: string,
-  keyword: string,
-): Promise<SearchOutcome> {
-  const params = new URLSearchParams({
-    company_name: companyName,
-    keyword,
-  });
-  const url = `${SEARCH_URL}?${params.toString()}`;
-  console.log(`[RapidAPI Search] ${url}`);
+  domain: string,
+): Promise<string | null> {
   try {
+    const url = `${COMPANY_BY_DOMAIN_URL}?domain=${encodeURIComponent(domain)}`;
     const res = await fetch(url, {
       method: "GET",
       headers: {
@@ -54,55 +70,126 @@ async function rapidSearch(
         "X-RapidAPI-Host": RAPIDAPI_HOST,
       },
     });
-    if (res.status === 429) return { ok: false, status: 429, error: "rate_limited" };
-    if (res.status === 402) return { ok: false, status: 402, error: "out_of_credits" };
     if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      console.log(`[RapidAPI Search] status ${res.status}: ${text.substring(0, 200)}`);
-      return { ok: false, status: res.status, error: `rapidapi_${res.status}` };
+      console.log(`[CompanyByDomain] status ${res.status}`);
+      return null;
     }
     const data = await res.json();
-    // Response shape can vary: try common fields
+    const root = data?.data ?? data;
+    const id = pick(root, "id", "company_id", "linkedin_id", "companyId");
+    return id || null;
+  } catch (e) {
+    console.log("[CompanyByDomain] threw:", (e as Error).message);
+    return null;
+  }
+}
+
+async function getCompanyIdBySearch(
+  apiKey: string,
+  companyName: string,
+): Promise<string | null> {
+  try {
+    const res = await fetch(SEARCH_COMPANIES_URL, {
+      method: "POST",
+      headers: {
+        "X-RapidAPI-Key": apiKey,
+        "X-RapidAPI-Host": RAPIDAPI_HOST,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ keywords: companyName, limit: 1 }),
+    });
+    if (!res.ok) {
+      console.log(`[SearchCompanies] status ${res.status}`);
+      return null;
+    }
+    const data = await res.json();
+    let arr: any[] = [];
+    if (Array.isArray(data)) arr = data;
+    else if (Array.isArray(data?.data)) arr = data.data;
+    else if (Array.isArray(data?.companies)) arr = data.companies;
+    else if (Array.isArray(data?.results)) arr = data.results;
+    if (arr.length === 0) return null;
+    const id = pick(arr[0], "id", "company_id", "linkedin_id", "companyId");
+    return id || null;
+  } catch (e) {
+    console.log("[SearchCompanies] threw:", (e as Error).message);
+    return null;
+  }
+}
+
+async function searchEmployees(
+  apiKey: string,
+  companyId: string,
+  titleKeywords: string[],
+  limit: number,
+): Promise<any[]> {
+  try {
+    const res = await fetch(SEARCH_EMPLOYEES_URL, {
+      method: "POST",
+      headers: {
+        "X-RapidAPI-Key": apiKey,
+        "X-RapidAPI-Host": RAPIDAPI_HOST,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        current_company_ids: [companyId],
+        title_keywords: titleKeywords,
+        limit,
+      }),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      console.log(
+        `[SearchEmployees] keywords=${JSON.stringify(titleKeywords)} status ${res.status}: ${text.substring(0, 200)}`,
+      );
+      return [];
+    }
+    const data = await res.json();
     let profiles: any[] = [];
     if (Array.isArray(data)) profiles = data;
     else if (Array.isArray(data?.data)) profiles = data.data;
     else if (Array.isArray(data?.profiles)) profiles = data.profiles;
     else if (Array.isArray(data?.results)) profiles = data.results;
     else if (Array.isArray(data?.employees)) profiles = data.employees;
-    console.log(`[RapidAPI Search] returned ${profiles.length} profiles`);
-    return { ok: true, profiles };
+    return profiles;
   } catch (e) {
-    console.log("[RapidAPI Search] threw:", (e as Error).message);
-    return { ok: false, status: 0, error: "fetch_error" };
+    console.log("[SearchEmployees] threw:", (e as Error).message);
+    return [];
   }
 }
 
-function pick(obj: any, ...keys: string[]): string {
-  for (const k of keys) {
-    const v = obj?.[k];
-    if (typeof v === "string" && v.trim()) return v.trim();
-  }
-  return "";
-}
-
-function normalizeProfileUrl(url: string): string {
-  if (!url) return "";
-  const clean = url.split("?")[0].replace(/\/+$/, "");
-  return clean;
-}
-
-function mapSearchProfile(p: any): Contact | null {
+function mapProfile(p: any): Contact | null {
   const profileUrl = normalizeProfileUrl(
-    pick(p, "profile_url", "profileUrl", "linkedin_url", "linkedinUrl", "url"),
+    pick(p, "linkedin_url", "profile_url", "linkedinUrl", "profileUrl", "url"),
   );
   if (!profileUrl || !profileUrl.includes("linkedin.com/in/")) return null;
   const fullName = pick(p, "full_name", "fullName", "name") ||
     `${pick(p, "first_name", "firstName")} ${pick(p, "last_name", "lastName")}`.trim();
   if (!fullName) return null;
   const headline = pick(p, "headline", "sub_title", "subTitle");
-  const currentTitle = pick(p, "current_job_title", "currentJobTitle", "job_title", "title") || headline;
-  const currentCompany = pick(p, "current_company_name", "currentCompanyName", "company_name", "company");
-  const profilePic = pick(p, "profile_image_url", "profileImageUrl", "profile_picture_url", "profilePictureUrl", "image_url");
+  const currentTitle = pick(
+    p,
+    "current_job_title",
+    "currentJobTitle",
+    "job_title",
+    "title",
+  ) || headline;
+  const currentCompany = pick(
+    p,
+    "current_company_name",
+    "currentCompanyName",
+    "company_name",
+    "company",
+  );
+  const profilePic = pick(
+    p,
+    "profile_image_url",
+    "profileImageUrl",
+    "profile_picture_url",
+    "profilePictureUrl",
+    "image_url",
+  );
+  const urn = pick(p, "urn", "profile_urn", "profileUrn", "id");
 
   return {
     full_name: fullName,
@@ -110,6 +197,7 @@ function mapSearchProfile(p: any): Contact | null {
     current_title: currentTitle,
     current_company: currentCompany,
     profile_url: profileUrl,
+    profile_urn: urn,
     connection_degree: "3rd+",
     profile_picture_url: profilePic,
     shared_connections_count: 0,
@@ -128,16 +216,26 @@ function deduplicate(contacts: Contact[]): Contact[] {
   });
 }
 
-async function fetchEducation(
+async function fetchExtraProfile(
   apiKey: string,
+  urn: string,
   profileUrl: string,
 ): Promise<string[]> {
   try {
     const params = new URLSearchParams({
-      linkedin_url: profileUrl,
-      include_skills: "false",
+      include_languages: "false",
+      include_certifications: "false",
+      include_publications: "false",
+      include_honors: "false",
+      include_patents: "false",
+      include_courses: "false",
+      include_projects: "false",
+      include_volunteers: "false",
+      include_organizations: "false",
     });
-    const url = `${PROFILE_URL}?${params.toString()}`;
+    if (urn) params.set("urn", urn);
+    else if (profileUrl) params.set("linkedin_url", profileUrl);
+    const url = `${EXTRA_PROFILE_URL}?${params.toString()}`;
     const res = await fetch(url, {
       method: "GET",
       headers: {
@@ -146,7 +244,7 @@ async function fetchEducation(
       },
     });
     if (!res.ok) {
-      console.log(`[RapidAPI Profile] ${profileUrl} status ${res.status}`);
+      console.log(`[ExtraProfile] urn=${urn} status ${res.status}`);
       return [];
     }
     const data = await res.json();
@@ -163,109 +261,42 @@ async function fetchEducation(
     }
     return schools;
   } catch (e) {
-    console.log("[RapidAPI Profile] threw:", (e as Error).message);
+    console.log("[ExtraProfile] threw:", (e as Error).message);
     return [];
   }
 }
 
-function titleMatchesKeywords(title: string, keywords: string): boolean {
-  const t = title.toLowerCase();
-  const words = keywords.toLowerCase().split(/\s+/).filter((w) => w.length > 2);
-  let matched = 0;
-  for (const w of words) if (t.includes(w)) matched++;
-  return matched >= Math.ceil(words.length * 0.4);
-}
-
-function scoreContacts(
+function categorizeAndScore(
   contacts: Contact[],
-  jobTitle: string,
   jobFunction: string,
-  userSchools: string[],
 ): Contact[] {
-  const hmRegex = /manager|lead|head|director|vp|vice president/i;
-  const hrRegex = /recruiter|talent|hr\b|people/i;
+  const hmRegex = /manager|lead|head|director|vp|vice president|principal/i;
+  const hrRegex = /recruiter|talent|hr\b|people|human resources/i;
   const internRegex = /intern\b|graduate|junior|trainee|associate/i;
 
   for (const c of contacts) {
+    const t = (c.current_title + " " + c.headline).toLowerCase();
     let score = 0;
-    const t = c.current_title.toLowerCase();
-    if (internRegex.test(t)) score += 5;
-    if (c.connection_degree === "1st") score += 4;
-    else if (c.connection_degree === "2nd") score += 2;
-    if (hmRegex.test(t) && titleMatchesKeywords(c.current_title + " " + c.headline, jobFunction)) score += 3;
-    if (hrRegex.test(t)) score += 2;
-    if (titleMatchesKeywords(c.current_title, jobTitle)) score += 2;
-    const isAlumni = userSchools.some((school) =>
-      c.headline.toLowerCase().includes(school.toLowerCase()) ||
-      c.current_title.toLowerCase().includes(school.toLowerCase())
-    );
-    if (isAlumni) {
+    let cat = "Your Network";
+    if (hrRegex.test(t)) {
+      cat = "HR and Recruiter";
       score += 3;
-      c.is_alumni = true;
+    } else if (hmRegex.test(t)) {
+      cat = "Hiring Manager";
+      score += 4;
+    } else if (internRegex.test(t)) {
+      cat = "In the Role";
+      score += 5;
+    } else if (jobFunction && t.includes(jobFunction.toLowerCase())) {
+      cat = "In the Role";
+      score += 3;
     }
+    c.category = cat;
     c.priority_score = score;
   }
-  return contacts;
-}
 
-function categorize(contacts: Contact[]): Contact[] {
-  const limits: Record<string, number> = {
-    "In the Role": 2,
-    "Hiring Manager": 1,
-    "HR and Recruiter": 1,
-    "Your Network": 2,
-  };
-  const counts: Record<string, number> = {
-    "In the Role": 0,
-    "Hiring Manager": 0,
-    "HR and Recruiter": 0,
-    "Your Network": 0,
-  };
   contacts.sort((a, b) => b.priority_score - a.priority_score);
-  const result: Contact[] = [];
-
-  for (const c of contacts) {
-    if (result.length >= 6) break;
-    const cat = c.category && limits[c.category] !== undefined ? c.category : "Your Network";
-    if (counts[cat] < limits[cat]) {
-      c.category = cat;
-      counts[cat]++;
-      result.push(c);
-    }
-  }
-  if (result.length < 6) {
-    const usedUrls = new Set(result.map((r) => r.profile_url));
-    for (const c of contacts) {
-      if (result.length >= 6) break;
-      if (usedUrls.has(c.profile_url)) continue;
-      const preferred = c.category && limits[c.category] !== undefined ? c.category : null;
-      if (preferred && counts[preferred] < limits[preferred]) {
-        counts[preferred]++;
-        result.push(c);
-        usedUrls.add(c.profile_url);
-        continue;
-      }
-      for (const cat of Object.keys(limits)) {
-        if (counts[cat] < limits[cat]) {
-          c.category = cat;
-          counts[cat]++;
-          result.push(c);
-          usedUrls.add(c.profile_url);
-          break;
-        }
-      }
-    }
-  }
-  if (result.length < 6) {
-    const usedUrls = new Set(result.map((r) => r.profile_url));
-    for (const c of contacts) {
-      if (result.length >= 6) break;
-      if (usedUrls.has(c.profile_url)) continue;
-      if (!c.category || limits[c.category] === undefined) c.category = "Your Network";
-      result.push(c);
-    }
-  }
-  return result;
+  return contacts.slice(0, 6);
 }
 
 serve(async (req) => {
@@ -317,6 +348,26 @@ serve(async (req) => {
       });
     }
 
+    // STEP 1: Get company LinkedIn ID
+    const domain = deriveDomain(company_name);
+    console.log(`[Step 1] Looking up company '${company_name}' via domain '${domain}'`);
+    let companyId = await getCompanyIdByDomain(rapidApiKey, domain);
+    console.log(`Company ID lookup for ${company_name}: ${companyId}`);
+
+    if (!companyId) {
+      console.log(`[Step 1] Domain lookup failed, trying search-companies fallback`);
+      companyId = await getCompanyIdBySearch(rapidApiKey, company_name);
+      console.log(`Company ID search fallback for ${company_name}: ${companyId}`);
+    }
+
+    if (!companyId) {
+      return json({
+        success: false,
+        step: "company_lookup",
+        message: "Could not find this company on LinkedIn. Try searching manually.",
+      });
+    }
+
     // Fetch user education for alumni detection
     const { data: eduData } = await supabase
       .from("education")
@@ -326,172 +377,60 @@ serve(async (req) => {
       .map((e: any) => e.institution)
       .filter(Boolean);
 
-    // Run three searches in sequence with 1000ms delay
-    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-    const searches = [
-      { keyword: job_title ?? "" },
-      { keyword: `manager director head lead ${job_function ?? ""}`.trim() },
-      { keyword: "recruiter talent acquisition HR" },
-    ];
+    // STEP 2: Three parallel employee searches
+    const search1Keywords = ["intern", "associate", job_function ?? ""].filter(Boolean);
+    const search2Keywords = ["manager", "lead", "head", "director"];
+    const search3Keywords = ["recruiter", "talent acquisition", "HR"];
+
+    const runWithDelay = async (delay: number, fn: () => Promise<any[]>) => {
+      await sleep(delay);
+      return fn();
+    };
+
+    const results = await Promise.allSettled([
+      runWithDelay(0, () => searchEmployees(rapidApiKey, companyId!, search1Keywords, 5)),
+      runWithDelay(500, () => searchEmployees(rapidApiKey, companyId!, search2Keywords, 3)),
+      runWithDelay(1000, () => searchEmployees(rapidApiKey, companyId!, search3Keywords, 3)),
+    ]);
 
     const allRaw: any[] = [];
-    let rateLimited = false;
-    let outOfCredits = false;
-    let otherError = false;
-
-    for (let i = 0; i < searches.length; i++) {
-      if (i > 0) await sleep(1000);
-      const r = await rapidSearch(rapidApiKey, company_name, searches[i].keyword);
-      if (r.ok) {
-        allRaw.push(...r.profiles);
-      } else {
-        if (r.status === 429) rateLimited = true;
-        else if (r.status === 402) outOfCredits = true;
-        else otherError = true;
+    let firstLogged = false;
+    for (const r of results) {
+      if (r.status === "fulfilled" && Array.isArray(r.value)) {
+        if (!firstLogged && r.value.length > 0) {
+          console.log(`[First result sample]: ${JSON.stringify(r.value[0]).substring(0, 500)}`);
+          firstLogged = true;
+        }
+        allRaw.push(...r.value);
       }
     }
 
     if (allRaw.length === 0) {
-      if (rateLimited) {
-        return json({
-          success: false,
-          step: "rate_limited",
-          message: "Search limit reached. Try again in a few minutes.",
-        });
-      }
-      if (outOfCredits) {
-        return json({
-          success: false,
-          step: "out_of_credits",
-          message: "Monthly search credits used up. Resets next month or upgrade your RapidAPI plan.",
-        });
-      }
-      if (otherError) {
-        return json({
-          success: false,
-          step: "search_failed",
-          message: "Search unavailable. Please try again.",
-        });
-      }
       return json({
         success: false,
-        step: "no_results",
-        message: "No matching profiles found.",
+        step: "employee_search",
+        message: "No contacts found for this company.",
       });
     }
 
-    // Map and deduplicate
+    // STEP 3: Map and dedupe
     let allContacts: Contact[] = [];
     for (const raw of allRaw) {
-      const c = mapSearchProfile(raw);
+      const c = mapProfile(raw);
       if (c) allContacts.push(c);
     }
     allContacts = deduplicate(allContacts);
     console.log(`Mapped ${allContacts.length} unique contacts after dedup`);
 
-    // AI classification (unchanged)
-    if (allContacts.length > 0) {
-      try {
-        const openaiKey = Deno.env.get("OPENAI_API_KEY");
-        if (openaiKey) {
-          const systemPrompt = `You are an expert recruiter assistant helping a job applicant identify who to reach out to at a target company. You will receive a list of LinkedIn profiles and details about the job being applied for. Classify each profile into exactly one category.
-
-Category definitions:
-- In the Role: this person currently does the same or very similar work to the job being applied for. They would be a peer or colleague of the applicant if hired. Use the job function and title as reference.
-- Hiring Manager: this person is senior in the same function and would likely manage or oversee someone in this role. Signals include: Manager, Lead, Senior Manager, Head of, Director, VP, Principal in the relevant function.
-- HR and Recruiter: this person works in talent acquisition, recruiting, HR business partnering, people operations, or similar. Signals include: Recruiter, Talent Acquisition, HR, People Partner, Talent Partner, TA.
-- Your Network: does not clearly fit the above three but is still at the company and may be worth contacting.
-
-Return ONLY a valid JSON array. Each element must have exactly these keys:
-- profile_url: the exact URL string provided, unchanged
-- category: exactly one of the four category names as written above
-- confidence: integer 0 to 100 representing how confident you are in this classification
-- reasoning: one short sentence explaining the classification
-
-Be decisive. Every profile must have a category.`;
-
-          const profilesPayload = allContacts.map((c) => ({
-            profile_url: c.profile_url,
-            full_name: c.full_name,
-            current_title: c.current_title,
-            headline: c.headline,
-          }));
-
-          const userMessage = `Job being applied for: ${job_title ?? ""} at ${company_name}, function: ${job_function ?? ""}
-Profiles to classify: ${JSON.stringify(profilesPayload)}`;
-
-          const aiRes = await fetch("https://api.openai.com/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${openaiKey}`,
-            },
-            body: JSON.stringify({
-              model: "gpt-4o-mini",
-              temperature: 0,
-              response_format: { type: "json_object" },
-              messages: [
-                { role: "system", content: systemPrompt },
-                { role: "user", content: userMessage },
-              ],
-            }),
-          });
-
-          if (aiRes.ok) {
-            const aiData = await aiRes.json();
-            const content = aiData?.choices?.[0]?.message?.content ?? "";
-            let parsed: any;
-            try { parsed = JSON.parse(content); } catch {}
-
-            let arr: any[] | null = null;
-            if (Array.isArray(parsed)) arr = parsed;
-            else if (parsed && typeof parsed === "object") {
-              for (const v of Object.values(parsed)) {
-                if (Array.isArray(v)) { arr = v as any[]; break; }
-              }
-            }
-
-            if (arr) {
-              const validCats = new Set([
-                "In the Role",
-                "Hiring Manager",
-                "HR and Recruiter",
-                "Your Network",
-              ]);
-              const byUrl = new Map<string, { category: string; confidence: number }>();
-              for (const item of arr) {
-                if (!item || typeof item !== "object") continue;
-                const url = String(item.profile_url || "");
-                let cat = String(item.category || "");
-                const conf = Number(item.confidence ?? 0);
-                if (!validCats.has(cat)) cat = "Your Network";
-                if (conf < 35) cat = "Your Network";
-                if (url) byUrl.set(url, { category: cat, confidence: conf });
-              }
-              for (const c of allContacts) {
-                const m = byUrl.get(c.profile_url);
-                c.category = m ? m.category : "Your Network";
-              }
-            }
-          }
-        }
-      } catch (aiErr) {
-        console.error("AI classification error:", aiErr);
-      }
-    }
-
-    // Score
-    scoreContacts(allContacts, job_title ?? "", job_function ?? "", userSchools);
-
     // Categorize and pick top 6
-    const topContacts = categorize(allContacts);
+    const topContacts = categorizeAndScore(allContacts, job_function ?? "");
 
-    // Alumni detection: only fetch full profile data for top 6 to conserve credits
+    // STEP 4: Alumni check for top 6 only
     if (userSchools.length > 0 && topContacts.length > 0) {
       for (let i = 0; i < topContacts.length; i++) {
         if (i > 0) await sleep(500);
         const c = topContacts[i];
-        const schools = await fetchEducation(rapidApiKey, c.profile_url);
+        const schools = await fetchExtraProfile(rapidApiKey, c.profile_urn, c.profile_url);
         const isAlumni = schools.some((s) =>
           userSchools.some(
             (us) =>
@@ -505,7 +444,7 @@ Profiles to classify: ${JSON.stringify(profilesPayload)}`;
 
     console.log(`Returning ${topContacts.length} categorized contacts`);
 
-    // Persist contacts (unchanged)
+    // Persist contacts
     if (job_id && topContacts.length > 0) {
       try {
         const { data: existing } = await supabase
