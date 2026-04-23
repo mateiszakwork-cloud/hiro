@@ -15,6 +15,9 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ContactTracker from "@/components/ContactTracker";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 
 /* ── Types ── */
 export type OutreachContact = {
@@ -279,99 +282,314 @@ const MessageCell = ({
 };
 
 /* ── LinkedIn Search Panel ── */
+/* Country → LinkedIn geoUrn ID map */
+const GEO_URNS: { label: string; id: string }[] = [
+  { label: "Netherlands", id: "102890719" },
+  { label: "United Kingdom", id: "101165590" },
+  { label: "France", id: "105015875" },
+  { label: "Germany", id: "101282230" },
+  { label: "United States", id: "103644278" },
+  { label: "Belgium", id: "100565514" },
+  { label: "Spain", id: "105646813" },
+  { label: "Portugal", id: "100364837" },
+  { label: "Switzerland", id: "106693272" },
+  { label: "Luxembourg", id: "104042105" },
+];
+
+const NETWORK_OPTIONS: { value: "F" | "S" | "O"; label: string }[] = [
+  { value: "F", label: "1st" },
+  { value: "S", label: "2nd" },
+  { value: "O", label: "3rd+" },
+];
+
+/* Suggest senior titles given a junior/intern role */
+const suggestTitle = (jobTitle: string | null): string => {
+  const t = (jobTitle || "").trim();
+  if (!t) return "";
+  const lower = t.toLowerCase();
+  // Strip common junior qualifiers
+  const stripped = lower
+    .replace(/\b(intern|internship|graduate|trainee|junior|jr\.?|associate|entry[-\s]?level|assistant)\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!stripped) return t;
+  // Capitalize words
+  const cap = stripped.replace(/\b\w/g, (c) => c.toUpperCase());
+  // If it already contains a senior title, return as-is
+  if (/\b(manager|lead|director|head|principal|senior|sr\.?)\b/i.test(stripped)) return cap;
+  return `${cap} Manager`;
+};
+
+/* Detect country from a free-text location string */
+const detectGeoFromLocation = (location: string | null): string => {
+  if (!location) return "";
+  const l = location.toLowerCase();
+  const map: Record<string, string> = {
+    netherlands: "102890719",
+    holland: "102890719",
+    amsterdam: "102890719",
+    rotterdam: "102890719",
+    "the hague": "102890719",
+    utrecht: "102890719",
+    "united kingdom": "101165590",
+    uk: "101165590",
+    england: "101165590",
+    london: "101165590",
+    manchester: "101165590",
+    france: "105015875",
+    paris: "105015875",
+    germany: "101282230",
+    berlin: "101282230",
+    munich: "101282230",
+    "united states": "103644278",
+    usa: "103644278",
+    "u.s.": "103644278",
+    "new york": "103644278",
+    "san francisco": "103644278",
+    belgium: "100565514",
+    brussels: "100565514",
+    spain: "105646813",
+    madrid: "105646813",
+    barcelona: "105646813",
+    portugal: "100364837",
+    lisbon: "100364837",
+    switzerland: "106693272",
+    zurich: "106693272",
+    geneva: "106693272",
+    luxembourg: "104042105",
+  };
+  for (const key of Object.keys(map)) {
+    if (l.includes(key)) return map[key];
+  }
+  return "";
+};
+
+/* Build a LinkedIn People Search URL with proper filter parameters */
+const buildLinkedInUrl = (opts: {
+  titleFreeText?: string;
+  company?: string;
+  geoUrnId?: string;
+  network?: "F" | "S" | "O";
+}): string => {
+  const params = new URLSearchParams();
+  if (opts.titleFreeText?.trim()) {
+    params.set("titleFreeText", opts.titleFreeText.trim());
+  }
+  if (opts.company?.trim()) {
+    params.set("company", opts.company.trim());
+  }
+  if (opts.geoUrnId) {
+    params.set("geoUrn", JSON.stringify([opts.geoUrnId]));
+  }
+  if (opts.network) {
+    params.set("network", JSON.stringify([opts.network]));
+  }
+  params.set("origin", "FACETED_SEARCH");
+  return `https://www.linkedin.com/search/results/people/?${params.toString()}`;
+};
+
 const LinkedInSearchPanel = ({
   companyName,
   jobTitle,
+  jobLocation,
 }: {
   companyName: string | null;
   jobTitle: string | null;
+  jobLocation: string | null;
 }) => {
-  const role = (jobTitle || "").trim();
   const company = (companyName || "").trim();
+  const initialGeo = detectGeoFromLocation(jobLocation) || "102890719";
 
-  const buildUrl = (keywords: string) =>
-    `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(
-      keywords.trim()
-    )}&origin=GLOBAL_SEARCH_HEADER`;
+  // Section 1 — Find a Contact
+  const [targetTitle, setTargetTitle] = useState<string>(suggestTitle(jobTitle));
+  const [targetCompany, setTargetCompany] = useState<string>(company);
+  const [targetGeo, setTargetGeo] = useState<string>(initialGeo);
+  const [targetNetwork, setTargetNetwork] = useState<"F" | "S" | "O">("S");
 
-  const searches = [
-    {
-      key: "in_role",
-      label: "In the role",
-      who: `People currently working as ${role || "this role"} at ${company || "this company"}.`,
-      why: "They've recently been where you want to be — ideal for a coffee chat or to ask about the team and interview process.",
-      keywords: `${role} ${company}`,
-    },
-    {
-      key: "hiring_manager",
-      label: "Likely hiring manager",
-      who: `Heads, directors, or managers one level above ${role || "the role"} at ${company || "the company"}.`,
-      why: "They're often the decision-maker for this hire. A warm intro here can move your application to the top of the stack.",
-      keywords: `head of director of manager ${role} ${company}`,
-    },
-    {
-      key: "recruiter",
-      label: "Recruiter / HR",
-      who: `Recruiters, talent acquisition, and HR partners at ${company || "the company"}.`,
-      why: "They can fast-track your CV, share role context, and tell you exactly what the team is screening for.",
-      keywords: `recruiter talent acquisition HR ${company}`,
-    },
-  ];
+  // Section 2 — Find a Recruiter
+  const [recCompany, setRecCompany] = useState<string>(company);
+  const [recGeo, setRecGeo] = useState<string>(initialGeo);
+  const [recNetwork, setRecNetwork] = useState<"F" | "S" | "O">("S");
+
+  const openContactSearch = () => {
+    const url = buildLinkedInUrl({
+      titleFreeText: targetTitle,
+      company: targetCompany,
+      geoUrnId: targetGeo,
+      network: targetNetwork,
+    });
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const openRecruiterSearch = (title: "Recruiter" | "Talent Acquisition Partner") => {
+    const url = buildLinkedInUrl({
+      titleFreeText: title,
+      company: recCompany,
+      geoUrnId: recGeo,
+      network: recNetwork,
+    });
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const NetworkRadio = ({
+    value, onChange, name,
+  }: { value: "F" | "S" | "O"; onChange: (v: "F" | "S" | "O") => void; name: string }) => (
+    <div className="flex items-center gap-3">
+      {NETWORK_OPTIONS.map((opt) => (
+        <label key={opt.value} className="flex items-center gap-1.5 cursor-pointer">
+          <input
+            type="radio"
+            name={name}
+            checked={value === opt.value}
+            onChange={() => onChange(opt.value)}
+            className="accent-[#950606]"
+          />
+          <span className="text-xs text-foreground">{opt.label}</span>
+        </label>
+      ))}
+    </div>
+  );
 
   return (
-    <div className="rounded-lg border bg-white p-5 space-y-4">
-      <div>
-        <h3 className="font-semibold text-foreground" style={{ fontFamily: "Sora, sans-serif", fontSize: 15 }}>
-          LinkedIn Search
-        </h3>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          Three targeted searches for {company || "this company"} — open in a new tab.
-        </p>
-      </div>
+    <div className="space-y-4">
+      {/* Section 1 — Find a Contact */}
+      <div className="rounded-lg border bg-white p-5 space-y-4">
+        <div>
+          <h3 className="font-semibold text-foreground" style={{ fontFamily: "Sora, sans-serif", fontSize: 15 }}>
+            Find a Contact
+          </h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Search for someone in or one level above your target role at this company.
+          </p>
+        </div>
 
-      <div className="grid gap-3 md:grid-cols-3">
-        {searches.map((s) => (
-          <div
-            key={s.key}
-            className="flex flex-col rounded-lg border border-gray-200 bg-[#FAFAFB] p-4"
-          >
-            <div className="text-sm font-semibold text-foreground">{s.label}</div>
-            <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
-              <span className="font-medium text-foreground/80">Who:</span> {s.who}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
-              <span className="font-medium text-foreground/80">Why:</span> {s.why}
-            </p>
-            <div className="mt-auto pt-3">
-              <a
-                href={buildUrl(s.keywords)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs font-medium text-[#950606] hover:text-[#7a0505] hover:underline"
-              >
-                <ExternalLink className="h-3.5 w-3.5" />
-                Open on LinkedIn
-              </a>
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="space-y-1">
+            <label className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Target Title</label>
+            <Input
+              value={targetTitle}
+              onChange={(e) => setTargetTitle(e.target.value)}
+              placeholder="e.g. Brand Manager"
+              className="text-sm"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Company</label>
+            <Input
+              value={targetCompany}
+              onChange={(e) => setTargetCompany(e.target.value)}
+              placeholder="Company name"
+              className="text-sm"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Location</label>
+            <Select value={targetGeo} onValueChange={setTargetGeo}>
+              <SelectTrigger className="text-sm">
+                <SelectValue placeholder="Select country" />
+              </SelectTrigger>
+              <SelectContent>
+                {GEO_URNS.map((g) => (
+                  <SelectItem key={g.id} value={g.id}>{g.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Network</label>
+            <div className="h-10 flex items-center">
+              <NetworkRadio value={targetNetwork} onChange={setTargetNetwork} name="contact-network" />
             </div>
           </div>
-        ))}
+        </div>
+
+        <Button
+          onClick={openContactSearch}
+          className="gap-2 bg-[#950606] hover:bg-[#7a0505] text-white"
+        >
+          <ExternalLink className="h-4 w-4" />
+          Search on LinkedIn
+        </Button>
       </div>
 
-      <p className="text-xs text-muted-foreground italic border-t pt-3">
-        Find someone relevant, copy their LinkedIn profile URL, and add them to your contact tracker below.
-      </p>
+      {/* Section 2 — Find a Recruiter */}
+      <div className="rounded-lg border bg-white p-5 space-y-4">
+        <div>
+          <h3 className="font-semibold text-foreground" style={{ fontFamily: "Sora, sans-serif", fontSize: 15 }}>
+            Find a Recruiter
+          </h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Two separate searches — recruiters and talent acquisition partners.
+          </p>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-3">
+          <div className="space-y-1">
+            <label className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Company</label>
+            <Input
+              value={recCompany}
+              onChange={(e) => setRecCompany(e.target.value)}
+              placeholder="Company name"
+              className="text-sm"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Location</label>
+            <Select value={recGeo} onValueChange={setRecGeo}>
+              <SelectTrigger className="text-sm">
+                <SelectValue placeholder="Select country" />
+              </SelectTrigger>
+              <SelectContent>
+                {GEO_URNS.map((g) => (
+                  <SelectItem key={g.id} value={g.id}>{g.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Network</label>
+            <div className="h-10 flex items-center">
+              <NetworkRadio value={recNetwork} onChange={setRecNetwork} name="recruiter-network" />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <Button
+            onClick={() => openRecruiterSearch("Recruiter")}
+            variant="outline"
+            className="gap-2 border-[#950606]/20 text-[#950606] hover:bg-[#FFF5F5] hover:text-[#950606]"
+          >
+            <ExternalLink className="h-4 w-4" />
+            Search Recruiters
+          </Button>
+          <Button
+            onClick={() => openRecruiterSearch("Talent Acquisition Partner")}
+            variant="outline"
+            className="gap-2 border-[#950606]/20 text-[#950606] hover:bg-[#FFF5F5] hover:text-[#950606]"
+          >
+            <ExternalLink className="h-4 w-4" />
+            Search Talent Acquisition
+          </Button>
+        </div>
+
+        <p className="text-xs text-muted-foreground italic border-t pt-3">
+          Find someone relevant, copy their LinkedIn profile URL, and add them to your contact tracker below.
+        </p>
+      </div>
     </div>
   );
 };
 
 /* ── Main Component ── */
 const OutreachTab = ({
-  jobId, userId, companyName, jobTitle, jobFunction, contacts, setContacts,
+  jobId, userId, companyName, jobTitle, jobLocation, jobFunction, contacts, setContacts,
 }: {
   jobId: string;
   userId: string;
   companyName: string | null;
   jobTitle: string | null;
+  jobLocation: string | null;
   jobFunction: string | null;
   contacts: OutreachContact[];
   setContacts: React.Dispatch<React.SetStateAction<OutreachContact[]>>;
@@ -533,7 +751,7 @@ const OutreachTab = ({
       </div>
 
       {/* LinkedIn Search Panel — manual search URLs */}
-      <LinkedInSearchPanel companyName={companyName} jobTitle={jobTitle} />
+      <LinkedInSearchPanel companyName={companyName} jobTitle={jobTitle} jobLocation={jobLocation} />
 
       {/* Contact Tracker — outreach_contacts table */}
       <ContactTracker jobId={jobId} userId={userId} companyName={companyName} />

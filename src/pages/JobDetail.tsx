@@ -1362,6 +1362,7 @@ const JobDetail = () => {
               userId={userId}
               companyName={job.company_name}
               jobTitle={job.job_title}
+              jobLocation={job.location}
               jobFunction={job.function}
               contacts={contacts as any}
               setContacts={setContacts as any}
