@@ -1215,25 +1215,46 @@ const JobTracker = () => {
                       <td className="px-3 py-3" onClick={(e) => { e.stopPropagation(); navigate(`/jobs/${job.id}?tab=outreach`); }}>
                         {(() => {
                           const o = outreachMap[job.id];
-                          if (!o) return <span className="text-muted-foreground">–</span>;
-                          const dotColor: Record<string, string> = {
-                            "Not contacted": "bg-gray-400",
-                            "Connection sent": "bg-blue-500",
-                            "Connected": "bg-green-500",
-                            "Replied": "bg-amber-500",
-                            "Meeting booked": "bg-[#950606]",
+                          if (!o || o.count === 0) {
+                            return (
+                              <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                                <span className="h-1.5 w-1.5 rounded-full bg-gray-300" />
+                                No outreach
+                              </span>
+                            );
+                          }
+                          const STATUS_LABEL: Record<string, string> = {
+                            not_contacted: "not contacted",
+                            messaged: "messaged",
+                            replied: "replied",
+                            meeting_booked: "meeting booked",
                           };
+                          const STATUS_DOT: Record<string, string> = {
+                            not_contacted: "bg-gray-400",
+                            messaged: "bg-blue-500",
+                            replied: "bg-amber-500",
+                            meeting_booked: "bg-green-500",
+                          };
+                          // Pick the most advanced status with at least 1 contact for the badge label
+                          const ORDER = ["meeting_booked", "replied", "messaged", "not_contacted"];
+                          const headline = ORDER.find((s) => (o.counts[s] || 0) > 0) || "not_contacted";
+                          const headlineCount = o.counts[headline] || 0;
+                          const tooltipParts = ORDER
+                            .filter((s) => (o.counts[s] || 0) > 0)
+                            .map((s) => `${o.counts[s]} ${STATUS_LABEL[s]}`)
+                            .join(", ");
                           return (
                             <TooltipProvider delayDuration={200}>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <button className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">
-                                    <Users className="h-3.5 w-3.5" />
-                                    <span className="text-xs font-medium">{o.count}</span>
-                                    <span className={`h-2 w-2 rounded-full ${dotColor[o.maxStatus] || "bg-gray-400"}`} />
+                                  <button className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-gray-50 border border-gray-200 text-foreground hover:border-gray-300 transition-colors">
+                                    <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[headline]}`} />
+                                    {headlineCount} {STATUS_LABEL[headline]}
                                   </button>
                                 </TooltipTrigger>
-                                <TooltipContent>{o.count} contact{o.count !== 1 ? "s" : ""} — most advanced: {o.maxStatus}</TooltipContent>
+                                <TooltipContent>
+                                  {o.count} contact{o.count !== 1 ? "s" : ""} — {tooltipParts}
+                                </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
                           );
