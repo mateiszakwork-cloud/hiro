@@ -282,13 +282,23 @@ const JobTracker = () => {
     }
   };
 
-  const filtersActive = filterStatus !== "All" || filterFunction !== "All" || filterPriority !== "All";
+  const filtersActive = filterStatus !== "All" || filterFunction !== "All" || filterPriority !== "All" || onlyOutreach;
 
   const filteredAndSorted = useMemo(() => {
     let result = [...jobs];
     if (filterStatus !== "All") result = result.filter(j => j.status === filterStatus);
     if (filterFunction !== "All") result = result.filter(j => j.function === filterFunction);
     if (filterPriority !== "All") result = result.filter(j => j.priority === filterPriority);
+    if (onlyOutreach) {
+      result = result.filter(j => (outreachMap[j.id]?.count || 0) > 0);
+      // When viewing outreach-only, sort by most recent outreach activity
+      result.sort((a, b) => {
+        const av = outreachMap[a.id]?.lastActivity || "";
+        const bv = outreachMap[b.id]?.lastActivity || "";
+        return bv.localeCompare(av);
+      });
+      return result;
+    }
 
     result.sort((a, b) => {
       if (sortKey === "match_score") {
@@ -314,7 +324,7 @@ const JobTracker = () => {
       return compareStr(a[sortKey] as string | null, b[sortKey] as string | null, sortDir);
     });
     return result;
-  }, [jobs, sortKey, sortDir, filterStatus, filterFunction, filterPriority]);
+  }, [jobs, sortKey, sortDir, filterStatus, filterFunction, filterPriority, onlyOutreach, outreachMap]);
 
   useEffect(() => {
     const init = async () => {
