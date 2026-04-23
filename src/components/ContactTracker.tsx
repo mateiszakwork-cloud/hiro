@@ -602,6 +602,130 @@ const ContactTracker = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Draft message modal */}
+      <Dialog open={!!draftContact} onOpenChange={(v) => { if (!v) { setDraftContact(null); setDraftText(""); } }}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle style={{ fontFamily: "Sora, sans-serif" }}>
+              Draft message
+            </DialogTitle>
+            {draftContact && (
+              <DialogDescription>
+                <span className="font-medium text-foreground">{draftContact.name || "Unnamed contact"}</span>
+                {draftContact.title && <> · {draftContact.title}</>}
+                {draftContact.company && <> · {draftContact.company}</>}
+              </DialogDescription>
+            )}
+          </DialogHeader>
+
+          {/* Type toggle */}
+          <div className="inline-flex rounded-md border border-gray-200 bg-gray-50 p-0.5 self-start">
+            <button
+              type="button"
+              onClick={() => handleSwitchType("connection_note")}
+              className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                isConnNote ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Connection request note
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSwitchType("cold_message")}
+              className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                !isConnNote ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Cold message / InMail
+            </button>
+          </div>
+
+          {/* Textarea */}
+          <div className="space-y-1.5">
+            <Textarea
+              value={draftText}
+              onChange={(e) => setDraftText(e.target.value)}
+              rows={isConnNote ? 6 : 10}
+              maxLength={isConnNote ? 300 : 2000}
+              placeholder={draftLoading ? "Generating draft…" : "Your draft will appear here."}
+              disabled={draftLoading}
+              className="resize-none text-sm leading-relaxed"
+            />
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">
+                {isConnNote ? "LinkedIn connection notes are limited to 300 characters." : "Aim for 130–180 words."}
+              </span>
+              <span className={`font-medium tabular-nums ${counterColor}`}>
+                {charCount}{isConnNote ? " / 300" : ""}
+              </span>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:justify-between">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => draftContact && generateDraft(draftContact, draftType, true)}
+              disabled={draftLoading || draftSaving}
+              className="gap-1.5"
+            >
+              {draftLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+              Regenerate
+            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCopyDraft}
+                disabled={!draftText.trim() || draftLoading}
+                className="gap-1.5"
+              >
+                {draftCopied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
+                {draftCopied ? "Copied" : "Copy"}
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleSaveDraft}
+                disabled={!draftText.trim() || draftLoading || draftSaving}
+                className="bg-[#950606] hover:bg-[#7a0505] text-white gap-1.5"
+              >
+                {draftSaving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                Save draft
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm status update on save */}
+      <AlertDialog open={confirmStatusOpen} onOpenChange={setConfirmStatusOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mark this contact as messaged?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You can save the draft only, or also update the contact's status to "Messaged" and stamp today's date.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel disabled={draftSaving}>Cancel</AlertDialogCancel>
+            <Button
+              variant="outline"
+              onClick={() => persistDraft(false)}
+              disabled={draftSaving}
+            >
+              Save draft only
+            </Button>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); persistDraft(true); }}
+              disabled={draftSaving}
+              className="bg-[#950606] hover:bg-[#7a0505] text-white"
+            >
+              Save & mark messaged
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
