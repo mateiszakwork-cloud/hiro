@@ -526,6 +526,16 @@ const LinkedInSearchPanel = ({
           <ExternalLink className="h-4 w-4" />
           Search on LinkedIn
         </Button>
+
+        <div className="space-y-1">
+          <label className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">URL preview</label>
+          <Input
+            value={contactUrl}
+            readOnly
+            onFocus={(e) => e.currentTarget.select()}
+            className="text-[11px] font-mono text-gray-600 bg-gray-50"
+          />
+        </div>
       </div>
 
       {/* Section 2 — Find a Recruiter */}
