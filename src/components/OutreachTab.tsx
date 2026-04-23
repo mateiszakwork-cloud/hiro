@@ -445,6 +445,9 @@ const OutreachTab = ({
         </div>
       </div>
 
+      {/* LinkedIn Search Panel — manual search URLs */}
+      <LinkedInSearchPanel companyName={companyName} jobTitle={jobTitle} />
+
       {/* Alerts */}
       {noCookie && (
         <div className="flex items-center gap-3 rounded-lg p-3 bg-amber-50 border border-amber-200">
