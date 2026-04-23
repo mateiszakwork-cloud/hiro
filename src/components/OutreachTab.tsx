@@ -751,7 +751,7 @@ const OutreachTab = ({
       </div>
 
       {/* LinkedIn Search Panel — manual search URLs */}
-      <LinkedInSearchPanel companyName={companyName} jobTitle={jobTitle} />
+      <LinkedInSearchPanel companyName={companyName} jobTitle={jobTitle} jobLocation={jobLocation} />
 
       {/* Contact Tracker — outreach_contacts table */}
       <ContactTracker jobId={jobId} userId={userId} companyName={companyName} />
