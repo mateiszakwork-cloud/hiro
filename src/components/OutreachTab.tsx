@@ -613,7 +613,7 @@ const LinkedInSearchPanel = ({
 
 /* ── Main Component ── */
 const OutreachTab = ({
-  jobId, userId, companyName, jobTitle, jobLocation, jobFunction, contacts, setContacts,
+  jobId, userId, companyName, jobTitle, jobLocation, jobFunction, jobDescription, contacts, setContacts,
 }: {
   jobId: string;
   userId: string;
@@ -621,6 +621,7 @@ const OutreachTab = ({
   jobTitle: string | null;
   jobLocation: string | null;
   jobFunction: string | null;
+  jobDescription?: string | null;
   contacts: OutreachContact[];
   setContacts: React.Dispatch<React.SetStateAction<OutreachContact[]>>;
 }) => {
