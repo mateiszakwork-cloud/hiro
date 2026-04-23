@@ -292,6 +292,10 @@ const JobDetail = () => {
   }, [jobId, navigate]);
 
   const defaultTab = searchParams.get("tab") || "overview";
+  const [activeTab, setActiveTab] = useState<string>(defaultTab);
+  const [outreachSummary, setOutreachSummary] = useState<{
+    total: number; not_contacted: number; messaged: number; replied: number; meeting_booked: number;
+  }>({ total: 0, not_contacted: 0, messaged: 0, replied: 0, meeting_booked: 0 });
   const [job, setJob] = useState<Job | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [linkedinUrl, setLinkedinUrl] = useState("");
