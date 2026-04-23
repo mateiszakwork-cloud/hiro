@@ -77,13 +77,14 @@ const ContactTracker = ({
 
   // Draft modal state
   const [draftContact, setDraftContact] = useState<OutreachContact | null>(null);
-  const [draftType, setDraftType] = useState<"connection_note" | "cold_message">("connection_note");
+  const [draftType, setDraftType] = useState<"connection_request" | "outreach">("connection_request");
   const [draftText, setDraftText] = useState("");
   const [draftLoading, setDraftLoading] = useState(false);
   const [draftSaving, setDraftSaving] = useState(false);
   const [draftCopied, setDraftCopied] = useState(false);
+  const [draftError, setDraftError] = useState<string | null>(null);
+  const [hasCv, setHasCv] = useState<boolean | null>(null);
   const [confirmStatusOpen, setConfirmStatusOpen] = useState(false);
-  const [pendingSavedText, setPendingSavedText] = useState<string | null>(null);
 
   // Form state
   const [fLinkedin, setFLinkedin] = useState("");
@@ -129,6 +130,26 @@ const ContactTracker = ({
     fetchContacts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId]);
+
+  // Detect whether the user has any CV data — drives the AI draft buttons
+  useEffect(() => {
+    let cancelled = false;
+    const checkCv = async () => {
+      const [w, e, p] = await Promise.all([
+        supabase.from("work_experiences").select("id", { count: "exact", head: true }).eq("user_id", userId),
+        supabase.from("education").select("id", { count: "exact", head: true }).eq("user_id", userId),
+        supabase.from("profiles").select("base_cv_text").eq("id", userId).maybeSingle(),
+      ]);
+      if (cancelled) return;
+      const has =
+        (w.count ?? 0) > 0 ||
+        (e.count ?? 0) > 0 ||
+        !!(p.data && (p.data as any).base_cv_text);
+      setHasCv(has);
+    };
+    checkCv();
+    return () => { cancelled = true; };
+  }, [userId]);
 
   const validateLinkedin = (url: string) => {
     const trimmed = url.trim();
@@ -218,48 +239,55 @@ const ContactTracker = ({
   };
 
   /* ── Draft message ── */
-  const openDraft = (c: OutreachContact) => {
+  const openDraft = (c: OutreachContact, type: "connection_request" | "outreach") => {
     setDraftContact(c);
-    setDraftType("connection_note");
-    setDraftText(c.drafted_message || "");
+    setDraftType(type);
+    setDraftText("");
     setDraftCopied(false);
-    if (!c.drafted_message) {
-      // auto-generate first draft
-      generateDraft(c, "connection_note", false);
-    }
+    setDraftError(null);
+    generateDraft(c, type);
   };
 
   const generateDraft = async (
-    c: OutreachContact,
-    type: "connection_note" | "cold_message",
-    vary: boolean
+    _c: OutreachContact,
+    type: "connection_request" | "outreach"
   ) => {
     setDraftLoading(true);
+    setDraftError(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       const { data, error } = await supabase.functions.invoke("draft-tracker-message", {
-        body: { contact_id: c.id, job_id: jobId, message_type: type, vary },
+        body: { job_id: jobId, message_type: type },
         ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
       });
-      if (error) throw error;
-      if (!data?.success) {
-        toast.error(data?.error || "Could not generate draft");
+      if (error) {
+        setDraftError("Could not generate draft. Please try again.");
         return;
       }
-      setDraftText(data.message || "");
+      if (!data?.success) {
+        setDraftError(data?.error || "Could not generate draft. Please try again.");
+        return;
+      }
+      const msg = (data.message || "").toString();
+      if (!msg.trim()) {
+        setDraftError("Could not generate draft. Please try again.");
+        return;
+      }
+      setDraftText(msg);
     } catch {
-      toast.error("Draft generation failed — try again.");
+      setDraftError("Could not generate draft. Please try again.");
     } finally {
       setDraftLoading(false);
     }
   };
 
-  const handleSwitchType = (next: "connection_note" | "cold_message") => {
+  const handleSwitchType = (next: "connection_request" | "outreach") => {
     if (next === draftType || !draftContact) return;
     setDraftType(next);
     setDraftText("");
-    generateDraft(draftContact, next, false);
+    setDraftError(null);
+    generateDraft(draftContact, next);
   };
 
   const handleCopyDraft = async () => {
@@ -305,7 +333,7 @@ const ContactTracker = ({
     }
   };
 
-  const isConnNote = draftType === "connection_note";
+  const isConnNote = draftType === "connection_request";
   const charCount = draftText.length;
   const counterColor = isConnNote
     ? charCount >= 290
