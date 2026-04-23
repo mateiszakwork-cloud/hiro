@@ -976,12 +976,12 @@ const JobTracker = () => {
                             <TooltipTrigger asChild>
                               <div className="flex items-center gap-2 min-w-0">
                                 <div className="h-7 w-7 rounded bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground shrink-0">
-                                  {(job.company_name || "–")[0].toUpperCase()}
+                                  {safeText(job.company_name)[0].toUpperCase()}
                                 </div>
-                                <span className="font-semibold text-foreground truncate">{job.company_name || "–"}</span>
+                                <span className="font-semibold text-foreground truncate">{safeText(job.company_name)}</span>
                               </div>
                             </TooltipTrigger>
-                            {job.company_name && job.company_name.length > 14 && <TooltipContent>{job.company_name}</TooltipContent>}
+                            {!isBlank(job.company_name) && safeText(job.company_name).length > 14 && <TooltipContent>{safeText(job.company_name)}</TooltipContent>}
                           </Tooltip>
                         </TooltipProvider>
                       </td>
@@ -990,15 +990,17 @@ const JobTracker = () => {
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <span className="font-medium truncate block">
-                                {job.job_title || (job.url ? <span className="text-muted-foreground italic">Parsing...</span> : "–")}
+                                {!isBlank(job.job_title)
+                                  ? safeText(job.job_title)
+                                  : (job.url ? <span className="text-muted-foreground italic">Parsing...</span> : "–")}
                               </span>
                             </TooltipTrigger>
-                            {job.job_title && job.job_title.length > 18 && <TooltipContent>{job.job_title}</TooltipContent>}
+                            {!isBlank(job.job_title) && safeText(job.job_title).length > 18 && <TooltipContent>{safeText(job.job_title)}</TooltipContent>}
                           </Tooltip>
                         </TooltipProvider>
                       </td>
                       <td className="px-4 py-3">
-                        {job.function ? (
+                        {!isBlank(job.function) ? (
                           <span
                             style={{
                               display: "inline-block",
@@ -1007,8 +1009,8 @@ const JobTracker = () => {
                               fontFamily: "var(--font-body)",
                               fontSize: "11px",
                               fontWeight: 600,
-                              background: (FUNCTION_PILL[job.function] || FUNCTION_PILL.Other).bg,
-                              color: (FUNCTION_PILL[job.function] || FUNCTION_PILL.Other).color,
+                              background: (FUNCTION_PILL[job.function as string] || FUNCTION_PILL.Other).bg,
+                              color: (FUNCTION_PILL[job.function as string] || FUNCTION_PILL.Other).color,
                             }}
                           >
                             {job.function}
@@ -1020,10 +1022,10 @@ const JobTracker = () => {
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <span className="flex items-center gap-1 text-foreground truncate">
-                                {job.location ? <><MapPin className="h-3 w-3 text-muted-foreground shrink-0" /><span className="truncate">{job.location}</span></> : <span className="text-muted-foreground">–</span>}
+                                {!isBlank(job.location) ? <><MapPin className="h-3 w-3 text-muted-foreground shrink-0" /><span className="truncate">{safeText(job.location)}</span></> : <span className="text-muted-foreground">–</span>}
                               </span>
                             </TooltipTrigger>
-                            {job.location && job.location.length > 12 && <TooltipContent>{job.location}</TooltipContent>}
+                            {!isBlank(job.location) && safeText(job.location).length > 12 && <TooltipContent>{safeText(job.location)}</TooltipContent>}
                           </Tooltip>
                         </TooltipProvider>
                       </td>
@@ -1031,9 +1033,9 @@ const JobTracker = () => {
                         <TooltipProvider delayDuration={300}>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <span className="text-foreground truncate block">{job.duration || "–"}</span>
+                              <span className="text-foreground truncate block">{safeText(job.duration)}</span>
                             </TooltipTrigger>
-                            {job.duration && job.duration.length > 8 && <TooltipContent>{job.duration}</TooltipContent>}
+                            {!isBlank(job.duration) && safeText(job.duration).length > 8 && <TooltipContent>{safeText(job.duration)}</TooltipContent>}
                           </Tooltip>
                         </TooltipProvider>
                       </td>
