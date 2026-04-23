@@ -1,182 +1,47 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { toast } from "@/components/ui/sonner";
-import { AlertTriangle, CheckCircle2, Circle, Loader2, XCircle } from "lucide-react";
-import { Textarea } from "@/components/ui/textarea";
-
-const formatUpdatedAt = (iso: string | null) => {
-  if (!iso) return null;
-  const d = new Date(iso);
-  const date = d.toLocaleDateString("en-US", { month: "long", day: "numeric" });
-  let hour = d.getHours();
-  const ampm = hour >= 12 ? "pm" : "am";
-  hour = hour % 12 || 12;
-  const min = d.getMinutes();
-  const time = min === 0 ? `${hour}${ampm}` : `${hour}:${min.toString().padStart(2, "0")}${ampm}`;
-  return `${date} at ${time}`;
-};
+import { CheckCircle2, Zap } from "lucide-react";
 
 const Settings = () => {
-  const [cookie, setCookie] = useState("");
-  const [jsessionid, setJsessionid] = useState("");
-  const [savedCookie, setSavedCookie] = useState<string | null>(null);
-  const [savedJsessionid, setSavedJsessionid] = useState<string | null>(null);
-  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [loading, setLoading] = useState(true);
-  const [validating, setValidating] = useState(false);
-  const [sessionLive, setSessionLive] = useState<boolean | null>(null);
-
-  const validateSession = async () => {
-    setValidating(true);
-    setSessionLive(null);
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const session = sessionData?.session;
-      if (!session) { setValidating(false); return; }
-      const { data, error } = await supabase.functions.invoke("test-linkedin-connection", {
-        body: { user_id: session.user.id },
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      setSessionLive(!error && !!data?.success);
-    } catch {
-      setSessionLive(false);
-    } finally {
-      setValidating(false);
-    }
-  };
+  const [contactsThisMonth, setContactsThisMonth] = useState<number>(0);
 
   useEffect(() => {
     const load = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-      const { data } = await supabase
-        .from("profiles")
-        .select("linkedin_cookie, linkedin_jsessionid, linkedin_updated_at")
-        .eq("id", session.user.id)
-        .single();
-      if (data?.linkedin_cookie) {
-        setCookie(data.linkedin_cookie);
-        setSavedCookie(data.linkedin_cookie);
-      }
-      if ((data as any)?.linkedin_jsessionid) {
-        setJsessionid((data as any).linkedin_jsessionid);
-        setSavedJsessionid((data as any).linkedin_jsessionid);
-      }
-      if ((data as any)?.linkedin_updated_at) {
-        setUpdatedAt((data as any).linkedin_updated_at);
-      }
+      if (!session) { setLoading(false); return; }
+
+      // Estimate credits used this month via contacts created since the 1st
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+
+      const { count } = await supabase
+        .from("contacts")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", session.user.id)
+        .gte("created_at", monthStart.toISOString());
+
+      setContactsThisMonth(count ?? 0);
       setLoading(false);
-      // Auto-validate session if both cookies are present
-      const liAt = data?.linkedin_cookie;
-      const jsid = (data as any)?.linkedin_jsessionid;
-      if (liAt && liAt.trim().length >= 50 && jsid && jsid.trim().startsWith("ajax:")) {
-        validateSession();
-      }
     };
     load();
   }, []);
 
-  const isLiAtValid = (v: string) => v.trim().length >= 50;
-  const isJsessionValid = (v: string) => v.trim().startsWith("ajax:");
-
-  const handleSave = async () => {
-    const trimmedCookie = cookie.trim();
-    const trimmedSession = jsessionid.trim();
-
-    if (trimmedCookie && !isLiAtValid(trimmedCookie)) {
-      toast("The li_at cookie looks too short. Make sure you copied the full value.");
-      return;
-    }
-    if (trimmedSession && !isJsessionValid(trimmedSession)) {
-      toast("The JSESSIONID should start with 'ajax:'. Please check the value.");
-      return;
-    }
-    if (!trimmedCookie && !trimmedSession) {
-      toast("Please paste at least one cookie value.");
-      return;
-    }
-
-    setSaving(true);
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) { setSaving(false); return; }
-    const now = new Date().toISOString();
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        linkedin_cookie: trimmedCookie || null,
-        linkedin_jsessionid: trimmedSession || null,
-        linkedin_updated_at: now,
-      } as any)
-      .eq("id", session.user.id);
-    setSaving(false);
-    if (error) {
-      toast("Failed to save. Please try again.");
-    } else {
-      setSavedCookie(trimmedCookie || null);
-      setSavedJsessionid(trimmedSession || null);
-      setUpdatedAt(now);
-      setTestResult(null);
-      toast("LinkedIn connected");
-      // Re-validate freshly saved cookies
-      if (trimmedCookie && isLiAtValid(trimmedCookie) && trimmedSession && isJsessionValid(trimmedSession)) {
-        validateSession();
-      } else {
-        setSessionLive(null);
-      }
-    }
-  };
-
-  const handleTest = async () => {
-    setTesting(true);
-    setTestResult(null);
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const session = sessionData?.session;
-      if (!session) { setTesting(false); return; }
-      const { data, error } = await supabase.functions.invoke("test-linkedin-connection", {
-        body: { user_id: session.user.id },
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      if (error || !data?.success) {
-        setTestResult({ ok: false, message: "Connection failed - please refresh your cookies" });
-      } else {
-        setTestResult({ ok: true, message: "Connection working" });
-      }
-    } catch {
-      setTestResult({ ok: false, message: "Connection failed - please refresh your cookies" });
-    } finally {
-      setTesting(false);
-    }
-  };
-
-  const cookieValid = !!savedCookie && isLiAtValid(savedCookie);
-  const sessionValid = !!savedJsessionid && isJsessionValid(savedJsessionid);
-  const isFullyConnected = cookieValid && sessionValid;
-  const isPartial = (cookieValid && !sessionValid) || (!cookieValid && sessionValid);
-
-  const missingField = cookieValid && !sessionValid
-    ? "JSESSIONID"
-    : !cookieValid && sessionValid
-      ? "li_at cookie"
-      : null;
+  // Each contact roughly costs: 1 search call shared across ~6 contacts + 1 profile call per top contact.
+  // Estimate: ~2 credits per contact saved.
+  const estimatedCredits = contactsThisMonth * 2;
 
   if (loading) {
     return (
       <div className="-m-8">
         <div className="hiro-page-header">
           <h1 className="hiro-page-title">Settings</h1>
-          <p className="hiro-page-subtext">Manage your LinkedIn connection and account preferences</p>
+          <p className="hiro-page-subtext">Manage your account and integrations</p>
         </div>
         <div className="hiro-page-content">
           <div className="hiro-page-content-inner animate-pulse space-y-4">
-            <div className="h-64 bg-muted rounded-lg" />
+            <div className="h-48 bg-muted rounded-lg" />
           </div>
         </div>
       </div>
@@ -185,10 +50,9 @@ const Settings = () => {
 
   return (
     <div className="-m-8">
-      {/* Page Header */}
       <div className="hiro-page-header">
         <h1 className="hiro-page-title">Settings</h1>
-        <p className="hiro-page-subtext">Manage your LinkedIn connection and account preferences</p>
+        <p className="hiro-page-subtext">Manage your account and integrations</p>
       </div>
 
       <div className="hiro-page-content">
@@ -197,153 +61,55 @@ const Settings = () => {
             <div className="hiro-section-card-header">
               <div className="hiro-section-card-title-wrap">
                 <span className="hiro-section-accent-bar" />
-                <h2 className="hiro-section-card-title">LinkedIn Connection</h2>
+                <h2 className="hiro-section-card-title">LinkedIn Search</h2>
               </div>
             </div>
 
-            <div className="p-6 space-y-6">
-              {/* Status row */}
+            <div className="p-6 space-y-5">
               <div className="hiro-li-status-row">
-                {isFullyConnected ? (
-                  validating ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                      <span className="text-sm font-medium text-muted-foreground">Checking LinkedIn session…</span>
-                    </>
-                  ) : sessionLive === false ? (
-                    <>
-                      <XCircle className="h-4 w-4" style={{ color: "#991B1B" }} />
-                      <span className="text-sm font-semibold" style={{ color: "#991B1B" }}>
-                        Session expired — please update your cookies
-                      </span>
-                      {updatedAt && (
-                        <span className="text-xs text-muted-foreground ml-auto">
-                          Last updated: {formatUpdatedAt(updatedAt)}
-                        </span>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <span className="hiro-li-dot-connected" />
-                      <span className="text-sm font-semibold" style={{ color: "#15803D" }}>LinkedIn connected</span>
-                      {updatedAt && (
-                        <span className="text-xs text-muted-foreground ml-auto">
-                          Last updated: {formatUpdatedAt(updatedAt)}
-                        </span>
-                      )}
-                    </>
-                  )
-                ) : isPartial ? (
-                  <>
-                    <AlertTriangle className="h-4 w-4" style={{ color: "#D97706" }} />
-                    <span className="text-sm font-medium" style={{ color: "#D97706" }}>Partially configured</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="hiro-li-dot-disconnected" />
-                    <span className="text-sm font-medium text-muted-foreground">Not connected</span>
-                  </>
-                )}
+                <CheckCircle2 className="h-4 w-4" style={{ color: "#15803D" }} />
+                <span className="text-sm font-semibold" style={{ color: "#15803D" }}>
+                  LinkedIn search active
+                </span>
               </div>
 
-              <p className="text-sm text-muted-foreground -mt-2">
-                Hiro uses your LinkedIn session to search for contacts at target companies, see your connection degrees, and identify alumni from your own schools.
+              <p className="text-sm text-muted-foreground">
+                LinkedIn search is powered by RapidAPI. No login or cookies required — Hiro automatically
+                surfaces relevant contacts at your target companies whenever you run a search.
               </p>
 
-              {isPartial && missingField && (
-                <div className="hiro-warning-card">
-                  <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" style={{ color: "#D97706" }} />
-                  <p>Please also add your {missingField} to enable LinkedIn search.</p>
-                </div>
-              )}
-
-              {/* Instructions */}
-              <div className="hiro-instructions-panel">
-                <p className="hiro-instructions-heading">
-                  How to find your LinkedIn session cookies
-                </p>
-                <ol className="hiro-instructions-list">
-                  <li><span className="hiro-step-num">1</span><span>Open <code>linkedin.com</code> in Chrome and make sure you are logged in</span></li>
-                  <li><span className="hiro-step-num">2</span><span>Right click anywhere on the page and click <strong>Inspect</strong> (or press F12)</span></li>
-                  <li><span className="hiro-step-num">3</span><span>In the DevTools panel that opens, click the <strong>Application</strong> tab at the top</span></li>
-                  <li><span className="hiro-step-num">4</span><span>In the left sidebar, click <strong>Cookies</strong>, then click <code>https://www.linkedin.com</code></span></li>
-                  <li><span className="hiro-step-num">5</span><span>Find the cookie named <code>li_at</code>. Click on it and copy the entire <strong>Value</strong> — a long string starting with <code>AQED</code></span></li>
-                  <li><span className="hiro-step-num">6</span><span>In the same list, find the cookie named <code>JSESSIONID</code>. Copy its entire <strong>Value</strong> — it starts with <code>ajax:</code></span></li>
-                </ol>
-                <div className="hiro-warning-card mt-1">
-                  <span>💡</span>
-                  <p>Tip: Use Ctrl+F (or Cmd+F on Mac) to search for 'li_at' and 'JSESSIONID' to find them quickly.</p>
-                </div>
-              </div>
-
-              {/* li_at Input */}
-              <div>
-                <label htmlFor="li-cookie" className="hiro-field-label" style={{ marginBottom: 8 }}>
-                  li_at Cookie
-                </label>
-                <textarea
-                  id="li-cookie"
-                  rows={4}
-                  value={cookie}
-                  onChange={(e) => setCookie(e.target.value)}
-                  placeholder="Paste your li_at value here — starts with AQED..."
-                  className="hiro-cookie-textarea"
-                />
-              </div>
-
-              {/* JSESSIONID Input */}
-              <div>
-                <label htmlFor="jsessionid" className="hiro-field-label" style={{ marginBottom: 8 }}>
-                  JSESSIONID Cookie
-                </label>
-                <textarea
-                  id="jsessionid"
-                  rows={2}
-                  value={jsessionid}
-                  onChange={(e) => setJsessionid(e.target.value)}
-                  placeholder="Paste your JSESSIONID value here — starts with ajax:..."
-                  className="hiro-cookie-textarea"
-                  style={{ minHeight: 56 }}
-                />
-                <p className="text-xs text-muted-foreground mt-1.5">
-                  This is required for LinkedIn to accept Hiro's requests. Without it, searches will fail.
-                </p>
-              </div>
-
-              {/* Save / Test row */}
-              <div className="flex items-center gap-2.5 flex-wrap pt-5 border-t" style={{ borderColor: "var(--color-border)" }}>
-                <button
-                  onClick={handleSave}
-                  disabled={saving || (!cookie.trim() && !jsessionid.trim())}
-                  className="hiro-next-btn"
-                  style={{ padding: "10px 28px" }}
+              <div
+                className="rounded-lg border p-5 flex items-start gap-4"
+                style={{ borderColor: "var(--color-border)", background: "#FAFBFC" }}
+              >
+                <div
+                  className="h-10 w-10 rounded-lg flex items-center justify-center shrink-0"
+                  style={{ background: "#FFF5F5" }}
                 >
-                  {saving ? "Saving…" : "Save"}
-                </button>
-                <button
-                  onClick={handleTest}
-                  disabled={testing || !isFullyConnected}
-                  className="hiro-test-btn"
-                >
-                  {testing ? (
-                    <><Loader2 className="h-4 w-4 animate-spin" /> Testing…</>
-                  ) : (
-                    "Test LinkedIn Connection"
-                  )}
-                </button>
-                {testResult && (
-                  <span className={`flex items-center gap-1.5 text-sm font-medium ml-auto ${testResult.ok ? "" : ""}`} style={{ color: testResult.ok ? "#15803D" : "#991B1B" }}>
-                    {testResult.ok ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
-                    {testResult.message}
-                  </span>
-                )}
+                  <Zap className="h-5 w-5" style={{ color: "#950606" }} />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-foreground mb-1">
+                    Search credits used this month
+                  </p>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Estimated based on the contacts you've discovered since the 1st of this month.
+                  </p>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-2xl font-semibold text-foreground">
+                      ~{estimatedCredits}
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      credits ({contactsThisMonth} contacts found)
+                    </span>
+                  </div>
+                </div>
               </div>
 
-              {/* Warning */}
-              <div className="hiro-warning-card">
-                <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" style={{ color: "#D97706" }} />
-                <p>For personal use only. Avoid running more than 50 searches per day to keep your LinkedIn account safe.</p>
-              </div>
+              <p className="text-xs text-muted-foreground">
+                Credits reset on the 1st of each month. If you hit your limit, searches will pause until
+                the next reset or until your RapidAPI plan is upgraded.
+              </p>
             </div>
           </div>
         </div>
