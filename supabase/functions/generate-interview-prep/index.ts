@@ -71,36 +71,46 @@ Each bullet starts with "- ". 3-7 bullets depending on the question type. Be spe
 
 {
   "answers": {
-    "q1": "- bullet\\n- bullet\\n- bullet\\n- bullet\\n- bullet",
-    "q2": "- bullet\\n- bullet\\n- bullet\\n- bullet",
-    "q3": "- bullet\\n- bullet\\n- bullet\\n- bullet",
-    "q4": "- bullet\\n- bullet\\n- bullet",
-    "q5": "- bullet\\n- bullet\\n- bullet",
-    "q6": "- bullet\\n- bullet\\n- Note: verify with current sources before your interview",
-    "q7": "- bullet\\n- bullet\\n- Note: verify with current sources before your interview",
-    "q8": "- bullet\\n- bullet\\n- bullet\\n- bullet\\n- bullet",
+    "q1": "- bullet\\n- bullet",
+    "q2": "- bullet\\n- bullet",
+    "q3": "- bullet\\n- bullet",
+    "q4": "- bullet\\n- bullet",
+    "q5": "- bullet\\n- bullet",
+    "q6": "- bullet\\n- bullet\\n- Verify all of the above with current sources — this may be outdated.",
+    "q7": "- bullet\\n- bullet\\n- Verify all of the above with current sources — this may be outdated.",
+    "q8": "- bullet\\n- bullet",
     "section1_extra": [
       { "id": "extra1", "question": "...", "answer": "- bullet\\n- bullet", "insertAfter": "q3" }
     ],
     "role_specific": [
-      { "id": "rs1", "question": "...", "answer": "- bullet\\n- bullet\\n- bullet" }
+      { "id": "rs1", "question": "...", "answer": "- bullet\\n- bullet" }
     ]
   }
 }
 
-Field instructions:
-- q1 (Tell me about the company): 5-7 bullets covering company overview, business model, key products or brands, market position, scale, notable facts from the job posting.
-- q2 (The role and its responsibilities, and how it fits in the big picture): 4-6 bullets on day-to-day responsibilities, team or department context, how the role connects to company strategy. Pull from the job description.
-- q3 (Tell me about yourself - 2-minute pitch): 4 bullets structured as: (1) who you are academically (degree, university, field of study), (2) most relevant past experience from CV (1-2 roles or projects), (3) key skill or achievement matching this role, (4) what you are looking for now.
-- q4 (Why are you applying for this role): 3-4 bullets specific to this role's responsibilities matched to the applicant's background. Never generic.
-- q5 (Why are you applying to this company): 3-4 bullets specific to this company — its mission, culture, product, or market position. Never generic.
-- q6 (Recent company news): 2 bullets on real or plausible company news up to your training cutoff, then the verify note bullet exactly as shown above.
-- q7 (Recent industry news): 2 bullets on real or plausible industry trends up to your training cutoff, then the verify note bullet exactly as shown above.
-- q8 (Questions to ask the interviewer): 5-7 specific questions covering role clarity, team culture, success metrics, and one strategic question about company direction. Never generic.
-- section1_extra: 0 to 3 objects ONLY if the role type warrants extra fixed questions (consulting → "structured problem", startup → "funding/growth stage", technical → relevant deep-dive). Each object has "insertAfter" set to the q-id it should come after (e.g. "q3" or "q5"). If none needed, return an empty array [].
-- role_specific: EXACTLY 3-5 objects with questions and answers specific to this job title and industry. Never generic. Each answer is 3-5 bullets.
+Per-question guidelines (follow exactly):
 
-Every bullet starts with "- " (hyphen + space). Output ONLY the JSON object, nothing else.`;
+- q1 — Tell me about the company: 6-8 bullets. Name specific products, brands, revenue scale if known, market position, business model, key competitors, anything notable from the job posting. Factual and specific.
+
+- q2 — The role and its responsibilities: 5-7 bullets drawn directly from the job description. What does this role actually do day to day? What team does it sit in? What does success look like? How does it connect to company strategy? Quote or closely paraphrase specific responsibilities from the job description.
+
+- q3 — Tell me about yourself (2-minute pitch): 7-9 bullets structured as: (1) current degree, university, and what it covers that is relevant, (2-3) most relevant past experiences from CV with specific details — company name, what you actually did, concrete outcome if possible, (4) a specific skill or project that directly maps to something in this job description, (5) what stage you are at and what specifically you are looking for — name the type of work, not just a challenge. Long enough to fill 2 minutes when spoken.
+
+- q4 — Why this role: 4-5 bullets. Each bullet must reference a specific responsibility or requirement from the job description and connect it to something specific in the CV. No generic motivation. Format: "The focus on [specific thing from JD] maps directly to my experience with [specific thing from CV]".
+
+- q5 — Why this company: 4-5 bullets. Must reference specific things about this company — a specific product line, a specific market position, a specific strategic move, something about how they operate. At least one bullet must reference something that makes this company different from its direct competitors. No generic sustainability or innovation talking points unless the JD specifically names them concretely.
+
+- q6 — Recent company news: 3 bullets of specific real or highly plausible news about this company up to training cutoff. Name actual events, product launches, leadership changes, or strategic moves. The LAST bullet MUST be exactly: "- Verify all of the above with current sources — this may be outdated."
+
+- q7 — Recent industry news: 3 bullets of specific trends or developments in the relevant industry. Be specific about the trend, not vague. The LAST bullet MUST be exactly: "- Verify all of the above with current sources — this may be outdated."
+
+- q8 — Questions to ask the interviewer: 6-7 questions, each specific to this exact role and company. Include: what does success look like in the first 6 months, how does this team interact with [specific other team mentioned in JD], what is the biggest challenge this team is currently facing, one strategic question about the company's direction that shows you understand their business.
+
+- section1_extra: 0-3 role-relevant insertions. Each object has "insertAfter" set to the q-id it should come after (e.g. "q3" or "q5"). Return empty array if none needed.
+
+- role_specific: 3-5 behavioral or situational questions the interviewer is likely to ask for this specific role type. For each, provide a STAR-structured answer (Situation/Task → Action → Result) in bullet format, using specific details from the CV where possible. Tailor questions to the role — brand management, consulting, finance, operations, etc. Examples: "Tell me about a time you had to analyze data to make a decision", "Walk me through a project where you worked cross-functionally", "Give me an example of when you managed competing priorities."
+
+Bullet formatting: every bullet starts with "- " (hyphen + space). Never use em-dashes or en-dashes as bullet markers. Output ONLY the JSON object, nothing else.`;
     }
 
     const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
