@@ -954,6 +954,11 @@ const JobDetail = () => {
               {job.duration && <span className="hiro-job-meta-pill">{job.duration}</span>}
               {job.function && <span className="hiro-job-meta-pill">{job.function}</span>}
             </div>
+            {/* Outreach summary widget */}
+            <OutreachSummary
+              summary={outreachSummary}
+              onJump={() => setActiveTab("outreach")}
+            />
           </div>
           <div className="flex items-center gap-2 flex-wrap justify-end">
             {deadlineState.kind !== "none" && (
