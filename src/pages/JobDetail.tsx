@@ -383,6 +383,19 @@ const JobDetail = () => {
       }
       setJob(jobData as any);
       setNotes(jobData.notes || "");
+      const ud = (jobData as any).interview_user_data;
+      if (ud && typeof ud === "object") {
+        setInterviewData({
+          format: ud.format || "",
+          format_notes: ud.format_notes || "",
+          interview_date: ud.interview_date || null,
+          talking_points: ud.talking_points || "",
+          questions_to_prepare: Array.isArray(ud.questions_to_prepare) ? ud.questions_to_prepare : [],
+          questions_to_ask: Array.isArray(ud.questions_to_ask) ? ud.questions_to_ask : [],
+          post_notes: ud.post_notes || "",
+          outcome: ud.outcome || "Pending",
+        });
+      }
 
       if (jobData.match_score === null) {
         setMatchLoading(true);
