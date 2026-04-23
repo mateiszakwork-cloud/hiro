@@ -462,15 +462,37 @@ const ContactTracker = ({
                             Draft saved
                           </span>
                         )}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 text-xs gap-1.5"
-                          onClick={() => { onDraftMessage?.(c); openDraft(c); }}
-                        >
-                          <MessageSquare className="h-3 w-3" />
-                          Draft message
-                        </Button>
+                        {hasCv === false ? (
+                          <span
+                            className="text-[11px] text-muted-foreground italic"
+                            title="Add your CV in Settings to enable AI-drafted messages"
+                          >
+                            Add your CV in Settings to enable AI-drafted messages
+                          </span>
+                        ) : (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs gap-1.5"
+                              onClick={() => { onDraftMessage?.(c); openDraft(c, "connection_request"); }}
+                              disabled={hasCv === null}
+                            >
+                              <MessageSquare className="h-3 w-3" />
+                              Draft connection request
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs gap-1.5"
+                              onClick={() => { onDraftMessage?.(c); openDraft(c, "outreach"); }}
+                              disabled={hasCv === null}
+                            >
+                              <MessageSquare className="h-3 w-3" />
+                              Draft outreach message
+                            </Button>
+                          </>
+                        )}
                         <Button
                           size="sm"
                           variant="ghost"
