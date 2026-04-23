@@ -196,8 +196,9 @@
 .hiro-nav-link {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
+  gap: 12px;
+  padding: 13px 14px;
+  line-height: 1.4;
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: var(--transition);
@@ -229,7 +230,7 @@
 .hiro-nav-link-active {
   background: rgba(149, 6, 6, 0.15) !important;
   border-left: 2px solid var(--color-primary) !important;
-  padding-left: 10px !important;
+  padding-left: 12px !important;
 }
 .hiro-nav-link-active .hiro-nav-icon {
   color: var(--color-primary) !important;
@@ -257,6 +258,25 @@
 /* Hiro table row hover */
 .hiro-table-row:hover {
   background: #FFF8F8;
+}
+
+/* Column resize handle on table headers */
+.hiro-col-resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  user-select: none;
+  background: transparent;
+  z-index: 2;
+  transition: background 120ms ease;
+}
+.hiro-col-resize-handle:hover,
+.hiro-col-resize-handle:active {
+  background: var(--color-primary);
+  opacity: 0.6;
 }
 
 /* Hiro responsive metrics grid: 6 cols desktop, 2 cols on small screens */

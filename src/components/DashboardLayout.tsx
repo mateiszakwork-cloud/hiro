@@ -54,8 +54,8 @@ const DashboardLayout = () => {
       <div
         className="flex items-center"
         style={{
-          height: "64px",
-          padding: "0 20px",
+          minHeight: "84px",
+          padding: "20px",
           borderBottom: "1px solid var(--color-border-dark)",
         }}
       >
@@ -101,7 +101,7 @@ const DashboardLayout = () => {
       </div>
 
       {/* Navigation */}
-      <nav style={{ padding: "16px 12px", flex: 1 }}>
+      <nav style={{ padding: "20px 14px", flex: 1 }}>
         <div
           style={{
             fontFamily: "var(--font-body)",
@@ -109,13 +109,13 @@ const DashboardLayout = () => {
             color: "var(--color-text-white-50)",
             letterSpacing: "0.1em",
             textTransform: "uppercase",
-            padding: "8px 8px 4px",
-            marginBottom: "4px",
+            padding: "8px 10px 8px",
+            marginBottom: "6px",
           }}
         >
           Workspace
         </div>
-        <div className="space-y-1">
+        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
           {navItems.map((item) => (
             <NavLink
               key={item.to}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -132,21 +132,24 @@ const isValidUrl = (str: string): boolean => {
 type SortKey = "company_name" | "job_title" | "function" | "location" | "duration" | "status" | "match_score" | "priority" | "created_at" | "applied_date" | "application_deadline";
 type SortDir = "asc" | "desc";
 
-const COLUMNS: { label: string; key: SortKey | null; width: string }[] = [
-  { label: "", key: null, width: "36px" },
-  { label: "Company", key: "company_name", width: "15%" },
-  { label: "Job Title", key: "job_title", width: "18%" },
-  { label: "Function", key: "function", width: "90px" },
-  { label: "Location", key: "location", width: "12%" },
-  { label: "Duration", key: "duration", width: "80px" },
-  { label: "Deadline", key: "application_deadline", width: "100px" },
-  { label: "Status", key: "status", width: "100px" },
-  { label: "Match", key: "match_score", width: "64px" },
-  { label: "Kit", key: null, width: "44px" },
-  { label: "Outreach", key: null, width: "80px" },
-  { label: "Priority", key: "priority", width: "80px" },
-  { label: "Applied", key: "applied_date", width: "90px" },
+// Default column widths in pixels — generous so all columns fit a 1280px screen
+// without horizontal scroll (sidebar 240 + page padding ~64 = 304 reserved).
+const COLUMNS: { label: string; key: SortKey | null; width: number; resizable: boolean }[] = [
+  { label: "",         key: null,                   width: 36,  resizable: false },
+  { label: "Company",  key: "company_name",         width: 140, resizable: true  },
+  { label: "Job Title",key: "job_title",            width: 220, resizable: true  },
+  { label: "Function", key: "function",             width: 120, resizable: true  },
+  { label: "Location", key: "location",             width: 140, resizable: true  },
+  { label: "Duration", key: "duration",             width: 90,  resizable: true  },
+  { label: "Deadline", key: "application_deadline", width: 110, resizable: true  },
+  { label: "Status",   key: "status",               width: 110, resizable: true  },
+  { label: "Match",    key: "match_score",          width: 80,  resizable: true  },
+  { label: "Kit",      key: null,                   width: 44,  resizable: false },
+  { label: "Outreach", key: null,                   width: 90,  resizable: true  },
+  { label: "Priority", key: "priority",             width: 90,  resizable: true  },
+  { label: "Applied",  key: "applied_date",         width: 100, resizable: true  },
 ];
+const MIN_COL_WIDTH = 60;
 
 const FUNCTION_VALUES = ["Strategy", "Finance", "Marketing", "Product", "Operations", "HR", "Consulting", "Other"];
 
@@ -233,6 +236,40 @@ const JobTracker = () => {
   const [filterStatus, setFilterStatus] = useState("All");
   const [filterFunction, setFilterFunction] = useState("All");
   const [filterPriority, setFilterPriority] = useState("All");
+
+  // In-memory column widths (persists for the session, resets on refresh)
+  const [colWidths, setColWidths] = useState<Record<string, number>>(() =>
+    Object.fromEntries(COLUMNS.map(c => [c.label || "_open", c.width]))
+  );
+  const resizingRef = useRef<{ label: string; startX: number; startWidth: number } | null>(null);
+
+  const handleResizeStart = (e: React.MouseEvent, label: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    resizingRef.current = {
+      label,
+      startX: e.clientX,
+      startWidth: colWidths[label] ?? 100,
+    };
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+
+    const onMove = (ev: MouseEvent) => {
+      const r = resizingRef.current;
+      if (!r) return;
+      const next = Math.max(MIN_COL_WIDTH, r.startWidth + (ev.clientX - r.startX));
+      setColWidths(prev => ({ ...prev, [r.label]: next }));
+    };
+    const onUp = () => {
+      resizingRef.current = null;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
 
   const handleSort = (key: SortKey | null) => {
     if (!key) return;
@@ -876,50 +913,65 @@ const JobTracker = () => {
               </p>
             </div>
           ) : (
-            <div style={{ width: "100%", overflowX: "hidden" }}>
-              <table className="text-sm" style={{ tableLayout: "fixed", width: "100%" }}>
+            <div style={{ width: "100%", overflowX: "auto" }}>
+              <table className="text-sm" style={{ tableLayout: "fixed", width: "max-content", minWidth: "100%" }}>
                 <colgroup>
-                  {COLUMNS.map((col) => (
-                    <col key={`col-${col.label || "_open"}`} style={{ width: col.width }} />
-                  ))}
+                  {COLUMNS.map((col) => {
+                    const key = col.label || "_open";
+                    return <col key={`col-${key}`} style={{ width: `${colWidths[key] ?? col.width}px` }} />;
+                  })}
                 </colgroup>
                 <thead>
                    <tr style={{ background: "#F9FAFB", borderBottom: "2px solid var(--color-border)" }}>
-                     {COLUMNS.map((col) => (
-                       <th
-                         key={col.label || "_open"}
-                         style={{
-                           fontFamily: "var(--font-body)",
-                           fontSize: "11px",
-                           fontWeight: 600,
-                           color: "var(--color-text-muted)",
-                           textTransform: "uppercase",
-                           letterSpacing: "0.08em",
-                           padding: "10px 14px",
-                           textAlign: "left",
-                           whiteSpace: "nowrap",
-                           overflow: "hidden",
-                           textOverflow: "ellipsis",
-                         }}
-                         className={cn(
-                           col.key && "cursor-pointer select-none hover:text-foreground transition-colors group/th"
-                         )}
-                         onClick={() => handleSort(col.key)}
-                       >
-                         {col.label && (
-                           <span className="inline-flex items-center gap-1">
-                             {col.label}
-                             {col.key && (
-                               sortKey === col.key ? (
-                                 sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-                               ) : (
-                                 <ArrowUpDown className="h-3 w-3 opacity-0 group-hover/th:opacity-50 transition-opacity" />
-                               )
-                             )}
-                           </span>
-                         )}
-                       </th>
-                     ))}
+                     {COLUMNS.map((col) => {
+                       const key = col.label || "_open";
+                       return (
+                         <th
+                           key={key}
+                           style={{
+                             fontFamily: "var(--font-body)",
+                             fontSize: "11px",
+                             fontWeight: 600,
+                             color: "var(--color-text-muted)",
+                             textTransform: "uppercase",
+                             letterSpacing: "0.08em",
+                             padding: "10px 14px",
+                             textAlign: "left",
+                             whiteSpace: "nowrap",
+                             overflow: "hidden",
+                             textOverflow: "ellipsis",
+                             position: "relative",
+                           }}
+                           className={cn(
+                             col.key && "cursor-pointer select-none hover:text-foreground transition-colors group/th"
+                           )}
+                           onClick={() => handleSort(col.key)}
+                         >
+                           {col.label && (
+                             <span className="inline-flex items-center gap-1">
+                               {col.label}
+                               {col.key && (
+                                 sortKey === col.key ? (
+                                   sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                                 ) : (
+                                   <ArrowUpDown className="h-3 w-3 opacity-0 group-hover/th:opacity-50 transition-opacity" />
+                                 )
+                               )}
+                             </span>
+                           )}
+                           {col.resizable && (
+                             <span
+                               role="separator"
+                               aria-orientation="vertical"
+                               aria-label={`Resize ${col.label} column`}
+                               onMouseDown={(e) => handleResizeStart(e, key)}
+                               onClick={(e) => e.stopPropagation()}
+                               className="hiro-col-resize-handle"
+                             />
+                           )}
+                         </th>
+                       );
+                     })}
                    </tr>
                 </thead>
                 <tbody>
