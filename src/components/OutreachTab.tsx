@@ -365,28 +365,33 @@ const detectGeoFromLocation = (location: string | null): string => {
   return "";
 };
 
-/* Build a LinkedIn People Search URL with proper filter parameters */
+/* Build a LinkedIn People Search URL with proper filter parameters.
+ * - currentCompany is always sent as encoded JSON array of strings.
+ * - titleFreeText is sent raw (LinkedIn handles boolean OR queries with quoted phrases).
+ * - keywords is intentionally never used. */
 const buildLinkedInUrl = (opts: {
   titleFreeText?: string;
   company?: string;
   geoUrnId?: string;
   network?: "F" | "S" | "O";
 }): string => {
-  const params = new URLSearchParams();
+  const parts: string[] = [];
   if (opts.titleFreeText?.trim()) {
-    params.set("titleFreeText", opts.titleFreeText.trim());
+    parts.push(`titleFreeText=${encodeURIComponent(opts.titleFreeText.trim())}`);
   }
   if (opts.company?.trim()) {
-    params.set("company", opts.company.trim());
+    parts.push(
+      `currentCompany=${encodeURIComponent(JSON.stringify([opts.company.trim()]))}`
+    );
   }
   if (opts.geoUrnId) {
-    params.set("geoUrn", JSON.stringify([opts.geoUrnId]));
+    parts.push(`geoUrn=${encodeURIComponent(JSON.stringify([opts.geoUrnId]))}`);
   }
   if (opts.network) {
-    params.set("network", JSON.stringify([opts.network]));
+    parts.push(`network=${encodeURIComponent(JSON.stringify([opts.network]))}`);
   }
-  params.set("origin", "FACETED_SEARCH");
-  return `https://www.linkedin.com/search/results/people/?${params.toString()}`;
+  parts.push("origin=FACETED_SEARCH");
+  return `https://www.linkedin.com/search/results/people/?${parts.join("&")}`;
 };
 
 const LinkedInSearchPanel = ({
