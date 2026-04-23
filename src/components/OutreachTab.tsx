@@ -11,7 +11,7 @@ import {
 import { toast } from "sonner";
 import {
   Search, Users, ChevronDown, Check, X as XIcon, Trash2, Copy,
-  Loader2, AlertTriangle, Plus,
+  Loader2, AlertTriangle, Plus, ExternalLink,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
