@@ -340,22 +340,30 @@ const JobTracker = () => {
         }
         setCvMap(map);
       }
-      // Fetch outreach summary per job
+      // Fetch outreach summary per job from outreach_contacts
       const { data: contactData } = await supabase
-        .from("contacts")
-        .select("job_id, outreach_status")
+        .from("outreach_contacts" as any)
+        .select("job_id, status, date_added, date_messaged")
         .eq("user_id", session.user.id);
       if (contactData) {
-        const STATUS_ORDER = ["Not contacted", "Connection sent", "Connected", "Replied", "Meeting booked"];
-        const oMap: Record<string, { count: number; maxStatus: string }> = {};
+        const STATUS_ORDER = ["not_contacted", "messaged", "replied", "meeting_booked"];
+        const oMap: Record<string, { count: number; maxStatus: string; counts: Record<string, number>; lastActivity: string | null }> = {};
         let reached = 0;
-        for (const row of contactData) {
-          if (!oMap[row.job_id]) oMap[row.job_id] = { count: 0, maxStatus: "Not contacted" };
-          oMap[row.job_id].count++;
-          if (row.outreach_status && row.outreach_status !== "Not contacted") reached++;
-          const currentIdx = STATUS_ORDER.indexOf(oMap[row.job_id].maxStatus);
-          const newIdx = STATUS_ORDER.indexOf(row.outreach_status);
-          if (newIdx > currentIdx) oMap[row.job_id].maxStatus = row.outreach_status;
+        for (const row of contactData as any[]) {
+          if (!oMap[row.job_id]) oMap[row.job_id] = {
+            count: 0, maxStatus: "not_contacted",
+            counts: { not_contacted: 0, messaged: 0, replied: 0, meeting_booked: 0 },
+            lastActivity: null,
+          };
+          const o = oMap[row.job_id];
+          o.count++;
+          o.counts[row.status] = (o.counts[row.status] || 0) + 1;
+          if (row.status && row.status !== "not_contacted") reached++;
+          const currentIdx = STATUS_ORDER.indexOf(o.maxStatus);
+          const newIdx = STATUS_ORDER.indexOf(row.status);
+          if (newIdx > currentIdx) o.maxStatus = row.status;
+          const ts = row.date_messaged || row.date_added;
+          if (ts && (!o.lastActivity || ts > o.lastActivity)) o.lastActivity = ts;
         }
         setOutreachMap(oMap);
         setContactsReached(reached);
