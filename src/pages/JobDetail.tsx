@@ -335,6 +335,33 @@ const JobDetail = () => {
   const [interviewLoading, setInterviewLoading] = useState(false);
   const [interviewFetched, setInterviewFetched] = useState(false);
 
+  // Editable interview user-data (manual fields)
+  type InterviewUserData = {
+    format: string;
+    format_notes: string;
+    interview_date: string | null; // ISO date
+    talking_points: string;
+    questions_to_prepare: string[];
+    questions_to_ask: string[];
+    post_notes: string;
+    outcome: string;
+  };
+  const emptyInterviewData: InterviewUserData = {
+    format: "",
+    format_notes: "",
+    interview_date: null,
+    talking_points: "",
+    questions_to_prepare: [],
+    questions_to_ask: [],
+    post_notes: "",
+    outcome: "Pending",
+  };
+  const [interviewData, setInterviewData] = useState<InterviewUserData>(emptyInterviewData);
+  const [interviewDataSaved, setInterviewDataSaved] = useState(true);
+  const interviewSaveTimer = useRef<ReturnType<typeof setTimeout>>();
+  const [newPrepQuestion, setNewPrepQuestion] = useState("");
+  const [newAskQuestion, setNewAskQuestion] = useState("");
+
   useEffect(() => {
     const init = async () => {
       setJobLoading(true);
