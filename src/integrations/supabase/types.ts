@@ -473,6 +473,7 @@ export type Database = {
           linkedin_jsessionid: string | null
           linkedin_updated_at: string | null
           onboarding_complete: boolean
+          tour_complete: boolean
         }
         Insert: {
           base_cv_text?: string | null
@@ -485,6 +486,7 @@ export type Database = {
           linkedin_jsessionid?: string | null
           linkedin_updated_at?: string | null
           onboarding_complete?: boolean
+          tour_complete?: boolean
         }
         Update: {
           base_cv_text?: string | null
@@ -497,6 +499,7 @@ export type Database = {
           linkedin_jsessionid?: string | null
           linkedin_updated_at?: string | null
           onboarding_complete?: boolean
+          tour_complete?: boolean
         }
         Relationships: []
       }

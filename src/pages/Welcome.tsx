@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -6,6 +6,7 @@ import { UserCircle, Link2, FileText, Users, Upload, Loader2, CheckCircle, Alert
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import type { ParsedCVData } from "@/types/cv";
+import ProductTour from "@/components/ProductTour";
 
 const steps = [
   { icon: UserCircle, title: "Build your profile once" },
@@ -25,6 +26,42 @@ const Welcome = () => {
   const [errorMessage, setErrorMessage] = useState("");
   const [showPasteMode, setShowPasteMode] = useState(false);
   const [pastedText, setPastedText] = useState("");
+  const [tourState, setTourState] = useState<"loading" | "show" | "hide">("loading");
+
+  // Decide whether to show the first-login product tour
+  useEffect(() => {
+    let cancelled = false;
+    const check = async () => {
+      if (!user) return;
+      const { data } = await supabase
+        .from("profiles")
+        .select("tour_complete")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (cancelled) return;
+      const done = (data as any)?.tour_complete === true;
+      setTourState(done ? "hide" : "show");
+    };
+    if (isReady && user) check();
+    return () => { cancelled = true; };
+  }, [isReady, user]);
+
+  const markTourComplete = async () => {
+    if (!user) return;
+    await supabase.from("profiles").update({ tour_complete: true } as any).eq("id", user.id);
+  };
+
+  const handleTourFinish = async () => {
+    setTourState("hide");
+    await markTourComplete();
+    navigate("/onboarding");
+  };
+
+  const handleTourSkip = async () => {
+    setTourState("hide");
+    await markTourComplete();
+    navigate("/onboarding");
+  };
 
   if (!isReady) {
     return (
@@ -150,6 +187,10 @@ const Welcome = () => {
   };
 
   return (
+    <>
+      {tourState === "show" && (
+        <ProductTour onComplete={handleTourFinish} onSkip={handleTourSkip} />
+      )}
     <div className="hiro-onboarding-bg flex items-center justify-center">
       <div className="hiro-onboarding-container w-full" style={{ maxWidth: 560 }}>
         <div className="hiro-form-card">
@@ -291,6 +332,7 @@ const Welcome = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 
