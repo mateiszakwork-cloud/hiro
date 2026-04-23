@@ -785,7 +785,13 @@ const OutreachTab = ({
       <LinkedInSearchPanel companyName={companyName} jobTitle={jobTitle} jobLocation={jobLocation} />
 
       {/* Contact Tracker — outreach_contacts table */}
-      <ContactTracker jobId={jobId} userId={userId} companyName={companyName} />
+      <ContactTracker
+        jobId={jobId}
+        userId={userId}
+        companyName={companyName}
+        jobTitle={jobTitle}
+        jobDescription={jobDescription ?? null}
+      />
 
       {/* Alerts */}
       {noCookie && (
