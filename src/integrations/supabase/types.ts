@@ -353,6 +353,7 @@ export type Database = {
           function: string | null
           hard_skills: string[] | null
           id: string
+          interview_user_data: Json | null
           job_title: string | null
           languages_nice_to_have: string[] | null
           languages_required: string[] | null
@@ -377,6 +378,7 @@ export type Database = {
           function?: string | null
           hard_skills?: string[] | null
           id?: string
+          interview_user_data?: Json | null
           job_title?: string | null
           languages_nice_to_have?: string[] | null
           languages_required?: string[] | null
@@ -401,6 +403,7 @@ export type Database = {
           function?: string | null
           hard_skills?: string[] | null
           id?: string
+          interview_user_data?: Json | null
           job_title?: string | null
           languages_nice_to_have?: string[] | null
           languages_required?: string[] | null

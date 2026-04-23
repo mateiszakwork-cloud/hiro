@@ -1,0 +1,1 @@
+ALTER TABLE public.jobs ADD COLUMN IF NOT EXISTS interview_user_data jsonb;
