@@ -8,11 +8,14 @@ import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter,
 } from "@/components/ui/sheet";
 import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from "@/components/ui/dialog";
+import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Plus, Trash2, MessageSquare, ExternalLink, Loader2 } from "lucide-react";
+import { Plus, Trash2, MessageSquare, ExternalLink, Loader2, Copy, RefreshCw, Check } from "lucide-react";
 import { format } from "date-fns";
 
 /* ── Types ── */
