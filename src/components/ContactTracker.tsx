@@ -673,7 +673,7 @@ const ContactTracker = ({
           <div className="inline-flex rounded-md border border-gray-200 bg-gray-50 p-0.5 self-start">
             <button
               type="button"
-              onClick={() => handleSwitchType("connection_note")}
+              onClick={() => handleSwitchType("connection_request")}
               className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
                 isConnNote ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
               }`}
@@ -682,14 +682,21 @@ const ContactTracker = ({
             </button>
             <button
               type="button"
-              onClick={() => handleSwitchType("cold_message")}
+              onClick={() => handleSwitchType("outreach")}
               className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
                 !isConnNote ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              Cold message / InMail
+              Outreach message
             </button>
           </div>
+
+          {/* Inline error */}
+          {draftError && !draftLoading && (
+            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+              {draftError}
+            </div>
+          )}
 
           {/* Textarea */}
           <div className="space-y-1.5">
@@ -697,17 +704,17 @@ const ContactTracker = ({
               value={draftText}
               onChange={(e) => setDraftText(e.target.value)}
               rows={isConnNote ? 6 : 10}
-              maxLength={isConnNote ? 300 : 2000}
+              maxLength={isConnNote ? 300 : 800}
               placeholder={draftLoading ? "Generating draft…" : "Your draft will appear here."}
               disabled={draftLoading}
               className="resize-none text-sm leading-relaxed"
             />
             <div className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground">
-                {isConnNote ? "LinkedIn connection notes are limited to 300 characters." : "Aim for 130–180 words."}
+                {isConnNote ? "LinkedIn connection notes are limited to 300 characters." : "Outreach messages are limited to 800 characters."}
               </span>
               <span className={`font-medium tabular-nums ${counterColor}`}>
-                {charCount}{isConnNote ? " / 300" : ""}
+                {charCount} / {isConnNote ? 300 : 800}
               </span>
             </div>
           </div>
@@ -716,7 +723,7 @@ const ContactTracker = ({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => draftContact && generateDraft(draftContact, draftType, true)}
+              onClick={() => draftContact && generateDraft(draftContact, draftType)}
               disabled={draftLoading || draftSaving}
               className="gap-1.5"
             >
