@@ -1505,6 +1505,55 @@ const JobDetail = () => {
             </div>
           </div>
 
+          {/* Global header banner (constant across all CVs) */}
+          {cvOutput && (
+            <Card className="bg-muted/40 border-dashed">
+              <CardContent className="p-3 flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground shrink-0">Global Header</span>
+                  <span className="text-sm text-foreground truncate">
+                    <span className="font-semibold">{userProfile.full_name || "Add your name"}</span>
+                    {" · "}
+                    <span className="text-muted-foreground">
+                      {[userProfile.phone, userProfile.email, userProfile.linkedin_url, userProfile.default_location].filter(Boolean).join(" · ") || "Add phone, email and LinkedIn"}
+                    </span>
+                  </span>
+                </div>
+                <Link to="/profile" className="text-xs underline text-[#950606] shrink-0">Edit global details</Link>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Layout / section controls panel */}
+          {cvOutput && layoutOpen && (
+            <Card>
+              <CardContent className="p-4 space-y-3">
+                <div>
+                  <h4 className="text-sm font-semibold text-foreground">CV layout</h4>
+                  <p className="text-xs text-muted-foreground">Reorder, rename, or hide sections. Changes apply to this job only.</p>
+                </div>
+                <CvSectionControls config={sectionConfig} onChange={updateSectionConfig} />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Preview dialog */}
+          {previewData && (
+            <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+              <DialogContent className="max-w-[860px] max-h-[90vh] overflow-auto p-0 bg-neutral-100">
+                <DialogHeader className="px-4 py-3 bg-background border-b">
+                  <DialogTitle>CV preview</DialogTitle>
+                  <DialogDescription>Approximation of the downloaded layout.</DialogDescription>
+                </DialogHeader>
+                <div className="p-6 flex justify-center">
+                  <div className="shadow-lg" style={{ transformOrigin: "top center", transform: "scale(0.85)" }}>
+                    <CvPreview data={previewData} />
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
+
           {/* Loading state */}
           {cvLoading && (
             <Card>
