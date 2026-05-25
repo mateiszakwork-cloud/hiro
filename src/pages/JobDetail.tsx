@@ -392,6 +392,33 @@ const JobDetail = () => {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [layoutOpen, setLayoutOpen] = useState(false);
 
+  // Persist section_config to cv_outputs (debounced lightly via inline await).
+  const sectionConfig: CvSectionConfig = normalizeSectionConfig(cvOutput?.section_config);
+  const updateSectionConfig = async (next: CvSectionConfig) => {
+    if (!cvOutput) return;
+    setCvOutput({ ...cvOutput, section_config: next as any });
+    const { error } = await supabase
+      .from("cv_outputs")
+      .update({ section_config: next as any })
+      .eq("id", cvOutput.id);
+    if (error) toast.error("Couldn't save layout changes.");
+  };
+
+  // Live preview data (kept in sync with current cvOutput + profile).
+  const previewData = (cvOutput && job)
+    ? buildCvData({
+        cvOutput: {
+          tailored_summary: cvOutput.tailored_summary,
+          selected_bullets: cvOutput.selected_bullets,
+          selected_hard_skills: cvOutput.selected_hard_skills,
+          selected_soft_skills: cvOutput.selected_soft_skills,
+          section_config: cvOutput.section_config,
+        },
+        profile: userProfile,
+        job: { company_name: job.company_name, location: job.location },
+      })
+    : null;
+
   // Master skills for suggestions
   const [masterHardSkills, setMasterHardSkills] = useState<string[]>([]);
   const [masterSoftSkills, setMasterSoftSkills] = useState<string[]>([]);
