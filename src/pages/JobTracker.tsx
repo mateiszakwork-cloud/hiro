@@ -80,12 +80,12 @@ const STATUS_PILL: Record<string, { bg: string; color: string }> = {
 };
 
 const STATUS_OPTIONS = [
-  { value: "Saved", color: "bg-gray-200 text-gray-700" },
-  { value: "Applied", color: "bg-blue-100 text-blue-700" },
-  { value: "Screening", color: "bg-amber-100 text-amber-700" },
-  { value: "Interview", color: "bg-orange-100 text-orange-700" },
-  { value: "Offer", color: "bg-green-100 text-green-700" },
-  { value: "Rejected", color: "bg-red-100 text-red-700" },
+  { value: "Saved",     color: "bg-gray-200 text-gray-700",   description: "Bookmarked — not yet applied." },
+  { value: "Applied",   color: "bg-blue-100 text-blue-700",   description: "Submitted, no engagement yet from the company." },
+  { value: "Screening", color: "bg-amber-100 text-amber-700", description: "Recruiter screen, shortlist, or HR contact." },
+  { value: "Interview", color: "bg-orange-100 text-orange-700", description: "In active interview rounds." },
+  { value: "Offer",     color: "bg-green-100 text-green-700", description: "Offer received." },
+  { value: "Rejected",  color: "bg-red-100 text-red-700",     description: "No longer in process." },
 ];
 
 const getStatusPillStyle = (status: string): React.CSSProperties => {
