@@ -809,6 +809,7 @@ const JobDetail = () => {
           selected_bullets: cvOutput.selected_bullets,
           selected_hard_skills: cvOutput.selected_hard_skills,
           selected_soft_skills: cvOutput.selected_soft_skills,
+          section_config: cvOutput.section_config,
         },
         profile: userProfile,
         job: { company_name: job.company_name, location: job.location },
