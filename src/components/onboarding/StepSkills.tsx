@@ -3,8 +3,26 @@ import { supabase } from "@/integrations/supabase/client";
 import { X, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
-const HARD_SUGGESTIONS = ["Excel", "PowerPoint", "SQL", "Python", "Salesforce", "Tableau", "Google Analytics", "Jira", "Figma", "SAP"];
-const SOFT_SUGGESTIONS = ["Stakeholder management", "Analytical thinking", "Cross-functional collaboration", "Project management", "Communication", "Problem solving", "Leadership", "Attention to detail"];
+const HARD_SUGGESTIONS = [
+  "Excel", "PowerPoint", "Word", "Google Sheets", "Google Slides",
+  "SQL", "Python", "R", "JavaScript", "TypeScript", "Java",
+  "Tableau", "Power BI", "Looker", "Google Analytics", "Mixpanel", "Amplitude",
+  "Salesforce", "HubSpot", "SAP", "NetSuite", "Workday",
+  "Jira", "Confluence", "Notion", "Asana", "Trello", "Linear", "Monday",
+  "Figma", "Sketch", "Adobe XD", "Photoshop", "Illustrator", "InDesign",
+  "AWS", "GCP", "Azure", "Docker", "Git",
+  "Financial modelling", "DCF valuation", "PESTEL analysis", "Porter's Five Forces",
+  "Market research", "A/B testing", "SEO", "SEM", "Email marketing",
+];
+const SOFT_SUGGESTIONS = [
+  "Stakeholder management", "Cross-functional collaboration", "Project management",
+  "Analytical thinking", "Problem solving", "Strategic thinking", "Critical thinking",
+  "Communication", "Written communication", "Public speaking", "Active listening",
+  "Leadership", "Coaching", "Mentoring", "Negotiation", "Conflict resolution",
+  "Attention to detail", "Time management", "Prioritisation", "Ownership",
+  "Adaptability", "Resilience", "Curiosity", "Creativity",
+  "Client management", "Presentation skills", "Storytelling with data",
+];
 
 interface Props { userId: string; onNext: () => void; onBack: () => void; initialHardSkills?: string[]; initialSoftSkills?: string[]; }
 
@@ -60,7 +78,7 @@ const SkillTagInput = ({
           rows={1}
         />
       </div>
-      <p className="text-xs text-muted-foreground mt-1">💡 Paste from your CV — separate with commas or new lines</p>
+      <p className="text-xs text-muted-foreground mt-1">Tap a suggestion or paste a list — separate with commas or new lines.</p>
       {unusedSuggestions.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mt-2">
           {unusedSuggestions.map(s => (
@@ -97,13 +115,15 @@ const StepSkills = ({ userId, onNext, onBack, initialHardSkills, initialSoftSkil
 
   return (
     <div className="rounded-lg bg-card p-8 shadow-sm">
-      <h1 className="text-2xl font-bold text-foreground">Your skills</h1>
-      <p className="mt-1 text-muted-foreground">Add your hard and soft skills. The more specific you are, the better the AI will tailor your applications.</p>
+      <h1 className="text-2xl font-bold text-foreground">Your skill bank</h1>
+      <p className="mt-1 text-muted-foreground">
+        Add more than you think you need. This is the pool Hiro draws from when matching you to each role — tools, software, methods, and professional strengths all count.
+      </p>
 
       <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
         <div className="space-y-2">
           <h2 className="text-base font-semibold text-foreground">Hard Skills</h2>
-          <p className="text-sm text-muted-foreground">Tools, software, methodologies, languages (e.g. Excel, Python, Salesforce, SQL, PESTEL analysis)</p>
+          <p className="text-sm text-muted-foreground">Tools, software, methods, programming languages.</p>
           <SkillTagInput
             tags={hardSkills}
             onAdd={(t) => setHardSkills(prev => [...prev, t])}
@@ -116,7 +136,7 @@ const StepSkills = ({ userId, onNext, onBack, initialHardSkills, initialSoftSkil
 
         <div className="space-y-2">
           <h2 className="text-base font-semibold text-foreground">Soft Skills</h2>
-          <p className="text-sm text-muted-foreground">Interpersonal and professional abilities (e.g. Stakeholder management, Cross-functional collaboration)</p>
+          <p className="text-sm text-muted-foreground">Interpersonal and professional strengths.</p>
           <SkillTagInput
             tags={softSkills}
             onAdd={(t) => setSoftSkills(prev => [...prev, t])}
