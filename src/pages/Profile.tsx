@@ -73,6 +73,11 @@ const Profile = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [linkedinUrl, setLinkedinUrl] = useState("");
+  const [defaultLocation, setDefaultLocation] = useState("");
+  const [contactSaving, setContactSaving] = useState(false);
+  const [contactSaved, setContactSaved] = useState(false);
   
 
   const [workExps, setWorkExps] = useState<WorkExp[]>([]);
