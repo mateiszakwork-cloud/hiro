@@ -1,8 +1,10 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Loader2, Download, RotateCcw, AlertTriangle } from "lucide-react";
+import { Loader2, Download, RotateCcw, AlertTriangle, Plus, Trash2, Pencil, Info } from "lucide-react";
 import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import {
   Document,
   Packer,
@@ -18,17 +20,18 @@ type RoleQ = { id: string; question: string; answer: string };
 
 type Answers = {
   q1: string; q2: string; q3: string; q4: string; q5: string;
-  q6: string; q7: string; q8: string;
+  q6: string; q7: string; q8: string; q9: string;
   section1_extra: ExtraQ[];
   role_specific: RoleQ[];
 };
 
-const FIXED_QUESTIONS: { id: keyof Answers | "q1"|"q2"|"q3"|"q4"|"q5"|"q6"|"q7"|"q8"; label: string; newsDisclaimer?: boolean }[] = [
+const FIXED_QUESTIONS: { id: "q1"|"q2"|"q3"|"q4"|"q5"|"q6"|"q7"|"q8"|"q9"; label: string; newsDisclaimer?: boolean }[] = [
   { id: "q1", label: "Tell me about the company" },
   { id: "q2", label: "The role and its responsibilities, and how it fits in the big picture" },
   { id: "q3", label: "Tell me about yourself (2-minute pitch)" },
   { id: "q4", label: "Why are you applying for this role?" },
   { id: "q5", label: "Why are you applying to this company?" },
+  { id: "q9", label: "How would you approach your first 30, 60, and 90 days in this role?" },
   { id: "q6", label: "Recent company news that interests you", newsDisclaimer: true },
   { id: "q7", label: "Recent industry news that interests you", newsDisclaimer: true },
   { id: "q8", label: "Questions to ask the interviewer" },
