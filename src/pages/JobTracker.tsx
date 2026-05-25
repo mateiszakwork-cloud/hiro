@@ -20,6 +20,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import ManualJobModal from "@/components/ManualJobModal";
+import CustomColumnCell from "@/components/CustomColumnCell";
 
 type Job = {
   id: string; url: string | null; company_name: string | null; job_title: string | null;
