@@ -724,16 +724,11 @@ const JobTracker = () => {
       <div
         style={{
           background: "var(--color-bg-white)",
-          padding: "20px 28px",
+          padding: "20px 28px 18px",
           borderBottom: "1px solid var(--color-border)",
-          display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "space-between",
-          gap: "24px",
-          flexWrap: "wrap",
         }}
       >
-        <div>
+        <div style={{ maxWidth: 880 }}>
           <h1
             style={{
               fontFamily: "var(--font-heading)",
@@ -752,18 +747,17 @@ const JobTracker = () => {
               fontSize: "13px",
               color: "var(--color-text-muted)",
               marginTop: "6px",
+              marginBottom: "14px",
             }}
           >
-            Paste a job URL to automatically fill every column
+            Paste a general job posting URL from LinkedIn, Greenhouse, Workday, Lever, or a company careers page — Hiro will fill every column for you.
           </p>
-        </div>
 
-        <div style={{ flex: 1, maxWidth: "520px", minWidth: "280px" }}>
-          <div style={{ display: "flex", gap: "10px" }}>
+          <div style={{ display: "flex", gap: "10px", alignItems: "stretch" }}>
             <Input
               value={url}
               onChange={(e) => { setUrl(e.target.value); if (urlError) setUrlError(""); }}
-              placeholder="Paste a job posting URL..."
+              placeholder="Paste a general job posting URL from LinkedIn, Greenhouse, Workday, Lever, or a company careers page..."
               onKeyDown={(e) => e.key === "Enter" && !loading && handleAddJob()}
               disabled={loading}
               style={{
@@ -809,18 +803,27 @@ const JobTracker = () => {
             >
               {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Parsing...</> : "Add Job"}
             </button>
-          </div>
-          <div className="flex items-center gap-3 mt-1.5">
-            {urlError && <p className="text-destructive text-xs">{urlError}</p>}
             <button
               type="button"
               onClick={() => { setManualPrefillUrl(url.trim()); setManualOpen(true); }}
-              className="text-xs ml-auto"
-              style={{ color: "var(--color-text-muted)" }}
+              style={{
+                height: "44px",
+                background: "var(--color-bg-white)",
+                color: "var(--color-text-primary)",
+                fontFamily: "var(--font-body)",
+                fontSize: "14px",
+                fontWeight: 600,
+                borderRadius: "var(--radius-md)",
+                padding: "0 16px",
+                border: "1px solid var(--color-border)",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+              }}
             >
               Add manually
             </button>
           </div>
+          {urlError && <p className="text-destructive text-xs mt-1.5">{urlError}</p>}
         </div>
       </div>
 
