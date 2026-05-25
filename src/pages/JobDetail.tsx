@@ -1645,7 +1645,10 @@ const JobDetail = () => {
               {Array.isArray(cvOutput.selected_bullets) && cvOutput.selected_bullets.length > 0 && (
                 <Card>
                   <CardContent className="p-5">
-                    <h4 className="font-semibold text-foreground mb-4">Selected Bullet Points</h4>
+                    <h4 className="font-semibold text-foreground mb-1">Selected Bullet Points</h4>
+                    <p className="text-xs text-muted-foreground mb-4">
+                      Tailored wording sharpens your original point for this role. Switch any bullet back to the original, edit freely, or generate a new variation grounded in your existing experience.
+                    </p>
                     <div className="space-y-5">
                       {(cvOutput.selected_bullets as BulletBlock[]).map((block, blockIdx) => {
                         const normalizedBullets = (block.bullets || []).map(normalizeBullet);
@@ -1672,10 +1675,21 @@ const JobDetail = () => {
                               {normalizedBullets.map((bullet, bulletIdx) => {
                                 const identical = bulletsAreIdentical(bullet);
                                 const showTailored = isBulletTailored(blockIdx, bulletIdx);
+                                const originLabel =
+                                  bullet.origin === "generated" ? "AI variation"
+                                  : (showTailored && !identical) ? "Tailored"
+                                  : "Original";
+                                const originClass =
+                                  bullet.origin === "generated"
+                                    ? "bg-purple-50 text-purple-700 border-purple-200"
+                                    : (showTailored && !identical)
+                                      ? "bg-[#FFF5F5] text-[#950606] border-[#FBD5D5]"
+                                      : "bg-gray-50 text-gray-600 border-gray-200";
                                 return (
                                   <li key={bulletIdx} className="flex items-start gap-2 group">
                                     <span className="text-muted-foreground mt-1.5 shrink-0">•</span>
                                     <div className="flex-1 min-w-0">
+                                      <span className={`inline-block text-[10px] font-medium px-1.5 py-0.5 rounded border mb-1 ${originClass}`}>{originLabel}</span>
                                       <span
                                         contentEditable
                                         suppressContentEditableWarning
@@ -1703,7 +1717,7 @@ const JobDetail = () => {
                               })}
                             </ul>
                             {/* +/- bullet controls */}
-                            <div className="flex items-center gap-2 mt-2">
+                            <div className="flex flex-wrap items-center gap-2 mt-3">
                               <button
                                 disabled={normalizedBullets.length <= 1}
                                 onClick={() => {
@@ -1713,35 +1727,71 @@ const JobDetail = () => {
                                   );
                                   setCvOutput({ ...cvOutput, selected_bullets: updated });
                                 }}
-                                className="h-6 w-6 rounded border border-border bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                className="h-7 px-2 rounded border border-border bg-muted text-xs text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed inline-flex items-center gap-1"
                                 title="Remove last bullet"
                               >
-                                <Minus className="h-3 w-3" />
+                                <Minus className="h-3 w-3" /> Remove last
                               </button>
                               <button
-                                disabled={normalizedBullets.length >= 4}
                                 onClick={() => {
                                   if (!cvOutput || !Array.isArray(cvOutput.selected_bullets)) return;
-                                  // Find unused bullets from original work experiences
                                   const currentTexts = new Set(normalizedBullets.map(b => b.original));
                                   const matchExp = (userProfile?.work_experiences || []).find((w: any) =>
                                     w.company_name === block.company && w.job_title === block.job_title
                                   );
-                                  if (!matchExp || !Array.isArray(matchExp.bullet_points)) return;
+                                  if (!matchExp || !Array.isArray(matchExp.bullet_points)) {
+                                    toast({ title: "No more original bullets", description: "This experience has no unused original bullets.", variant: "destructive" });
+                                    return;
+                                  }
                                   const unused = matchExp.bullet_points.filter((bp: string) => !currentTexts.has(bp));
-                                  if (unused.length === 0) return;
-                                  const newBullet: BulletItem = { original: unused[0], tailored: unused[0], use_tailored: true };
+                                  if (unused.length === 0) {
+                                    toast({ title: "All originals used", description: "Every original bullet for this role is already shown." });
+                                    return;
+                                  }
+                                  const newBullet: BulletItem = { original: unused[0], tailored: unused[0], use_tailored: false, origin: "original" };
                                   const updated = (cvOutput.selected_bullets as BulletBlock[]).map((b, i) =>
                                     i === blockIdx ? { ...b, bullets: [...b.bullets, newBullet] as BulletItem[] } : b
                                   );
                                   setCvOutput({ ...cvOutput, selected_bullets: updated });
                                 }}
-                                className="h-6 w-6 rounded border border-border bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                                title="Add bullet from profile"
+                                className="h-7 px-2 rounded border border-border bg-muted text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+                                title="Pull an unused bullet from your original CV"
                               >
-                                <Plus className="h-3 w-3" />
+                                <Plus className="h-3 w-3" /> Add from original CV
                               </button>
-                              <span className="text-[10px] text-muted-foreground">{normalizedBullets.length}/4 bullets</span>
+                              <button
+                                onClick={async () => {
+                                  if (!cvOutput || !Array.isArray(cvOutput.selected_bullets)) return;
+                                  try {
+                                    const { data, error } = await supabase.functions.invoke("generate-bullet", {
+                                      body: {
+                                        job_id: job.id,
+                                        company: block.company,
+                                        job_title: block.job_title,
+                                        existing_bullets: normalizedBullets.map(b => b.use_tailored !== false ? b.tailored : b.original),
+                                      },
+                                    });
+                                    if (error || !data?.success) {
+                                      toast({ title: "Couldn't generate bullet", description: data?.error || error?.message || "Try again.", variant: "destructive" });
+                                      return;
+                                    }
+                                    const text = data.bullet as string;
+                                    const newBullet: BulletItem = { original: text, tailored: text, use_tailored: true, origin: "generated" };
+                                    const updated = (cvOutput.selected_bullets as BulletBlock[]).map((b, i) =>
+                                      i === blockIdx ? { ...b, bullets: [...b.bullets, newBullet] as BulletItem[] } : b
+                                    );
+                                    setCvOutput({ ...cvOutput, selected_bullets: updated });
+                                    toast({ title: "Tailored bullet added", description: "Review and edit it inline to keep it true to you." });
+                                  } catch (e: any) {
+                                    toast({ title: "Generation failed", description: String(e?.message || e), variant: "destructive" });
+                                  }
+                                }}
+                                className="h-7 px-2 rounded border border-[#FBD5D5] bg-[#FFF5F5] text-xs text-[#950606] hover:bg-[#FFE5E5] inline-flex items-center gap-1"
+                                title="Generate a new tailored bullet grounded in this experience"
+                              >
+                                <Sparkles className="h-3 w-3" /> Generate tailored bullet
+                              </button>
+                              <span className="text-[10px] text-muted-foreground ml-auto">{normalizedBullets.length} bullets</span>
                             </div>
                           </div>
                         );
