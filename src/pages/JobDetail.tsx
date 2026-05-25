@@ -1129,8 +1129,15 @@ const JobDetail = () => {
               <SelectTrigger className={`h-9 w-auto border-0 gap-1.5 px-4 rounded-full text-sm font-medium ${getStatusColor(job.status)}`}>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
-                {STATUS_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.value}</SelectItem>)}
+              <SelectContent className="w-72">
+                {STATUS_OPTIONS.map(s => (
+                  <SelectItem key={s.value} value={s.value}>
+                    <div className="flex flex-col py-0.5">
+                      <span className="text-sm font-medium">{s.value}</span>
+                      <span className="text-[11px] text-muted-foreground leading-snug">{s.description}</span>
+                    </div>
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
