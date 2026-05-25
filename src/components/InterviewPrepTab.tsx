@@ -217,19 +217,58 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
   const persistAnswers = async (a: Answers) => {
     const uid = userIdRef.current;
     if (!uid || !jobId) return;
-    const { q1, q2, q3, q4, q5, q6, q7, q8, section1_extra, role_specific } = a;
+    const { q1, q2, q3, q4, q5, q6, q7, q8, q9, section1_extra, role_specific } = a;
     await supabase
       .from("interview_prep_answers")
       .upsert(
         {
           user_id: uid,
           job_id: jobId,
-          answers: { q1, q2, q3, q4, q5, q6, q7, q8 },
+          answers: { q1, q2, q3, q4, q5, q6, q7, q8, q9 },
           section1_extra,
           role_specific,
         },
         { onConflict: "user_id,job_id" }
       );
+  };
+
+  /* ── Custom question helpers ── */
+  const ensureAnswers = (): Answers =>
+    answers || {
+      q1: "", q2: "", q3: "", q4: "", q5: "", q6: "", q7: "", q8: "", q9: "",
+      section1_extra: [], role_specific: [],
+    };
+
+  const addCoreCustomQuestion = (insertAfter: string) => {
+    const base = ensureAnswers();
+    const id = `extra-${Date.now()}`;
+    const newExtra: ExtraQ = { id, question: "", answer: "", insertAfter };
+    setAnswers({ ...base, section1_extra: [...base.section1_extra, newExtra] });
+  };
+
+  const addRoleCustomQuestion = () => {
+    const base = ensureAnswers();
+    const id = `rs-custom-${Date.now()}`;
+    const newRole: RoleQ = { id, question: "", answer: "" };
+    setAnswers({ ...base, role_specific: [...base.role_specific, newRole] });
+  };
+
+  const deleteCustomQuestion = (id: string) => {
+    setAnswers((prev) => {
+      if (!prev) return prev;
+      if (id.startsWith("rs")) return { ...prev, role_specific: prev.role_specific.filter((r) => r.id !== id) };
+      return { ...prev, section1_extra: prev.section1_extra.filter((e) => e.id !== id) };
+    });
+  };
+
+  const updateCustomTitle = (id: string, title: string) => {
+    setAnswers((prev) => {
+      if (!prev) return prev;
+      if (id.startsWith("rs")) {
+        return { ...prev, role_specific: prev.role_specific.map((r) => r.id === id ? { ...r, question: title } : r) };
+      }
+      return { ...prev, section1_extra: prev.section1_extra.map((e) => e.id === id ? { ...e, question: title } : e) };
+    });
   };
 
   /* ── Debounced auto-save on edits ── */
