@@ -163,6 +163,7 @@ export type Database = {
           id: string
           job_id: string
           profile_headline: string | null
+          section_config: Json
           selected_awards: Json | null
           selected_bullets: Json | null
           selected_education: Json | null
@@ -181,6 +182,7 @@ export type Database = {
           id?: string
           job_id: string
           profile_headline?: string | null
+          section_config?: Json
           selected_awards?: Json | null
           selected_bullets?: Json | null
           selected_education?: Json | null
@@ -199,6 +201,7 @@ export type Database = {
           id?: string
           job_id?: string
           profile_headline?: string | null
+          section_config?: Json
           selected_awards?: Json | null
           selected_bullets?: Json | null
           selected_education?: Json | null
@@ -558,39 +561,48 @@ export type Database = {
           base_cv_text: string | null
           base_cv_uploaded_at: string | null
           created_at: string
+          default_location: string | null
           email: string | null
           full_name: string | null
           id: string
           linkedin_cookie: string | null
           linkedin_jsessionid: string | null
           linkedin_updated_at: string | null
+          linkedin_url: string | null
           onboarding_complete: boolean
+          phone: string | null
           tour_complete: boolean
         }
         Insert: {
           base_cv_text?: string | null
           base_cv_uploaded_at?: string | null
           created_at?: string
+          default_location?: string | null
           email?: string | null
           full_name?: string | null
           id: string
           linkedin_cookie?: string | null
           linkedin_jsessionid?: string | null
           linkedin_updated_at?: string | null
+          linkedin_url?: string | null
           onboarding_complete?: boolean
+          phone?: string | null
           tour_complete?: boolean
         }
         Update: {
           base_cv_text?: string | null
           base_cv_uploaded_at?: string | null
           created_at?: string
+          default_location?: string | null
           email?: string | null
           full_name?: string | null
           id?: string
           linkedin_cookie?: string | null
           linkedin_jsessionid?: string | null
           linkedin_updated_at?: string | null
+          linkedin_url?: string | null
           onboarding_complete?: boolean
+          phone?: string | null
           tour_complete?: boolean
         }
         Relationships: []
