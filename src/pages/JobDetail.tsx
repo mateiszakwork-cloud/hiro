@@ -1461,6 +1461,13 @@ const JobDetail = () => {
             </div>
             <div className="flex items-center gap-2">
               {cvOutput && !cvLoading && (
+                <>
+                <Button variant="outline" onClick={() => setLayoutOpen(v => !v)} className="gap-1.5">
+                  <FileText className="h-4 w-4" /> Layout
+                </Button>
+                <Button variant="outline" onClick={() => setPreviewOpen(true)} className="gap-1.5">
+                  <Eye className="h-4 w-4" /> Preview
+                </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" disabled={downloadingCv} className="gap-1.5">
@@ -1480,6 +1487,7 @@ const JobDetail = () => {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+                </>
               )}
               <Button
                 onClick={() => handleGenerateCv()}
