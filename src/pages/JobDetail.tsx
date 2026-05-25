@@ -26,6 +26,7 @@ import InterviewPrepTab from "@/components/InterviewPrepTab";
 import CvPreview from "@/components/cv/CvPreview";
 import CvSectionControls from "@/components/cv/CvSectionControls";
 import { DEFAULT_SECTION_CONFIG, normalizeSectionConfig, type CvSectionConfig } from "@/lib/cvLayout";
+import { buildCvData } from "@/lib/buildCvData";
 import { Link } from "react-router-dom";
 
 type BulletItem = { original: string; tailored: string; use_tailored: boolean };
