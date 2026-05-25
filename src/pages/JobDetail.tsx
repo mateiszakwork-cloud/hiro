@@ -23,6 +23,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { cn } from "@/lib/utils";
 import OutreachTab from "@/components/OutreachTab";
 import InterviewPrepTab from "@/components/InterviewPrepTab";
+import CvPreview from "@/components/cv/CvPreview";
+import CvSectionControls from "@/components/cv/CvSectionControls";
+import { DEFAULT_SECTION_CONFIG, normalizeSectionConfig, type CvSectionConfig } from "@/lib/cvLayout";
+import { Link } from "react-router-dom";
 
 type BulletItem = { original: string; tailored: string; use_tailored: boolean };
 type BulletBlock = { company: string; job_title: string; bullets: BulletItem[] | string[] };
@@ -36,6 +40,7 @@ type CvOutput = {
   tailoring_notes: string[];
   created_at: string;
   updated_at: string;
+  section_config?: any;
 };
 
 type MatchDetails = {
@@ -365,9 +370,10 @@ const JobDetail = () => {
   const [cvError, setCvError] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<{
     full_name: string | null; email: string | null;
+    phone: string | null; linkedin_url: string | null; default_location: string | null;
     work_experiences: any[]; education: any[]; languages: any[];
     interests: string[]; awards: any[]; volunteering: any[];
-  }>({ full_name: null, email: null, work_experiences: [], education: [], languages: [], interests: [], awards: [], volunteering: [] });
+  }>({ full_name: null, email: null, phone: null, linkedin_url: null, default_location: null, work_experiences: [], education: [], languages: [], interests: [], awards: [], volunteering: [] });
   const [cvHistory, setCvHistory] = useState<any[]>([]);
   const [regenConfirmOpen, setRegenConfirmOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -382,6 +388,8 @@ const JobDetail = () => {
 
   // CV download state
   const [downloadingCv, setDownloadingCv] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [layoutOpen, setLayoutOpen] = useState(false);
 
   // Master skills for suggestions
   const [masterHardSkills, setMasterHardSkills] = useState<string[]>([]);
@@ -511,7 +519,7 @@ const JobDetail = () => {
 
       const uid = session.user.id;
       const [profileRes, workRes, eduRes, langRes, interestsRes, awardsRes, volRes, skillsRes] = await Promise.all([
-        supabase.from("profiles").select("full_name, email").eq("id", uid).single(),
+        supabase.from("profiles").select("full_name, email, phone, linkedin_url, default_location").eq("id", uid).single(),
         supabase.from("work_experiences").select("*").eq("user_id", uid).order("start_year", { ascending: false }),
         supabase.from("education").select("*").eq("user_id", uid).order("start_year", { ascending: false }),
         supabase.from("languages").select("*").eq("user_id", uid),
@@ -523,6 +531,9 @@ const JobDetail = () => {
       setUserProfile({
         full_name: profileRes.data?.full_name || null,
         email: profileRes.data?.email || null,
+        phone: (profileRes.data as any)?.phone || null,
+        linkedin_url: (profileRes.data as any)?.linkedin_url || null,
+        default_location: (profileRes.data as any)?.default_location || null,
         work_experiences: workRes.data || [],
         education: eduRes.data || [],
         languages: langRes.data || [],
