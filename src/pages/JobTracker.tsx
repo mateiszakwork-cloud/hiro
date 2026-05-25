@@ -138,24 +138,21 @@ const isValidUrl = (str: string): boolean => {
 type SortKey = "company_name" | "job_title" | "function" | "location" | "duration" | "status" | "match_score" | "priority" | "created_at" | "applied_date" | "application_deadline" | "start_date";
 type SortDir = "asc" | "desc";
 
-// Default column widths in pixels — generous so all columns fit a 1280px screen
-// without horizontal scroll (sidebar 240 + page padding ~64 = 304 reserved).
+// Default column widths in pixels — tightened so the table fits a ~1280px
+// desktop viewport without horizontal scroll (sidebar 240 + page padding ~64).
+// Lower-priority fields (function, duration, kit, applied date) are surfaced
+// inside other cells or on the job detail page instead of as full columns.
 type ColDef = { label: string; key: SortKey | null; width: number; resizable: boolean; custom?: { id: string } };
 const DEFAULT_COLUMNS: ColDef[] = [
-  { label: "",         key: null,                   width: 36,  resizable: false },
-  { label: "Company",  key: "company_name",         width: 140, resizable: true  },
-  { label: "Job Title",key: "job_title",            width: 220, resizable: true  },
-  { label: "Function", key: "function",             width: 120, resizable: true  },
-  { label: "Location", key: "location",             width: 140, resizable: true  },
-  { label: "Duration", key: "duration",             width: 90,  resizable: true  },
-  { label: "Deadline", key: "application_deadline", width: 110, resizable: true  },
-  { label: "Start Date", key: "start_date",         width: 110, resizable: true  },
-  { label: "Status",   key: "status",               width: 110, resizable: true  },
-  { label: "Match",    key: "match_score",          width: 80,  resizable: true  },
-  { label: "Kit",      key: null,                   width: 44,  resizable: false },
-  { label: "Outreach", key: null,                   width: 90,  resizable: true  },
-  { label: "Priority", key: "priority",             width: 90,  resizable: true  },
-  { label: "Applied",  key: "applied_date",         width: 100, resizable: true  },
+  { label: "",            key: null,                   width: 28,  resizable: false },
+  { label: "Company / Role", key: "company_name",      width: 240, resizable: true  },
+  { label: "Location",    key: "location",             width: 130, resizable: true  },
+  { label: "Deadline",    key: "application_deadline", width: 100, resizable: true  },
+  { label: "Start",       key: "start_date",           width: 90,  resizable: true  },
+  { label: "Status",      key: "status",               width: 100, resizable: true  },
+  { label: "Match",       key: "match_score",          width: 64,  resizable: false },
+  { label: "Priority",    key: "priority",             width: 84,  resizable: true  },
+  { label: "Outreach",    key: null,                   width: 110, resizable: true  },
 ];
 const MIN_COL_WIDTH = 60;
 
