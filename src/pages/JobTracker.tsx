@@ -1127,6 +1127,16 @@ const JobTracker = () => {
                                    <ArrowUpDown className="h-3 w-3 opacity-0 group-hover/th:opacity-50 transition-opacity" />
                                  )
                                )}
+                               {col.custom && (
+                                 <button
+                                   type="button"
+                                   onClick={(e) => { e.stopPropagation(); handleDeleteCustomColumn(col.custom!.id); }}
+                                   className="ml-1 text-muted-foreground hover:text-destructive opacity-0 group-hover/th:opacity-100 transition-opacity"
+                                   title="Delete column"
+                                 >
+                                   <X className="h-3 w-3" />
+                                 </button>
+                               )}
                              </span>
                            )}
                            {col.resizable && (
