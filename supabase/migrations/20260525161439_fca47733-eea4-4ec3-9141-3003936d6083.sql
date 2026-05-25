@@ -1,0 +1,1 @@
+ALTER TABLE public.jobs ADD COLUMN IF NOT EXISTS interview_rounds jsonb NOT NULL DEFAULT '[]'::jsonb;

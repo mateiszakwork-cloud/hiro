@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, ExternalLink, MapPin, Copy, Check, Trash2, ChevronDown, ChevronUp, FileText, CheckCircle2, XCircle, CalendarIcon, RefreshCw, Lightbulb, History, RotateCcw, Pencil, X as XIcon, AlertTriangle, Loader2, Minus, Plus, AlertCircle, Download, Eye } from "lucide-react";
+import { ArrowLeft, ExternalLink, MapPin, Copy, Check, Trash2, ChevronDown, ChevronUp, FileText, CheckCircle2, XCircle, CalendarIcon, RefreshCw, Lightbulb, History, RotateCcw, Pencil, X as XIcon, AlertTriangle, Loader2, Minus, Plus, AlertCircle, Download, Eye, Sparkles } from "lucide-react";
 import { computeDeadlineState, DeadlineBadge } from "@/lib/deadlineUtils";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -23,13 +23,14 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { cn } from "@/lib/utils";
 import OutreachTab from "@/components/OutreachTab";
 import InterviewPrepTab from "@/components/InterviewPrepTab";
+import InterviewRounds, { type InterviewRound } from "@/components/InterviewRounds";
 import CvPreview from "@/components/cv/CvPreview";
 import CvSectionControls from "@/components/cv/CvSectionControls";
 import { DEFAULT_SECTION_CONFIG, normalizeSectionConfig, type CvSectionConfig } from "@/lib/cvLayout";
 import { buildCvData } from "@/lib/buildCvData";
 import { Link } from "react-router-dom";
 
-type BulletItem = { original: string; tailored: string; use_tailored: boolean };
+type BulletItem = { original: string; tailored: string; use_tailored: boolean; origin?: "original" | "tailored" | "generated" };
 type BulletBlock = { company: string; job_title: string; bullets: BulletItem[] | string[] };
 
 type CvOutput = {
@@ -48,10 +49,12 @@ type MatchDetails = {
   hard_skills_match: number | null;
   soft_skills_match: number | null;
   experience_match: number | null;
-  language_match: number | null;
+  language_match?: number | null; // deprecated, no longer in score
   match_summary: string | null;
   missing_skills: string[];
   strengths: string[];
+  language_requirement?: "none" | "met" | "missing";
+  missing_languages?: string[];
 };
 
 type Job = {
@@ -62,6 +65,7 @@ type Job = {
   languages_nice_to_have: string[] | null; application_deadline: string | null;
   status: string; match_score: number | null; match_details: MatchDetails | null;
   notes: string | null; created_at: string; priority: string; applied_date: string | null;
+  interview_rounds?: InterviewRound[] | null;
 };
 
 type Contact = {
@@ -74,12 +78,12 @@ type Contact = {
 };
 
 const STATUS_OPTIONS = [
-  { value: "Saved", color: "bg-gray-200 text-gray-700" },
-  { value: "Applied", color: "bg-blue-100 text-blue-700" },
-  { value: "Screening", color: "bg-amber-100 text-amber-700" },
-  { value: "Interview", color: "bg-orange-100 text-orange-700" },
-  { value: "Offer", color: "bg-green-100 text-green-700" },
-  { value: "Rejected", color: "bg-red-100 text-red-700" },
+  { value: "Saved",     color: "bg-gray-200 text-gray-700",   description: "Bookmarked — not yet applied." },
+  { value: "Applied",   color: "bg-blue-100 text-blue-700",   description: "Application submitted, no engagement yet from the company." },
+  { value: "Screening", color: "bg-amber-100 text-amber-700", description: "Recruiter / HR screen, shortlist, or early process contact." },
+  { value: "Interview", color: "bg-orange-100 text-orange-700", description: "In active interview rounds." },
+  { value: "Offer",     color: "bg-green-100 text-green-700", description: "Offer received." },
+  { value: "Rejected",  color: "bg-red-100 text-red-700",     description: "No longer in process." },
 ];
 
 const OUTREACH_STATUSES = ["Not sent", "Request sent", "Connected", "Replied", "Meeting booked"];
@@ -203,8 +207,13 @@ const TagInput = ({ tags, onChange, placeholder = "Type and press Enter" }: { ta
 
 /* ── Bullet toggle helper ── */
 function normalizeBullet(b: any): BulletItem {
-  if (typeof b === "string") return { original: b, tailored: b, use_tailored: true };
-  return { original: b.original || b.tailored || "", tailored: b.tailored || b.original || "", use_tailored: b.use_tailored !== false };
+  if (typeof b === "string") return { original: b, tailored: b, use_tailored: true, origin: "original" };
+  return {
+    original: b.original || b.tailored || "",
+    tailored: b.tailored || b.original || "",
+    use_tailored: b.use_tailored !== false,
+    origin: b.origin === "tailored" || b.origin === "generated" ? b.origin : "original",
+  };
 }
 
 function bulletsAreIdentical(b: BulletItem) {
@@ -1124,8 +1133,15 @@ const JobDetail = () => {
               <SelectTrigger className={`h-9 w-auto border-0 gap-1.5 px-4 rounded-full text-sm font-medium ${getStatusColor(job.status)}`}>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
-                {STATUS_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.value}</SelectItem>)}
+              <SelectContent className="w-72">
+                {STATUS_OPTIONS.map(s => (
+                  <SelectItem key={s.value} value={s.value}>
+                    <div className="flex flex-col py-0.5">
+                      <span className="text-sm font-medium">{s.value}</span>
+                      <span className="text-[11px] text-muted-foreground leading-snug">{s.description}</span>
+                    </div>
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -1382,7 +1398,6 @@ const JobDetail = () => {
                       { label: "Hard Skills", value: job.match_details.hard_skills_match },
                       { label: "Soft Skills", value: job.match_details.soft_skills_match },
                       { label: "Experience", value: job.match_details.experience_match },
-                      { label: "Languages", value: job.match_details.language_match },
                     ].map(({ label, value }) => (
                       <div key={label} className="space-y-1.5">
                         <div className="flex justify-between text-xs">
@@ -1392,6 +1407,18 @@ const JobDetail = () => {
                         <Progress value={value ?? 0} className="h-2 hiro-match-progress" />
                       </div>
                     ))}
+                    {job.match_details.language_requirement && job.match_details.language_requirement !== "none" && (
+                      <div className="space-y-1.5 sm:col-span-2">
+                        <div className="flex justify-between text-xs">
+                          <span className="font-medium text-muted-foreground">Language requirement</span>
+                          <span className={`font-semibold ${job.match_details.language_requirement === "met" ? "text-emerald-700" : "text-amber-700"}`}>
+                            {job.match_details.language_requirement === "met"
+                              ? "Met"
+                              : `Missing: ${(job.match_details.missing_languages || []).join(", ") || "see job"}`}
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     {job.match_details.strengths?.length > 0 && (
@@ -1633,7 +1660,10 @@ const JobDetail = () => {
               {Array.isArray(cvOutput.selected_bullets) && cvOutput.selected_bullets.length > 0 && (
                 <Card>
                   <CardContent className="p-5">
-                    <h4 className="font-semibold text-foreground mb-4">Selected Bullet Points</h4>
+                    <h4 className="font-semibold text-foreground mb-1">Selected Bullet Points</h4>
+                    <p className="text-xs text-muted-foreground mb-4">
+                      Tailored wording sharpens your original point for this role. Switch any bullet back to the original, edit freely, or generate a new variation grounded in your existing experience.
+                    </p>
                     <div className="space-y-5">
                       {(cvOutput.selected_bullets as BulletBlock[]).map((block, blockIdx) => {
                         const normalizedBullets = (block.bullets || []).map(normalizeBullet);
@@ -1660,10 +1690,21 @@ const JobDetail = () => {
                               {normalizedBullets.map((bullet, bulletIdx) => {
                                 const identical = bulletsAreIdentical(bullet);
                                 const showTailored = isBulletTailored(blockIdx, bulletIdx);
+                                const originLabel =
+                                  bullet.origin === "generated" ? "AI variation"
+                                  : (showTailored && !identical) ? "Tailored"
+                                  : "Original";
+                                const originClass =
+                                  bullet.origin === "generated"
+                                    ? "bg-purple-50 text-purple-700 border-purple-200"
+                                    : (showTailored && !identical)
+                                      ? "bg-[#FFF5F5] text-[#950606] border-[#FBD5D5]"
+                                      : "bg-gray-50 text-gray-600 border-gray-200";
                                 return (
                                   <li key={bulletIdx} className="flex items-start gap-2 group">
                                     <span className="text-muted-foreground mt-1.5 shrink-0">•</span>
                                     <div className="flex-1 min-w-0">
+                                      <span className={`inline-block text-[10px] font-medium px-1.5 py-0.5 rounded border mb-1 ${originClass}`}>{originLabel}</span>
                                       <span
                                         contentEditable
                                         suppressContentEditableWarning
@@ -1691,7 +1732,7 @@ const JobDetail = () => {
                               })}
                             </ul>
                             {/* +/- bullet controls */}
-                            <div className="flex items-center gap-2 mt-2">
+                            <div className="flex flex-wrap items-center gap-2 mt-3">
                               <button
                                 disabled={normalizedBullets.length <= 1}
                                 onClick={() => {
@@ -1701,35 +1742,71 @@ const JobDetail = () => {
                                   );
                                   setCvOutput({ ...cvOutput, selected_bullets: updated });
                                 }}
-                                className="h-6 w-6 rounded border border-border bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                className="h-7 px-2 rounded border border-border bg-muted text-xs text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed inline-flex items-center gap-1"
                                 title="Remove last bullet"
                               >
-                                <Minus className="h-3 w-3" />
+                                <Minus className="h-3 w-3" /> Remove last
                               </button>
                               <button
-                                disabled={normalizedBullets.length >= 4}
                                 onClick={() => {
                                   if (!cvOutput || !Array.isArray(cvOutput.selected_bullets)) return;
-                                  // Find unused bullets from original work experiences
                                   const currentTexts = new Set(normalizedBullets.map(b => b.original));
                                   const matchExp = (userProfile?.work_experiences || []).find((w: any) =>
                                     w.company_name === block.company && w.job_title === block.job_title
                                   );
-                                  if (!matchExp || !Array.isArray(matchExp.bullet_points)) return;
+                                  if (!matchExp || !Array.isArray(matchExp.bullet_points)) {
+                                    toast.error("No more original bullets", { description: "This experience has no unused original bullets." });
+                                    return;
+                                  }
                                   const unused = matchExp.bullet_points.filter((bp: string) => !currentTexts.has(bp));
-                                  if (unused.length === 0) return;
-                                  const newBullet: BulletItem = { original: unused[0], tailored: unused[0], use_tailored: true };
+                                  if (unused.length === 0) {
+                                    toast("All originals used", { description: "Every original bullet for this role is already shown." });
+                                    return;
+                                  }
+                                  const newBullet: BulletItem = { original: unused[0], tailored: unused[0], use_tailored: false, origin: "original" };
                                   const updated = (cvOutput.selected_bullets as BulletBlock[]).map((b, i) =>
                                     i === blockIdx ? { ...b, bullets: [...b.bullets, newBullet] as BulletItem[] } : b
                                   );
                                   setCvOutput({ ...cvOutput, selected_bullets: updated });
                                 }}
-                                className="h-6 w-6 rounded border border-border bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                                title="Add bullet from profile"
+                                className="h-7 px-2 rounded border border-border bg-muted text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+                                title="Pull an unused bullet from your original CV"
                               >
-                                <Plus className="h-3 w-3" />
+                                <Plus className="h-3 w-3" /> Add from original CV
                               </button>
-                              <span className="text-[10px] text-muted-foreground">{normalizedBullets.length}/4 bullets</span>
+                              <button
+                                onClick={async () => {
+                                  if (!cvOutput || !Array.isArray(cvOutput.selected_bullets)) return;
+                                  try {
+                                    const { data, error } = await supabase.functions.invoke("generate-bullet", {
+                                      body: {
+                                        job_id: job.id,
+                                        company: block.company,
+                                        job_title: block.job_title,
+                                        existing_bullets: normalizedBullets.map(b => b.use_tailored !== false ? b.tailored : b.original),
+                                      },
+                                    });
+                                    if (error || !data?.success) {
+                                      toast.error("Couldn't generate bullet", { description: data?.error || error?.message || "Try again." });
+                                      return;
+                                    }
+                                    const text = data.bullet as string;
+                                    const newBullet: BulletItem = { original: text, tailored: text, use_tailored: true, origin: "generated" };
+                                    const updated = (cvOutput.selected_bullets as BulletBlock[]).map((b, i) =>
+                                      i === blockIdx ? { ...b, bullets: [...b.bullets, newBullet] as BulletItem[] } : b
+                                    );
+                                    setCvOutput({ ...cvOutput, selected_bullets: updated });
+                                    toast.success("Tailored bullet added", { description: "Review and edit it inline to keep it true to you." });
+                                  } catch (e: any) {
+                                    toast.error("Generation failed", { description: String(e?.message || e) });
+                                  }
+                                }}
+                                className="h-7 px-2 rounded border border-[#FBD5D5] bg-[#FFF5F5] text-xs text-[#950606] hover:bg-[#FFE5E5] inline-flex items-center gap-1"
+                                title="Generate a new tailored bullet grounded in this experience"
+                              >
+                                <Sparkles className="h-3 w-3" /> Generate tailored bullet
+                              </button>
+                              <span className="text-[10px] text-muted-foreground ml-auto">{normalizedBullets.length} bullets</span>
                             </div>
                           </div>
                         );
@@ -2021,6 +2098,12 @@ const JobDetail = () => {
 
         {/* Interview Prep Tab */}
         <TabsContent value="interview" className="hiro-tab-content mt-0">
+          {job && (
+            <InterviewRounds
+              jobId={job.id}
+              initial={(Array.isArray((job as any).interview_rounds) ? (job as any).interview_rounds : []) as InterviewRound[]}
+            />
+          )}
           {job && (() => {
             const cvSummaryParts: string[] = [];
             if (userProfile.full_name) cvSummaryParts.push(`Name: ${userProfile.full_name}`);

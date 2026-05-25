@@ -107,8 +107,18 @@ serve(async (req) => {
   - job_title: string
   - bullets: array of objects, each with:
     - original: string (exact text from the candidate's profile, completely unchanged)
-    - tailored: string (a lightly edited version that mirrors the language of the job description. Rules for tailoring: maximum 20% change, never alter numbers or percentages, never change the core action verb unless it meaningfully improves relevance, never invent new information, preserve the candidate's concise metric-driven tone. If a bullet is already well-suited to the role, return the same text for both original and tailored.)
+    - tailored: string (a meaningfully rephrased version aligned to the target role)
     - use_tailored: boolean (default true)
+    - origin: string, always exactly "original"
+
+  Tailoring rules for the "tailored" field:
+    - Rewrite freely to mirror the wording, priorities, and terminology of the job description.
+    - You MAY change verbs, restructure the sentence, and reorder clauses to emphasise what the role values.
+    - You MUST preserve every concrete fact present in the original: numbers, percentages, currencies, named tools/companies/products, scope, and ownership level.
+    - You MUST NOT invent achievements, metrics, tools, ownership, or scope that are not in the original bullet.
+    - Keep a human, concrete tone — no corporate filler ("leveraged synergies", "spearheaded", "results-driven").
+    - If the bullet is already strongly aligned and any rewrite would weaken it, return the original text as "tailored".
+    - Aim for visibly different wording when the original is generic or weakly related to the role.
 
 - selected_hard_skills: object where keys are skill categories (preserve the candidate's existing categories exactly, e.g. "Data and Analytics", "Revenue Ops and CRM", "AI and Automation", "Design and Visual") and values are arrays of the most relevant skills from each category for this role. Remove irrelevant skills. Keep relevant ones exactly as written.
 
@@ -117,9 +127,10 @@ serve(async (req) => {
 - tailoring_notes: array of 3-5 short strings explaining the key tailoring decisions
 
 Rules:
-- For each work experience, select between 2 and 4 bullet points based on relevance to this specific role. If the experience is highly relevant to the role, select 3 or 4 bullets. If it is moderately relevant, select 2 or 3. Never select fewer than 2 and never more than 4. Let relevance to the job description drive the number, not a fixed count.
+- For each work experience, select EXACTLY 3 bullet points that are most relevant to this specific role. Not 2, not 4 — exactly 3. The user can add or remove bullets after generation.
+- If the experience has fewer than 3 original bullets, use all of them (do not invent new ones).
 - Never invent experience or skills not present in the profile.
-- Keep bullet points truthful. Only lightly rephrase for relevance.
+- Tailored wording must remain truthful and grounded in the original bullet's facts.
 - The summary must always be rewritten specifically for this role following the strict rules above.
 - Match the tone of the original CV: professional, concise, achievement-focused.`;
 
@@ -166,27 +177,33 @@ Rules:
       });
     }
 
-    // Validation: ensure every work experience has at least 2 bullets
+    // Validation: target exactly 3 bullets per experience (or all available if fewer).
     const selectedBullets = parsed.selected_bullets || [];
     for (const block of selectedBullets) {
-      if (!block.bullets || block.bullets.length < 2) {
-        // Find matching work experience from the fetched data
-        const match = workExperiences.find((w: any) =>
-          w.company_name === block.company && w.job_title === block.job_title
-        );
-        if (match && Array.isArray(match.bullet_points)) {
-          const existingTexts = new Set((block.bullets || []).map((b: any) =>
-            typeof b === "string" ? b : (b.original || b.tailored || "")
-          ));
-          for (const bp of match.bullet_points) {
-            if (block.bullets.length >= 2) break;
-            if (!existingTexts.has(bp)) {
-              block.bullets.push({ original: bp, tailored: bp, use_tailored: true });
-              existingTexts.add(bp);
-            }
+      block.bullets = (block.bullets || []).map((b: any) => ({
+        original: b.original || b.tailored || "",
+        tailored: b.tailored || b.original || "",
+        use_tailored: b.use_tailored !== false,
+        origin: b.origin || "original",
+      }));
+      const match = workExperiences.find((w: any) =>
+        w.company_name === block.company && w.job_title === block.job_title
+      );
+      const sourceBullets: string[] = (match && Array.isArray(match.bullet_points)) ? match.bullet_points : [];
+      const target = Math.min(3, sourceBullets.length || block.bullets.length);
+      // Pad up with unused originals
+      if (block.bullets.length < target && sourceBullets.length) {
+        const existing = new Set(block.bullets.map((b: any) => b.original));
+        for (const bp of sourceBullets) {
+          if (block.bullets.length >= target) break;
+          if (!existing.has(bp)) {
+            block.bullets.push({ original: bp, tailored: bp, use_tailored: true, origin: "original" });
+            existing.add(bp);
           }
         }
       }
+      // Trim down to 3
+      if (block.bullets.length > 3) block.bullets = block.bullets.slice(0, 3);
     }
     parsed.selected_bullets = selectedBullets;
 
