@@ -1158,24 +1158,18 @@ const JobTracker = () => {
                 <tbody>
                   {parsing && (
                     <tr className="border-b animate-pulse">
-                      <td className="px-3 py-3"></td>
-                      <td className="px-3 py-3"><div className="flex items-center gap-2.5"><Skeleton className="h-8 w-8 rounded" /><Skeleton className="h-4 w-24" /></div></td>
-                      <td className="px-3 py-3">
-                        <div className="flex items-center gap-2">
-                          <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-                          <span className="text-muted-foreground text-sm italic">Reading...</span>
-                        </div>
-                      </td>
-                      <td className="px-3 py-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
-                      <td className="px-3 py-3"><Skeleton className="h-4 w-20" /></td>
-                      <td className="px-3 py-3"><Skeleton className="h-5 w-14 rounded-full" /></td>
-                      <td className="px-3 py-3"><Skeleton className="h-4 w-14" /></td>
-                      <td className="px-3 py-3"><Skeleton className="h-4 w-16" /></td>
-                      <td className="px-3 py-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
-                      <td className="px-3 py-3"><Skeleton className="h-8 w-8 rounded-full" /></td>
-                      <td className="px-3 py-3"><Skeleton className="h-4 w-4" /></td>
-                      <td className="px-3 py-3"><Skeleton className="h-5 w-14 rounded-full" /></td>
-                      <td className="px-3 py-3"><Skeleton className="h-4 w-14" /></td>
+                      {COLUMNS.map((col, i) => (
+                        <td key={i} className="px-3 py-3">
+                          {i === 0 ? null : i === 2 ? (
+                            <div className="flex items-center gap-2">
+                              <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                              <span className="text-muted-foreground text-sm italic">Reading...</span>
+                            </div>
+                          ) : (
+                            <Skeleton className="h-4 w-16" />
+                          )}
+                        </td>
+                      ))}
                     </tr>
                   )}
                   {filteredAndSorted.map((job) => (
