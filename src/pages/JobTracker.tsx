@@ -1481,6 +1481,18 @@ const JobTracker = () => {
                           </Popover>
                         )}
                       </td>
+                      {/* Custom text columns */}
+                      {customColumns.map((cc) => {
+                        const val = customValues[job.id]?.[cc.id] || "";
+                        return (
+                          <td key={cc.id} className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                            <CustomColumnCell
+                              value={val}
+                              onSave={(next) => handleSetCustomValue(job.id, cc.id, next)}
+                            />
+                          </td>
+                        );
+                      })}
                     </tr>
                   ))}
                 </tbody>
