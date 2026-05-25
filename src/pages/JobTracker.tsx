@@ -828,7 +828,7 @@ const JobTracker = () => {
       </div>
 
       {/* Metrics bar */}
-      <div style={{ padding: "16px 28px" }}>
+      <div style={{ padding: "14px 28px 6px" }}>
         {stats.total === 0 ? (
           <div
             style={{
