@@ -554,11 +554,12 @@ const JobTracker = () => {
       duration: data.duration.trim() || null, hard_skills: data.hard_skills,
       soft_skills: data.soft_skills, languages_required: data.languages_required,
       application_deadline: data.application_deadline || null,
+      start_date: data.start_date || null,
     };
     const { data: job, error } = await supabase
       .from("jobs")
       .insert(insertData)
-      .select("id, url, company_name, job_title, function, location, work_mode, duration, status, match_score, created_at, priority, applied_date, application_deadline")
+      .select("id, url, company_name, job_title, function, location, work_mode, duration, status, match_score, created_at, priority, applied_date, application_deadline, start_date")
       .single();
     if (error || !job) { toast.error("Failed to save job."); return; }
     setJobs((prev) => [job as any, ...prev]);
