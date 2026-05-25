@@ -787,6 +787,36 @@ const JobDetail = () => {
     toast.success("Version restored!");
   };
 
+  const handleDownloadCv = async (fmt: "docx" | "pdf") => {
+    if (!cvOutput || !job) return;
+    setDownloadingCv(true);
+    try {
+      const { buildCvData } = await import("@/lib/buildCvData");
+      const data = buildCvData({
+        cvOutput: {
+          tailored_summary: cvOutput.tailored_summary,
+          selected_bullets: cvOutput.selected_bullets,
+          selected_hard_skills: cvOutput.selected_hard_skills,
+          selected_soft_skills: cvOutput.selected_soft_skills,
+        },
+        profile: userProfile,
+        job: { company_name: job.company_name, location: job.location },
+      });
+      if (fmt === "docx") {
+        const { generateCvDocx } = await import("@/lib/generateCvDocx");
+        await generateCvDocx(data);
+      } else {
+        const { generateCvPdf } = await import("@/lib/generateCvPdf");
+        await generateCvPdf(data);
+      }
+    } catch (e) {
+      console.error("CV download error:", e);
+      toast.error("Could not generate CV. Please try again.");
+    } finally {
+      setDownloadingCv(false);
+    }
+  };
+
   const startEdit = () => {
     if (!job) return;
     setEditData({
