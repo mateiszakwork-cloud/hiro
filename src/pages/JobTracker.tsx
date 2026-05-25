@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Briefcase, MapPin, Trash2, ExternalLink, Loader2, CalendarIcon, ArrowUp, ArrowDown, ArrowUpDown, Wand2, Check, Copy, ArrowRight, Pencil, Users, AlertCircle, X } from "lucide-react";
+import { Plus } from "lucide-react";
 import { computeDeadlineState, DeadlineBadge } from "@/lib/deadlineUtils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -25,7 +26,11 @@ type Job = {
   function: string | null; location: string | null; work_mode: string | null;
   duration: string | null; status: string; match_score: number | null; created_at: string;
   priority: string; applied_date: string | null; application_deadline: string | null;
+  start_date: string | null;
 };
+
+type CustomColumn = { id: string; name: string; sort_order: number };
+type CustomValueMap = Record<string, Record<string, string>>; // jobId -> columnId -> value
 
 type CvOutput = {
   tailored_summary: string | null;
@@ -129,12 +134,13 @@ const isValidUrl = (str: string): boolean => {
   }
 };
 
-type SortKey = "company_name" | "job_title" | "function" | "location" | "duration" | "status" | "match_score" | "priority" | "created_at" | "applied_date" | "application_deadline";
+type SortKey = "company_name" | "job_title" | "function" | "location" | "duration" | "status" | "match_score" | "priority" | "created_at" | "applied_date" | "application_deadline" | "start_date";
 type SortDir = "asc" | "desc";
 
 // Default column widths in pixels — generous so all columns fit a 1280px screen
 // without horizontal scroll (sidebar 240 + page padding ~64 = 304 reserved).
-const COLUMNS: { label: string; key: SortKey | null; width: number; resizable: boolean }[] = [
+type ColDef = { label: string; key: SortKey | null; width: number; resizable: boolean; custom?: { id: string } };
+const DEFAULT_COLUMNS: ColDef[] = [
   { label: "",         key: null,                   width: 36,  resizable: false },
   { label: "Company",  key: "company_name",         width: 140, resizable: true  },
   { label: "Job Title",key: "job_title",            width: 220, resizable: true  },
@@ -142,6 +148,7 @@ const COLUMNS: { label: string; key: SortKey | null; width: number; resizable: b
   { label: "Location", key: "location",             width: 140, resizable: true  },
   { label: "Duration", key: "duration",             width: 90,  resizable: true  },
   { label: "Deadline", key: "application_deadline", width: 110, resizable: true  },
+  { label: "Start Date", key: "start_date",         width: 110, resizable: true  },
   { label: "Status",   key: "status",               width: 110, resizable: true  },
   { label: "Match",    key: "match_score",          width: 80,  resizable: true  },
   { label: "Kit",      key: null,                   width: 44,  resizable: false },
