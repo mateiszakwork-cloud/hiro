@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Link2, Sparkles, Users, ScanLine, FileCheck2, Target, Search, MessageSquare, BookOpen, Menu, X } from "lucide-react";
+import { Link2, Sparkles, Users, FileCheck2, PlayCircle, Menu, X, ListChecks, Briefcase } from "lucide-react";
 
 const Landing = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -18,9 +18,9 @@ const Landing = () => {
           Hiro<span className="hiro-nav-logo-dot" />
         </Link>
         <div className="hiro-nav-links">
-          <a href="#features" className="hiro-nav-link">Features</a>
           <a href="#how" className="hiro-nav-link">How it works</a>
-          <a href="#metrics" className="hiro-nav-link">About</a>
+          <a href="#demo" className="hiro-nav-link">Demo</a>
+          <a href="#about" className="hiro-nav-link">Why Hiro</a>
         </div>
         <div className="hiro-nav-actions">
           <Link to="/login" className="hiro-nav-login">Log in</Link>
@@ -37,9 +37,9 @@ const Landing = () => {
 
       {mobileOpen && (
         <div className="hiro-mobile-menu open">
-          <a href="#features" onClick={() => setMobileOpen(false)}>Features</a>
           <a href="#how" onClick={() => setMobileOpen(false)}>How it works</a>
-          <a href="#metrics" onClick={() => setMobileOpen(false)}>About</a>
+          <a href="#demo" onClick={() => setMobileOpen(false)}>Demo</a>
+          <a href="#about" onClick={() => setMobileOpen(false)}>Why Hiro</a>
           <Link to="/register" className="hiro-cta-primary">Get Started</Link>
           <Link to="/login" className="hiro-cta-secondary">Log in</Link>
         </div>
@@ -56,13 +56,13 @@ const Landing = () => {
             <h1 className="hiro-hero-headline">Become the obvious hire.</h1>
             <p className="hiro-hero-sub">One link. Full application kit.</p>
             <p className="hiro-hero-body">
-              Paste any job URL and Hiro fills in the details, builds your tailored CV, finds who to
-              contact at the company, and drafts the messages. The whole application workflow, done
-              properly.
+              Paste any job URL and Hiro fills your tracker, tailors your CV, drafts outreach, and
+              prepares your interview — all in one workspace built around the actual application
+              workflow.
             </p>
             <div className="hiro-hero-cta-row">
-              <Link to="/register" className="hiro-cta-primary">Start for free</Link>
-              <a href="#how" className="hiro-cta-secondary">See how it works</a>
+              <a href="#how" className="hiro-cta-primary">See how Hiro works</a>
+              <Link to="/register" className="hiro-cta-secondary">Start free</Link>
             </div>
           </div>
 
@@ -109,111 +109,98 @@ const Landing = () => {
 
       <hr className="hiro-divider-line" />
 
-      {/* ABOUT — personal note */}
-      <section id="about" className="hiro-about">
-        <div className="hiro-about-inner">
-          <p className="hiro-about-eyebrow">A note from the person who built this</p>
-          <h2 className="hiro-about-h">Why Hiro exists.</h2>
-          <div className="hiro-about-body">
-            <p>
-              I'm Máté, 24, MSc student. Before my Masters I spent a gap year doing internships, and
-              those two positions took over 6 months of applying combined.
-            </p>
-            <p className="hiro-about-stat">
-              <span className="hiro-about-stat-num">130+</span>
-              <span className="hiro-about-stat-label">applications, custom CVs for every role, cold outreach on LinkedIn.</span>
-            </p>
-            <p>
-              I know how exhausting and disorganised it gets. I built Hiro because I wanted a tool
-              that actually helps students apply and save time.
-            </p>
-            <p className="hiro-about-sign">— Máté</p>
-          </div>
-        </div>
-      </section>
-
-      <hr className="hiro-divider-line" />
-
-      {/* HOW IT WORKS */}
+      {/* HOW HIRO WORKS — merged workflow + features */}
       <section id="how" className="hiro-section" style={{ background: "var(--color-bg-page)" }}>
         <div className="hiro-section-inner">
-          <p className="hiro-section-eyebrow">The workflow</p>
-          <h2 className="hiro-section-heading">Three steps. Complete application.</h2>
+          <p className="hiro-section-eyebrow">How Hiro works</p>
+          <h2 className="hiro-section-heading">From one job link to a complete application.</h2>
           <p className="hiro-section-subtext">
-            Most people spend hours on each application. Hiro cuts that to minutes without cutting corners.
+            One workflow that covers the whole process — tracking, tailoring, outreach, and interview
+            prep — without juggling spreadsheets, docs, and tabs.
           </p>
 
           <div className="hiro-how-grid">
             <div className="hiro-how-card">
               <div className="hiro-how-num">01</div>
               <div className="hiro-how-icon-wrap"><Link2 className="h-6 w-6" /></div>
-              <h3 className="hiro-how-h">Drop in the link</h3>
+              <h3 className="hiro-how-h">Paste the job link</h3>
               <p className="hiro-how-body">
-                Paste any job URL — LinkedIn, Workday, Greenhouse, or a direct careers page. Hiro reads
-                the posting and fills every column in your tracker automatically.
+                Drop any job URL — LinkedIn, Workday, Greenhouse, or a company careers page. That single
+                link is the entry point to the whole workflow.
               </p>
             </div>
-            <div className="hiro-how-arrow">→</div>
             <div className="hiro-how-card">
               <div className="hiro-how-num">02</div>
-              <div className="hiro-how-icon-wrap"><Sparkles className="h-6 w-6" /></div>
-              <h3 className="hiro-how-h">Get your application kit</h3>
+              <div className="hiro-how-icon-wrap"><ListChecks className="h-6 w-6" /></div>
+              <h3 className="hiro-how-h">Hiro reads the role and fills the tracker</h3>
               <p className="hiro-how-body">
-                A tailored CV with the right bullets selected, your skills trimmed to what matters for
-                this role, and a summary rewritten for this specific company.
+                Hiro extracts role details, required and nice-to-have skills, deadline, and location,
+                then creates the tracker row automatically — no copy-pasting.
               </p>
             </div>
-            <div className="hiro-how-arrow">→</div>
             <div className="hiro-how-card">
               <div className="hiro-how-num">03</div>
-              <div className="hiro-how-icon-wrap"><Users className="h-6 w-6" /></div>
-              <h3 className="hiro-how-h">Reach out properly</h3>
+              <div className="hiro-how-icon-wrap"><FileCheck2 className="h-6 w-6" /></div>
+              <h3 className="hiro-how-h">Build your application kit</h3>
               <p className="hiro-how-body">
-                Hiro searches LinkedIn as you, finds current interns, the hiring manager, and recruiters,
-                then drafts a 300-character connection note and a longer InMail for the most important
-                contacts.
+                Tailor your CV to the role, see a fit score with real strengths and gaps, surface the
+                right people on LinkedIn, and draft connection notes and InMail you can actually send.
+              </p>
+            </div>
+            <div className="hiro-how-card">
+              <div className="hiro-how-num">04</div>
+              <div className="hiro-how-icon-wrap"><Briefcase className="h-6 w-6" /></div>
+              <h3 className="hiro-how-h">Prepare and track the process</h3>
+              <p className="hiro-how-body">
+                Move the role through stages, log outreach replies, prep STAR answers for likely
+                questions, and track every interview round in one place.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* FEATURES */}
-      <section id="features" className="hiro-features-section">
+      {/* PRODUCT DEMO PLACEHOLDER */}
+      <section id="demo" className="hiro-section" style={{ background: "#0b0b0f" }}>
         <div className="hiro-section-inner">
-          <p className="hiro-section-eyebrow hiro-section-eyebrow-light">What Hiro does</p>
-          <h2 className="hiro-section-heading hiro-section-heading-dark">Everything in one tab.</h2>
+          <p className="hiro-section-eyebrow hiro-section-eyebrow-light">Product demo</p>
+          <h2 className="hiro-section-heading hiro-section-heading-dark">See one application go from link to interview.</h2>
+          <p className="hiro-section-subtext" style={{ color: "rgba(255,255,255,0.65)" }}>
+            A short walkthrough of the full Hiro workflow on a real role — tracker, kit, outreach, prep.
+          </p>
 
-          <div className="hiro-features-grid">
-            <div className="hiro-feature-cell">
-              <ScanLine className="hiro-feature-icon h-8 w-8" />
-              <h3 className="hiro-feature-h">Job tracker that fills itself</h3>
-              <p className="hiro-feature-body">Paste a URL and every column — company, role, location, skills, deadline — fills in automatically. No more copy-pasting.</p>
+          <div className="hiro-demo-frame">
+            <div className="hiro-demo-inner">
+              <PlayCircle className="hiro-demo-icon h-14 w-14" />
+              <div className="hiro-demo-label">Interactive walkthrough — coming soon</div>
+              <p className="hiro-demo-sub">
+                One job URL turned into a tracker row, a tailored CV, a shortlist of contacts, drafted
+                outreach, and an interview prep workspace.
+              </p>
             </div>
-            <div className="hiro-feature-cell">
-              <FileCheck2 className="hiro-feature-icon h-8 w-8" />
-              <h3 className="hiro-feature-h">CV tailored to each role</h3>
-              <p className="hiro-feature-body">Your master profile, trimmed and reordered for every single application. Copy the right bullets in one click.</p>
+          </div>
+
+          <div className="hiro-demo-proof">
+            <div className="hiro-demo-proof-cell">
+              <ListChecks className="h-5 w-5" />
+              <div>
+                <div className="hiro-demo-proof-h">Auto-filled tracker</div>
+                <div className="hiro-demo-proof-body">Role, skills, deadline, and location parsed from the job URL.</div>
+              </div>
             </div>
-            <div className="hiro-feature-cell">
-              <Target className="hiro-feature-icon h-8 w-8" />
-              <h3 className="hiro-feature-h">Know your fit before you apply</h3>
-              <p className="hiro-feature-body">A match score with specific strengths and gaps so you know exactly where to focus your cover note.</p>
+            <div className="hiro-demo-proof-cell">
+              <FileCheck2 className="h-5 w-5" />
+              <div>
+                <div className="hiro-demo-proof-h">Tailored application kit</div>
+                <div className="hiro-demo-proof-body">CV rewritten for the role, with a fit score and gap list.</div>
+              </div>
             </div>
-            <div className="hiro-feature-cell">
-              <Search className="hiro-feature-icon h-8 w-8" />
-              <h3 className="hiro-feature-h">Find the right people</h3>
-              <p className="hiro-feature-body">Searches LinkedIn as you to surface current interns, hiring managers, and HR contacts at the company.</p>
-            </div>
-            <div className="hiro-feature-cell">
-              <MessageSquare className="hiro-feature-icon h-8 w-8" />
-              <h3 className="hiro-feature-h">Messages that actually get replies</h3>
-              <p className="hiro-feature-body">A tight 300-character connection note and a longer, consultative InMail — both drafted, both editable, both ready to send.</p>
-            </div>
-            <div className="hiro-feature-cell">
-              <BookOpen className="hiro-feature-icon h-8 w-8" />
-              <h3 className="hiro-feature-h">Interview prep that goes deep</h3>
-              <p className="hiro-feature-body">Company context, your strongest talking points, and ten likely questions with answer frameworks using your real experience.</p>
+            <div className="hiro-demo-proof-cell">
+              <Users className="h-5 w-5" />
+              <div>
+                <div className="hiro-demo-proof-h">Interview and outreach workspace</div>
+                <div className="hiro-demo-proof-body">Contacts, drafted messages, STAR prep, and round-by-round notes.</div>
+              </div>
             </div>
           </div>
         </div>
@@ -221,24 +208,26 @@ const Landing = () => {
 
       <hr className="hiro-divider-line" />
 
-      {/* METRICS */}
-      <section id="metrics" className="hiro-metrics-section">
-        <div className="hiro-metrics-grid">
-          <div className="hiro-metric">
-            <div className="hiro-metric-num">1 URL</div>
-            <div className="hiro-metric-label">to start the whole process</div>
-          </div>
-          <div className="hiro-metric">
-            <div className="hiro-metric-num">&lt; 30s</div>
-            <div className="hiro-metric-label">to fill your tracker row</div>
-          </div>
-          <div className="hiro-metric">
-            <div className="hiro-metric-num">6 tools</div>
-            <div className="hiro-metric-label">replaced by one tab</div>
-          </div>
-          <div className="hiro-metric">
-            <div className="hiro-metric-num">0 tabs</div>
-            <div className="hiro-metric-label">of frantic copy-pasting</div>
+      {/* ABOUT — founder note */}
+      <section id="about" className="hiro-about">
+        <div className="hiro-about-inner">
+          <p className="hiro-about-eyebrow">A note from the person who built this</p>
+          <h2 className="hiro-about-h">Why Hiro exists.</h2>
+          <div className="hiro-about-body">
+            <p>
+              I'm Máté. Before my Masters I spent a gap year chasing internships and it took more than
+              six months to land two of them.
+            </p>
+            <p className="hiro-about-stat">
+              <span className="hiro-about-stat-num">130+</span>
+              <span className="hiro-about-stat-label">applications, a custom CV every time, and cold outreach on LinkedIn for each one.</span>
+            </p>
+            <p>
+              Most of that time wasn't spent thinking about the role — it was spent reformatting CVs,
+              hunting contacts, and rewriting the same notes. I built Hiro so candidates can actually
+              apply better, not just feel busy.
+            </p>
+            <p className="hiro-about-sign">— Máté</p>
           </div>
         </div>
       </section>
@@ -250,13 +239,13 @@ const Landing = () => {
             <span className="hiro-eyebrow-dot" />
             Ready when you are
           </span>
-          <h2 className="hiro-final-h">One tab. Every application.</h2>
+          <h2 className="hiro-final-h">Run every application through one workspace.</h2>
           <p className="hiro-final-sub">
-            Stop juggling spreadsheets, CV files, and LinkedIn tabs. Hiro keeps everything in one place
-            so you can focus on what actually matters.
+            Tracker, CV tailoring, outreach, and interview prep — connected end to end, so you can
+            spend your time on the roles that actually matter.
           </p>
-          <Link to="/register" className="hiro-cta-primary">Get started free</Link>
-          <p className="hiro-final-note">Takes two minutes to set up. No card needed.</p>
+          <Link to="/register" className="hiro-cta-primary">Create your account</Link>
+          <p className="hiro-final-note">Two minutes to set up. No card needed.</p>
         </div>
       </section>
 
