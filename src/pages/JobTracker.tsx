@@ -199,6 +199,18 @@ const JobTracker = () => {
   const [contactsReached, setContactsReached] = useState(0);
   const [onlyOutreach, setOnlyOutreach] = useState(false);
   const [deadlineAlertDismissed, setDeadlineAlertDismissed] = useState(false);
+  const [customColumns, setCustomColumns] = useState<CustomColumn[]>([]);
+  const [customValues, setCustomValues] = useState<CustomValueMap>({});
+  const [addColumnOpen, setAddColumnOpen] = useState(false);
+  const [newColumnName, setNewColumnName] = useState("");
+
+  // Combined columns: default + user-defined (rendered after defaults, before nothing)
+  const COLUMNS: ColDef[] = useMemo(() => [
+    ...DEFAULT_COLUMNS,
+    ...customColumns.map((c) => ({
+      label: c.name, key: null as SortKey | null, width: 140, resizable: true, custom: { id: c.id },
+    })),
+  ], [customColumns]);
 
   // Compute urgent deadline jobs (within 7 days, status Saved or Applied)
   const urgentDeadlineJobs = useMemo(() => {
