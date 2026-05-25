@@ -82,7 +82,6 @@ serve(async (req) => {
       })),
       hard_skills: skillsRes.data?.hard_skills || [],
       soft_skills: skillsRes.data?.soft_skills || [],
-      languages: (langRes.data || []).map((l: any) => `${l.language_name} (${l.proficiency})`),
     };
 
     const jobSummary = {
@@ -94,8 +93,15 @@ serve(async (req) => {
       duration: job.duration,
       hard_skills: job.hard_skills || [],
       soft_skills: job.soft_skills || [],
-      languages_required: job.languages_required || [],
     };
+    const candidateLanguages = (langRes.data || []).map((l: any) => (l.language_name || "").toLowerCase());
+    const requiredLanguages: string[] = job.languages_required || [];
+    const missingLanguages = requiredLanguages.filter(
+      (l) => !candidateLanguages.some((cl: string) => cl.includes((l || "").toLowerCase()))
+    );
+    const languageRequirement = requiredLanguages.length === 0
+      ? "none"
+      : missingLanguages.length === 0 ? "met" : "missing";
 
     // Step 2: Score with OpenAI
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
@@ -106,15 +112,14 @@ serve(async (req) => {
       });
     }
 
-    const systemPrompt = `You are an expert recruiter and career coach. You will receive a candidate's professional profile and a job description. Your task is to assess how well the candidate matches this specific role. Return ONLY a valid JSON object with these exact keys:
-- score: integer between 0 and 100 representing overall match quality
-- hard_skills_match: integer 0-100 (how well their hard skills match the requirements)
-- soft_skills_match: integer 0-100 (how well their soft skills match)
-- experience_match: integer 0-100 (how relevant their experience is)
-- language_match: integer 0-100 (whether they meet language requirements)
-- match_summary: string (exactly 2 sentences explaining the score, what matches well and what is missing)
-- missing_skills: array of strings (key requirements from the job that the candidate does not have)
-- strengths: array of strings (the candidate's strongest matching points for this role)
+    const systemPrompt = `You are an expert recruiter and career coach. You will receive a candidate's professional profile and a job description. Assess how well the candidate matches this role based ONLY on hard skills, soft skills, and experience. Do NOT consider languages — they are tracked separately. Return ONLY a valid JSON object with these exact keys:
+- score: integer 0-100 overall match (hard skills, soft skills, experience only)
+- hard_skills_match: integer 0-100
+- soft_skills_match: integer 0-100
+- experience_match: integer 0-100
+- match_summary: string (exactly 2 sentences, what matches and what is missing — do not mention languages)
+- missing_skills: array of strings (key skill or experience requirements the candidate lacks)
+- strengths: array of strings (strongest matching points)
 Be honest and precise. A score above 80 means genuinely strong fit. Do not inflate scores.`;
 
     const userMessage = `CANDIDATE PROFILE:\n${JSON.stringify(profileSummary, null, 2)}\n\nJOB DESCRIPTION:\n${JSON.stringify(jobSummary, null, 2)}`;
@@ -168,10 +173,11 @@ Be honest and precise. A score above 80 means genuinely strong fit. Do not infla
       hard_skills_match: scoreData.hard_skills_match ?? null,
       soft_skills_match: scoreData.soft_skills_match ?? null,
       experience_match: scoreData.experience_match ?? null,
-      language_match: scoreData.language_match ?? null,
       match_summary: scoreData.match_summary ?? null,
       missing_skills: scoreData.missing_skills ?? [],
       strengths: scoreData.strengths ?? [],
+      language_requirement: languageRequirement, // "none" | "met" | "missing"
+      missing_languages: missingLanguages,
     };
 
     const { error: updateError } = await supabase
