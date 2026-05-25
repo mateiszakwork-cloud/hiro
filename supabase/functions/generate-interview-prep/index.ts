@@ -162,9 +162,17 @@ Bullet formatting: every bullet starts with "- " (hyphen + space). Never use em-
       if (typeof s !== "string") return "";
       return s
         .split("\n")
-        .map((l) => l.trim())
-        .filter(Boolean)
-        .map((l) => (l.startsWith("- ") ? l : l.startsWith("-") ? "- " + l.slice(1).trim() : l.startsWith("•") ? "- " + l.slice(1).trim() : "- " + l))
+        .filter((l) => l.trim().length > 0)
+        .map((l) => {
+          // Preserve leading indentation (sub-bullets like q9 30/60/90)
+          const m = l.match(/^(\s*)(.*)$/);
+          const indent = m ? m[1] : "";
+          const rest = (m ? m[2] : l).trim();
+          if (rest.startsWith("- ")) return indent + rest;
+          if (rest.startsWith("-")) return indent + "- " + rest.slice(1).trim();
+          if (rest.startsWith("•")) return indent + "- " + rest.slice(1).trim();
+          return indent + "- " + rest;
+        })
         .join("\n");
     };
 
