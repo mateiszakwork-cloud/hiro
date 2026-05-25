@@ -379,6 +379,65 @@ export type Database = {
         }
         Relationships: []
       }
+      job_custom_column_values: {
+        Row: {
+          column_id: string
+          id: string
+          job_id: string
+          updated_at: string
+          user_id: string
+          value: string | null
+        }
+        Insert: {
+          column_id: string
+          id?: string
+          job_id: string
+          updated_at?: string
+          user_id: string
+          value?: string | null
+        }
+        Update: {
+          column_id?: string
+          id?: string
+          job_id?: string
+          updated_at?: string
+          user_id?: string
+          value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_custom_column_values_column_id_fkey"
+            columns: ["column_id"]
+            isOneToOne: false
+            referencedRelation: "job_custom_columns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_custom_columns: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       jobs: {
         Row: {
           application_deadline: string | null
@@ -400,6 +459,7 @@ export type Database = {
           priority: string
           skills_nice_to_have: string[] | null
           soft_skills: string[] | null
+          start_date: string | null
           status: string
           url: string | null
           user_id: string
@@ -425,6 +485,7 @@ export type Database = {
           priority?: string
           skills_nice_to_have?: string[] | null
           soft_skills?: string[] | null
+          start_date?: string | null
           status?: string
           url?: string | null
           user_id: string
@@ -450,6 +511,7 @@ export type Database = {
           priority?: string
           skills_nice_to_have?: string[] | null
           soft_skills?: string[] | null
+          start_date?: string | null
           status?: string
           url?: string | null
           user_id?: string
