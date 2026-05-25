@@ -380,6 +380,9 @@ const JobDetail = () => {
   // Bullet toggle state: map of "blockIdx-bulletIdx" -> boolean (true = show tailored)
   const [bulletToggles, setBulletToggles] = useState<Record<string, boolean>>({});
 
+  // CV download state
+  const [downloadingCv, setDownloadingCv] = useState(false);
+
   // Master skills for suggestions
   const [masterHardSkills, setMasterHardSkills] = useState<string[]>([]);
   const [masterSoftSkills, setMasterSoftSkills] = useState<string[]>([]);
