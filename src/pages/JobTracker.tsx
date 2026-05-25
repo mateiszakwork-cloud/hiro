@@ -340,6 +340,16 @@ const JobTracker = () => {
           ? new Date(bv).getTime() - new Date(av).getTime()
           : new Date(av).getTime() - new Date(bv).getTime();
       }
+      if (sortKey === "start_date") {
+        const av = a.start_date;
+        const bv = b.start_date;
+        if (!av && !bv) return 0;
+        if (!av) return 1;
+        if (!bv) return -1;
+        return sortDir === "desc"
+          ? new Date(bv).getTime() - new Date(av).getTime()
+          : new Date(av).getTime() - new Date(bv).getTime();
+      }
       return compareStr(a[sortKey] as string | null, b[sortKey] as string | null, sortDir);
     });
     return result;
