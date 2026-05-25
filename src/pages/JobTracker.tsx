@@ -407,6 +407,28 @@ const JobTracker = () => {
         setOutreachMap(oMap);
         setContactsReached(reached);
       }
+
+      // Fetch custom columns + values
+      const { data: ccData } = await supabase
+        .from("job_custom_columns" as any)
+        .select("id, name, sort_order")
+        .eq("user_id", session.user.id)
+        .order("sort_order", { ascending: true })
+        .order("created_at", { ascending: true });
+      if (ccData) setCustomColumns(ccData as any);
+
+      const { data: ccvData } = await supabase
+        .from("job_custom_column_values" as any)
+        .select("job_id, column_id, value")
+        .eq("user_id", session.user.id);
+      if (ccvData) {
+        const vmap: CustomValueMap = {};
+        for (const r of ccvData as any[]) {
+          if (!vmap[r.job_id]) vmap[r.job_id] = {};
+          vmap[r.job_id][r.column_id] = r.value || "";
+        }
+        setCustomValues(vmap);
+      }
     };
     init();
   }, []);
@@ -414,7 +436,7 @@ const JobTracker = () => {
   const fetchJobs = async (uid: string) => {
     const { data } = await supabase
       .from("jobs")
-      .select("id, url, company_name, job_title, function, location, work_mode, duration, status, match_score, created_at, priority, applied_date, application_deadline")
+      .select("id, url, company_name, job_title, function, location, work_mode, duration, status, match_score, created_at, priority, applied_date, application_deadline, start_date")
       .eq("user_id", uid)
       .order("created_at", { ascending: false });
     if (data) setJobs(data as any);
