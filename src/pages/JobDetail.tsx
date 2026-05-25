@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, ExternalLink, MapPin, Copy, Check, Trash2, ChevronDown, ChevronUp, FileText, CheckCircle2, XCircle, CalendarIcon, RefreshCw, Lightbulb, History, RotateCcw, Pencil, X as XIcon, AlertTriangle, Loader2, Minus, Plus, AlertCircle, Download } from "lucide-react";
+import { ArrowLeft, ExternalLink, MapPin, Copy, Check, Trash2, ChevronDown, ChevronUp, FileText, CheckCircle2, XCircle, CalendarIcon, RefreshCw, Lightbulb, History, RotateCcw, Pencil, X as XIcon, AlertTriangle, Loader2, Minus, Plus, AlertCircle, Download, Eye } from "lucide-react";
 import { computeDeadlineState, DeadlineBadge } from "@/lib/deadlineUtils";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -23,6 +23,11 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { cn } from "@/lib/utils";
 import OutreachTab from "@/components/OutreachTab";
 import InterviewPrepTab from "@/components/InterviewPrepTab";
+import CvPreview from "@/components/cv/CvPreview";
+import CvSectionControls from "@/components/cv/CvSectionControls";
+import { DEFAULT_SECTION_CONFIG, normalizeSectionConfig, type CvSectionConfig } from "@/lib/cvLayout";
+import { buildCvData } from "@/lib/buildCvData";
+import { Link } from "react-router-dom";
 
 type BulletItem = { original: string; tailored: string; use_tailored: boolean };
 type BulletBlock = { company: string; job_title: string; bullets: BulletItem[] | string[] };
@@ -36,6 +41,7 @@ type CvOutput = {
   tailoring_notes: string[];
   created_at: string;
   updated_at: string;
+  section_config?: any;
 };
 
 type MatchDetails = {
@@ -365,9 +371,10 @@ const JobDetail = () => {
   const [cvError, setCvError] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<{
     full_name: string | null; email: string | null;
+    phone: string | null; linkedin_url: string | null; default_location: string | null;
     work_experiences: any[]; education: any[]; languages: any[];
     interests: string[]; awards: any[]; volunteering: any[];
-  }>({ full_name: null, email: null, work_experiences: [], education: [], languages: [], interests: [], awards: [], volunteering: [] });
+  }>({ full_name: null, email: null, phone: null, linkedin_url: null, default_location: null, work_experiences: [], education: [], languages: [], interests: [], awards: [], volunteering: [] });
   const [cvHistory, setCvHistory] = useState<any[]>([]);
   const [regenConfirmOpen, setRegenConfirmOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -382,6 +389,35 @@ const JobDetail = () => {
 
   // CV download state
   const [downloadingCv, setDownloadingCv] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [layoutOpen, setLayoutOpen] = useState(false);
+
+  // Persist section_config to cv_outputs (debounced lightly via inline await).
+  const sectionConfig: CvSectionConfig = normalizeSectionConfig(cvOutput?.section_config);
+  const updateSectionConfig = async (next: CvSectionConfig) => {
+    if (!cvOutput) return;
+    setCvOutput({ ...cvOutput, section_config: next as any });
+    const { error } = await supabase
+      .from("cv_outputs")
+      .update({ section_config: next as any })
+      .eq("id", cvOutput.id);
+    if (error) toast.error("Couldn't save layout changes.");
+  };
+
+  // Live preview data (kept in sync with current cvOutput + profile).
+  const previewData = (cvOutput && job)
+    ? buildCvData({
+        cvOutput: {
+          tailored_summary: cvOutput.tailored_summary,
+          selected_bullets: cvOutput.selected_bullets,
+          selected_hard_skills: cvOutput.selected_hard_skills,
+          selected_soft_skills: cvOutput.selected_soft_skills,
+          section_config: cvOutput.section_config,
+        },
+        profile: userProfile,
+        job: { company_name: job.company_name, location: job.location },
+      })
+    : null;
 
   // Master skills for suggestions
   const [masterHardSkills, setMasterHardSkills] = useState<string[]>([]);
@@ -511,7 +547,7 @@ const JobDetail = () => {
 
       const uid = session.user.id;
       const [profileRes, workRes, eduRes, langRes, interestsRes, awardsRes, volRes, skillsRes] = await Promise.all([
-        supabase.from("profiles").select("full_name, email").eq("id", uid).single(),
+        supabase.from("profiles").select("full_name, email, phone, linkedin_url, default_location").eq("id", uid).single(),
         supabase.from("work_experiences").select("*").eq("user_id", uid).order("start_year", { ascending: false }),
         supabase.from("education").select("*").eq("user_id", uid).order("start_year", { ascending: false }),
         supabase.from("languages").select("*").eq("user_id", uid),
@@ -523,6 +559,9 @@ const JobDetail = () => {
       setUserProfile({
         full_name: profileRes.data?.full_name || null,
         email: profileRes.data?.email || null,
+        phone: (profileRes.data as any)?.phone || null,
+        linkedin_url: (profileRes.data as any)?.linkedin_url || null,
+        default_location: (profileRes.data as any)?.default_location || null,
         work_experiences: workRes.data || [],
         education: eduRes.data || [],
         languages: langRes.data || [],
@@ -798,6 +837,7 @@ const JobDetail = () => {
           selected_bullets: cvOutput.selected_bullets,
           selected_hard_skills: cvOutput.selected_hard_skills,
           selected_soft_skills: cvOutput.selected_soft_skills,
+          section_config: cvOutput.section_config,
         },
         profile: userProfile,
         job: { company_name: job.company_name, location: job.location },
@@ -1421,6 +1461,13 @@ const JobDetail = () => {
             </div>
             <div className="flex items-center gap-2">
               {cvOutput && !cvLoading && (
+                <>
+                <Button variant="outline" onClick={() => setLayoutOpen(v => !v)} className="gap-1.5">
+                  <FileText className="h-4 w-4" /> Layout
+                </Button>
+                <Button variant="outline" onClick={() => setPreviewOpen(true)} className="gap-1.5">
+                  <Eye className="h-4 w-4" /> Preview
+                </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" disabled={downloadingCv} className="gap-1.5">
@@ -1440,6 +1487,7 @@ const JobDetail = () => {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+                </>
               )}
               <Button
                 onClick={() => handleGenerateCv()}
@@ -1456,6 +1504,55 @@ const JobDetail = () => {
               </Button>
             </div>
           </div>
+
+          {/* Global header banner (constant across all CVs) */}
+          {cvOutput && (
+            <Card className="bg-muted/40 border-dashed">
+              <CardContent className="p-3 flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground shrink-0">Global Header</span>
+                  <span className="text-sm text-foreground truncate">
+                    <span className="font-semibold">{userProfile.full_name || "Add your name"}</span>
+                    {" · "}
+                    <span className="text-muted-foreground">
+                      {[userProfile.phone, userProfile.email, userProfile.linkedin_url, userProfile.default_location].filter(Boolean).join(" · ") || "Add phone, email and LinkedIn"}
+                    </span>
+                  </span>
+                </div>
+                <Link to="/profile" className="text-xs underline text-[#950606] shrink-0">Edit global details</Link>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Layout / section controls panel */}
+          {cvOutput && layoutOpen && (
+            <Card>
+              <CardContent className="p-4 space-y-3">
+                <div>
+                  <h4 className="text-sm font-semibold text-foreground">CV layout</h4>
+                  <p className="text-xs text-muted-foreground">Reorder, rename, or hide sections. Changes apply to this job only.</p>
+                </div>
+                <CvSectionControls config={sectionConfig} onChange={updateSectionConfig} />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Preview dialog */}
+          {previewData && (
+            <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+              <DialogContent className="max-w-[860px] max-h-[90vh] overflow-auto p-0 bg-neutral-100">
+                <DialogHeader className="px-4 py-3 bg-background border-b">
+                  <DialogTitle>CV preview</DialogTitle>
+                  <DialogDescription>Approximation of the downloaded layout.</DialogDescription>
+                </DialogHeader>
+                <div className="p-6 flex justify-center">
+                  <div className="shadow-lg" style={{ transformOrigin: "top center", transform: "scale(0.85)" }}>
+                    <CvPreview data={previewData} />
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
 
           {/* Loading state */}
           {cvLoading && (

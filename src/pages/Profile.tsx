@@ -73,6 +73,11 @@ const Profile = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [linkedinUrl, setLinkedinUrl] = useState("");
+  const [defaultLocation, setDefaultLocation] = useState("");
+  const [contactSaving, setContactSaving] = useState(false);
+  const [contactSaved, setContactSaved] = useState(false);
   
 
   const [workExps, setWorkExps] = useState<WorkExp[]>([]);
@@ -116,10 +121,13 @@ const Profile = () => {
       const uid = session.user.id;
       setUserId(uid);
       setEmail(session.user.email || "");
-      const { data: profile } = await supabase.from("profiles").select("created_at, full_name, base_cv_text, base_cv_uploaded_at").eq("id", uid).single();
+      const { data: profile } = await supabase.from("profiles").select("created_at, full_name, phone, linkedin_url, default_location, base_cv_text, base_cv_uploaded_at").eq("id", uid).single();
       if (profile) {
         
         setFullName(profile.full_name || "");
+        setPhone((profile as any).phone || "");
+        setLinkedinUrl((profile as any).linkedin_url || "");
+        setDefaultLocation((profile as any).default_location || "");
         setBaseCvText((profile as any).base_cv_text || null);
         setBaseCvUploadedAt((profile as any).base_cv_uploaded_at || null);
       }
@@ -380,6 +388,66 @@ const Profile = () => {
         <div className="hiro-page-content-inner">
 
       {/* ─── Unified CV Card ─── */}
+      {/* Contact & header — global fields used at the top of every exported CV */}
+      <div className="hiro-cv-card mb-4">
+        <div className="mb-4">
+          <h3 className="text-base font-semibold text-foreground">Contact &amp; header</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">These appear at the top of every CV you export.</p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Full name</label>
+            <input value={fullName} onChange={e => { setFullName(e.target.value); setContactSaved(false); }}
+              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Phone</label>
+            <input value={phone} onChange={e => { setPhone(e.target.value); setContactSaved(false); }}
+              placeholder="+44 7700 900123"
+              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Email</label>
+            <input value={email} disabled
+              className="mt-1 w-full rounded-md border border-input bg-muted/30 px-3 py-2 text-sm text-muted-foreground" />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">LinkedIn</label>
+            <input value={linkedinUrl} onChange={e => { setLinkedinUrl(e.target.value); setContactSaved(false); }}
+              placeholder="linkedin.com/in/your-handle"
+              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="text-xs font-medium text-muted-foreground">Default location</label>
+            <input value={defaultLocation} onChange={e => { setDefaultLocation(e.target.value); setContactSaved(false); }}
+              placeholder="London, UK"
+              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+          </div>
+        </div>
+        <div className="flex items-center justify-end gap-2 mt-3">
+          {contactSaved && <span className="text-xs text-muted-foreground">Saved</span>}
+          <Button
+            onClick={async () => {
+              if (!userId) return;
+              setContactSaving(true);
+              const { error } = await supabase.from("profiles").update({
+                full_name: fullName || null,
+                phone: phone || null,
+                linkedin_url: linkedinUrl || null,
+                default_location: defaultLocation || null,
+              } as any).eq("id", userId);
+              setContactSaving(false);
+              if (error) toast.error("Could not save contact details.");
+              else { setContactSaved(true); toast.success("Contact details saved"); }
+            }}
+            disabled={contactSaving}
+            style={{ backgroundColor: '#950606' }}
+          >
+            {contactSaving ? "Saving..." : "Save"}
+          </Button>
+        </div>
+      </div>
+
       <div className="hiro-cv-card">
           <input ref={importCvInputRef} type="file" accept="application/pdf" onChange={handleImportCvUpload} className="hidden" />
           <input ref={cvInputRef} type="file" accept="application/pdf" onChange={handleCvReimport} className="hidden" />
