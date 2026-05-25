@@ -942,6 +942,33 @@ const JobTracker = () => {
       {showTable && (
         <div style={{ padding: "0 28px 12px" }}>
           <div className="flex items-center gap-3 flex-wrap">
+            <Popover open={addColumnOpen} onOpenChange={setAddColumnOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  className="h-8 inline-flex items-center gap-1.5 px-3 text-xs font-medium rounded-lg border border-input bg-background text-foreground hover:bg-muted transition-colors"
+                  title="Add a custom text column"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Add column
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-64 p-3">
+                <p className="text-xs font-medium text-foreground mb-2">New custom column</p>
+                <Input
+                  value={newColumnName}
+                  onChange={(e) => setNewColumnName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleCreateCustomColumn(); }}
+                  placeholder="Column name"
+                  className="h-8 text-sm"
+                  autoFocus
+                />
+                <p className="text-[11px] text-muted-foreground mt-1.5">Free text only. You can edit values per job.</p>
+                <div className="flex justify-end gap-2 mt-3">
+                  <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => { setAddColumnOpen(false); setNewColumnName(""); }}>Cancel</Button>
+                  <Button size="sm" className="h-7 text-xs" onClick={handleCreateCustomColumn} disabled={!newColumnName.trim()}>Add</Button>
+                </div>
+              </PopoverContent>
+            </Popover>
             <div className="ml-auto flex items-center gap-2">
               <button
                 onClick={() => setOnlyOutreach(v => !v)}
