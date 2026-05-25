@@ -536,9 +536,26 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
         {error && <p className="text-sm text-destructive">{error}</p>}
       </div>
 
+      {/* Draft messaging banner */}
+      <div className="rounded-lg border border-[#950606]/20 bg-[#FFF5F5] p-4 space-y-1.5">
+        <div className="flex items-center gap-2 text-[#950606] font-semibold text-sm">
+          <Info className="h-4 w-4" />
+          These are draft answers — edit every one so it sounds like you.
+        </div>
+        <p className="text-xs text-foreground/80 leading-relaxed">
+          Use them as prep notes, not a script. Don't memorize them word for word. Company and industry news answers must always be verified with current sources before your interview.
+        </p>
+      </div>
+
       {/* Section 1 */}
       <section className="space-y-6">
-        <h2 className="text-xl font-bold text-foreground border-b pb-2">Core Prep Questions</h2>
+        <div className="border-b pb-2 flex items-end justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-bold text-foreground">Core Prep Questions</h2>
+            <p className="text-sm text-muted-foreground mt-1">The fixed questions every interviewer is likely to ask.</p>
+          </div>
+          <AddCoreQuestion onAdd={addCoreCustomQuestion} />
+        </div>
         {(() => {
           let qNum = 0;
           return section1Items.map((item) => {
@@ -570,6 +587,10 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
                 onRegenerate={() => handleRegenerate(item.q.id, item.q.question)}
                 regenerating={regenerating === item.q.id}
                 hasGenerated={hasGenerated}
+                editableTitle
+                onTitleChange={(v) => updateCustomTitle(item.q.id, v)}
+                onDelete={() => deleteCustomQuestion(item.q.id)}
+                isCustom
               />
             );
           });
@@ -578,19 +599,26 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
 
       {/* Section 2 */}
       <section className="space-y-6">
-        <div className="border-b pb-2">
-          <h2 className="text-xl font-bold text-foreground">Role-Specific Questions</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Generated based on your specific role at {companyName}
-          </p>
+        <div className="border-b pb-2 flex items-end justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-bold text-foreground">Role-Specific Questions</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Generated based on your specific role at {companyName}. Add your own to prep for what you expect.
+            </p>
+          </div>
+          <button
+            onClick={addRoleCustomQuestion}
+            className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-lg border border-input bg-background text-foreground hover:bg-muted transition-colors"
+          >
+            <Plus className="h-3.5 w-3.5" /> Add question
+          </button>
         </div>
         {!hasGenerated && (
           <p className="text-sm text-muted-foreground italic">
-            Click Generate All to create role-specific questions tailored to this position.
+            Click Generate All to create role-specific questions tailored to this position — or add your own above.
           </p>
         )}
-        {hasGenerated &&
-          answers!.role_specific.map((r, i) => (
+        {(answers?.role_specific || []).map((r, i) => (
             <QuestionBlock
               key={r.id}
               number={`${i + 1}.`}
@@ -600,6 +628,10 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
               onRegenerate={() => handleRegenerate(r.id, r.question)}
               regenerating={regenerating === r.id}
               hasGenerated={hasGenerated}
+              editableTitle={r.id.startsWith("rs-custom")}
+              onTitleChange={r.id.startsWith("rs-custom") ? (v) => updateCustomTitle(r.id, v) : undefined}
+              onDelete={r.id.startsWith("rs-custom") ? () => deleteCustomQuestion(r.id) : undefined}
+              isCustom={r.id.startsWith("rs-custom")}
             />
           ))}
       </section>
