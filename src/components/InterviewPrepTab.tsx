@@ -1,8 +1,10 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Loader2, Download, RotateCcw, AlertTriangle } from "lucide-react";
+import { Loader2, Download, RotateCcw, AlertTriangle, Plus, Trash2, Pencil, Info } from "lucide-react";
 import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import {
   Document,
   Packer,
@@ -18,17 +20,18 @@ type RoleQ = { id: string; question: string; answer: string };
 
 type Answers = {
   q1: string; q2: string; q3: string; q4: string; q5: string;
-  q6: string; q7: string; q8: string;
+  q6: string; q7: string; q8: string; q9: string;
   section1_extra: ExtraQ[];
   role_specific: RoleQ[];
 };
 
-const FIXED_QUESTIONS: { id: keyof Answers | "q1"|"q2"|"q3"|"q4"|"q5"|"q6"|"q7"|"q8"; label: string; newsDisclaimer?: boolean }[] = [
+const FIXED_QUESTIONS: { id: "q1"|"q2"|"q3"|"q4"|"q5"|"q6"|"q7"|"q8"|"q9"; label: string; newsDisclaimer?: boolean }[] = [
   { id: "q1", label: "Tell me about the company" },
   { id: "q2", label: "The role and its responsibilities, and how it fits in the big picture" },
   { id: "q3", label: "Tell me about yourself (2-minute pitch)" },
   { id: "q4", label: "Why are you applying for this role?" },
   { id: "q5", label: "Why are you applying to this company?" },
+  { id: "q9", label: "How would you approach your first 30, 60, and 90 days in this role?" },
   { id: "q6", label: "Recent company news that interests you", newsDisclaimer: true },
   { id: "q7", label: "Recent industry news that interests you", newsDisclaimer: true },
   { id: "q8", label: "Questions to ask the interviewer" },
@@ -79,6 +82,10 @@ function QuestionBlock({
   regenerating,
   newsDisclaimer,
   hasGenerated,
+  editableTitle,
+  onTitleChange,
+  onDelete,
+  isCustom,
 }: {
   number: string;
   title: string;
@@ -88,18 +95,51 @@ function QuestionBlock({
   regenerating: boolean;
   newsDisclaimer?: boolean;
   hasGenerated: boolean;
+  editableTitle?: boolean;
+  onTitleChange?: (v: string) => void;
+  onDelete?: () => void;
+  isCustom?: boolean;
 }) {
   return (
-    <div className="space-y-2">
-      <h3 className="font-semibold text-foreground text-[15px]">
-        <span className="text-muted-foreground font-medium mr-2">{number}</span>
-        {title}
-      </h3>
+    <div className="space-y-2 group/qb">
+      <div className="flex items-start justify-between gap-3">
+        {editableTitle && onTitleChange ? (
+          <div className="flex-1">
+            <Input
+              value={title}
+              onChange={(e) => onTitleChange(e.target.value)}
+              placeholder="Type your question..."
+              className="font-semibold text-[15px] h-9"
+            />
+          </div>
+        ) : (
+          <h3 className="font-semibold text-foreground text-[15px] flex-1">
+            <span className="text-muted-foreground font-medium mr-2">{number}</span>
+            {title}
+          </h3>
+        )}
+        {isCustom && onDelete && (
+          <button
+            onClick={onDelete}
+            className="text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover/qb:opacity-100"
+            title="Delete question"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+      <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+        <Pencil className="h-3 w-3" />
+        Editable draft answer
+      </div>
       <AutoTextarea
         value={value}
         onChange={onChange}
-        placeholder={hasGenerated ? "" : "Click Generate All to create your answer"}
+        placeholder={hasGenerated ? "Write or paste your answer..." : "Click Generate All to create a draft answer you can then edit"}
       />
+      <p className="text-[11px] text-muted-foreground italic">
+        Edit this to match your real wording, examples, and speaking style.
+      </p>
       {newsDisclaimer && (
         <div className="flex items-start gap-2 p-3 rounded-md bg-amber-50 border border-amber-200 text-amber-900 text-xs">
           <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
@@ -118,6 +158,34 @@ function QuestionBlock({
           {regenerating ? "Regenerating..." : "Regenerate"}
         </button>
       )}
+    </div>
+  );
+}
+
+/* ── Add Core Question control with insertAfter selector ── */
+function AddCoreQuestion({ onAdd }: { onAdd: (insertAfter: string) => void }) {
+  const [pos, setPos] = useState<string>(FIXED_QUESTIONS[FIXED_QUESTIONS.length - 1].id);
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-xs text-muted-foreground hidden sm:inline">Insert after</span>
+      <Select value={pos} onValueChange={setPos}>
+        <SelectTrigger className="h-8 w-[150px] text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {FIXED_QUESTIONS.map((q, i) => (
+            <SelectItem key={q.id} value={q.id} className="text-xs">
+              Q{i + 1}. {q.label.length > 28 ? q.label.slice(0, 28) + "…" : q.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <button
+        onClick={() => onAdd(pos)}
+        className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-lg border border-input bg-background text-foreground hover:bg-muted transition-colors"
+      >
+        <Plus className="h-3.5 w-3.5" /> Add question
+      </button>
     </div>
   );
 }
@@ -163,6 +231,7 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
         setAnswers({
           q1: a.q1 || "", q2: a.q2 || "", q3: a.q3 || "", q4: a.q4 || "",
           q5: a.q5 || "", q6: a.q6 || "", q7: a.q7 || "", q8: a.q8 || "",
+          q9: a.q9 || "",
           section1_extra: (data.section1_extra as ExtraQ[]) || [],
           role_specific: (data.role_specific as RoleQ[]) || [],
         });
@@ -176,19 +245,58 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
   const persistAnswers = async (a: Answers) => {
     const uid = userIdRef.current;
     if (!uid || !jobId) return;
-    const { q1, q2, q3, q4, q5, q6, q7, q8, section1_extra, role_specific } = a;
+    const { q1, q2, q3, q4, q5, q6, q7, q8, q9, section1_extra, role_specific } = a;
     await supabase
       .from("interview_prep_answers")
       .upsert(
         {
           user_id: uid,
           job_id: jobId,
-          answers: { q1, q2, q3, q4, q5, q6, q7, q8 },
+          answers: { q1, q2, q3, q4, q5, q6, q7, q8, q9 },
           section1_extra,
           role_specific,
         },
         { onConflict: "user_id,job_id" }
       );
+  };
+
+  /* ── Custom question helpers ── */
+  const ensureAnswers = (): Answers =>
+    answers || {
+      q1: "", q2: "", q3: "", q4: "", q5: "", q6: "", q7: "", q8: "", q9: "",
+      section1_extra: [], role_specific: [],
+    };
+
+  const addCoreCustomQuestion = (insertAfter: string) => {
+    const base = ensureAnswers();
+    const id = `extra-${Date.now()}`;
+    const newExtra: ExtraQ = { id, question: "", answer: "", insertAfter };
+    setAnswers({ ...base, section1_extra: [...base.section1_extra, newExtra] });
+  };
+
+  const addRoleCustomQuestion = () => {
+    const base = ensureAnswers();
+    const id = `rs-custom-${Date.now()}`;
+    const newRole: RoleQ = { id, question: "", answer: "" };
+    setAnswers({ ...base, role_specific: [...base.role_specific, newRole] });
+  };
+
+  const deleteCustomQuestion = (id: string) => {
+    setAnswers((prev) => {
+      if (!prev) return prev;
+      if (id.startsWith("rs")) return { ...prev, role_specific: prev.role_specific.filter((r) => r.id !== id) };
+      return { ...prev, section1_extra: prev.section1_extra.filter((e) => e.id !== id) };
+    });
+  };
+
+  const updateCustomTitle = (id: string, title: string) => {
+    setAnswers((prev) => {
+      if (!prev) return prev;
+      if (id.startsWith("rs")) {
+        return { ...prev, role_specific: prev.role_specific.map((r) => r.id === id ? { ...r, question: title } : r) };
+      }
+      return { ...prev, section1_extra: prev.section1_extra.map((e) => e.id === id ? { ...e, question: title } : e) };
+    });
   };
 
   /* ── Debounced auto-save on edits ── */
@@ -456,9 +564,26 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
         {error && <p className="text-sm text-destructive">{error}</p>}
       </div>
 
+      {/* Draft messaging banner */}
+      <div className="rounded-lg border border-[#950606]/20 bg-[#FFF5F5] p-4 space-y-1.5">
+        <div className="flex items-center gap-2 text-[#950606] font-semibold text-sm">
+          <Info className="h-4 w-4" />
+          These are draft answers — edit every one so it sounds like you.
+        </div>
+        <p className="text-xs text-foreground/80 leading-relaxed">
+          Use them as prep notes, not a script. Don't memorize them word for word. Company and industry news answers must always be verified with current sources before your interview.
+        </p>
+      </div>
+
       {/* Section 1 */}
       <section className="space-y-6">
-        <h2 className="text-xl font-bold text-foreground border-b pb-2">Core Prep Questions</h2>
+        <div className="border-b pb-2 flex items-end justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-bold text-foreground">Core Prep Questions</h2>
+            <p className="text-sm text-muted-foreground mt-1">The fixed questions every interviewer is likely to ask.</p>
+          </div>
+          <AddCoreQuestion onAdd={addCoreCustomQuestion} />
+        </div>
         {(() => {
           let qNum = 0;
           return section1Items.map((item) => {
@@ -490,6 +615,10 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
                 onRegenerate={() => handleRegenerate(item.q.id, item.q.question)}
                 regenerating={regenerating === item.q.id}
                 hasGenerated={hasGenerated}
+                editableTitle
+                onTitleChange={(v) => updateCustomTitle(item.q.id, v)}
+                onDelete={() => deleteCustomQuestion(item.q.id)}
+                isCustom
               />
             );
           });
@@ -498,19 +627,26 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
 
       {/* Section 2 */}
       <section className="space-y-6">
-        <div className="border-b pb-2">
-          <h2 className="text-xl font-bold text-foreground">Role-Specific Questions</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Generated based on your specific role at {companyName}
-          </p>
+        <div className="border-b pb-2 flex items-end justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-bold text-foreground">Role-Specific Questions</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Generated based on your specific role at {companyName}. Add your own to prep for what you expect.
+            </p>
+          </div>
+          <button
+            onClick={addRoleCustomQuestion}
+            className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-lg border border-input bg-background text-foreground hover:bg-muted transition-colors"
+          >
+            <Plus className="h-3.5 w-3.5" /> Add question
+          </button>
         </div>
         {!hasGenerated && (
           <p className="text-sm text-muted-foreground italic">
-            Click Generate All to create role-specific questions tailored to this position.
+            Click Generate All to create role-specific questions tailored to this position — or add your own above.
           </p>
         )}
-        {hasGenerated &&
-          answers!.role_specific.map((r, i) => (
+        {(answers?.role_specific || []).map((r, i) => (
             <QuestionBlock
               key={r.id}
               number={`${i + 1}.`}
@@ -520,6 +656,10 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
               onRegenerate={() => handleRegenerate(r.id, r.question)}
               regenerating={regenerating === r.id}
               hasGenerated={hasGenerated}
+              editableTitle={r.id.startsWith("rs-custom")}
+              onTitleChange={r.id.startsWith("rs-custom") ? (v) => updateCustomTitle(r.id, v) : undefined}
+              onDelete={r.id.startsWith("rs-custom") ? () => deleteCustomQuestion(r.id) : undefined}
+              isCustom={r.id.startsWith("rs-custom")}
             />
           ))}
       </section>
