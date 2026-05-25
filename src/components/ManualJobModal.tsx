@@ -26,6 +26,7 @@ type ManualJobData = {
   soft_skills: string[];
   languages_required: string[];
   application_deadline: string | null;
+  start_date: string | null;
   job_description: string;
 };
 
@@ -97,7 +98,7 @@ const ManualJobModal = ({ open, onOpenChange, prefillUrl = "", onSave }: ManualJ
   const [form, setForm] = useState<ManualJobData>({
     job_title: "", company_name: "", url: prefillUrl, function: "", location: "",
     work_mode: "", duration: "", hard_skills: [], soft_skills: [], languages_required: [],
-    application_deadline: null, job_description: "",
+    application_deadline: null, start_date: null, job_description: "",
   });
   const [errors, setErrors] = useState<{ job_title?: string; company_name?: string }>({});
 
@@ -121,7 +122,7 @@ const ManualJobModal = ({ open, onOpenChange, prefillUrl = "", onSave }: ManualJ
       setForm({
         job_title: "", company_name: "", url: "", function: "", location: "",
         work_mode: "", duration: "", hard_skills: [], soft_skills: [], languages_required: [],
-        application_deadline: null, job_description: "",
+        application_deadline: null, start_date: null, job_description: "",
       });
       onOpenChange(false);
     } finally {
@@ -130,6 +131,7 @@ const ManualJobModal = ({ open, onOpenChange, prefillUrl = "", onSave }: ManualJ
   };
 
   const deadlineDate = form.application_deadline ? new Date(form.application_deadline) : undefined;
+  const startDate = form.start_date ? new Date(form.start_date) : undefined;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -189,25 +191,46 @@ const ManualJobModal = ({ open, onOpenChange, prefillUrl = "", onSave }: ManualJ
             </div>
           </div>
 
-          {/* Row 4: Deadline */}
-          <div className="space-y-1.5">
-            <Label>Application Deadline</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !deadlineDate && "text-muted-foreground")}>
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {deadlineDate ? format(deadlineDate, "PPP") : "Pick a date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={deadlineDate}
-                  onSelect={(d) => setForm(p => ({ ...p, application_deadline: d ? format(d, "yyyy-MM-dd") : null }))}
-                  className={cn("p-3 pointer-events-auto")}
-                />
-              </PopoverContent>
-            </Popover>
+          {/* Row 4: Deadline + Start Date */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>Application Deadline</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !deadlineDate && "text-muted-foreground")}>
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {deadlineDate ? format(deadlineDate, "PPP") : "Pick a date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={deadlineDate}
+                    onSelect={(d) => setForm(p => ({ ...p, application_deadline: d ? format(d, "yyyy-MM-dd") : null }))}
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Start Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !startDate && "text-muted-foreground")}>
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, "PPP") : "Pick a date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={(d) => setForm(p => ({ ...p, start_date: d ? format(d, "yyyy-MM-dd") : null }))}
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
 
           {/* Skills */}
