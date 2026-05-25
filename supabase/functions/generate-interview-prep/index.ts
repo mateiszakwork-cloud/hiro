@@ -76,6 +76,7 @@ Each bullet starts with "- ". 3-7 bullets depending on the question type. Be spe
     "q3": "- bullet\\n- bullet",
     "q4": "- bullet\\n- bullet",
     "q5": "- bullet\\n- bullet",
+    "q9": "- bullet\\n- bullet",
     "q6": "- bullet\\n- bullet\\n- Verify all of the above with current sources — this may be outdated.",
     "q7": "- bullet\\n- bullet\\n- Verify all of the above with current sources — this may be outdated.",
     "q8": "- bullet\\n- bullet",
@@ -99,6 +100,12 @@ Per-question guidelines (follow exactly):
 - q4 — Why this role: 4-5 bullets. Each bullet must reference a specific responsibility or requirement from the job description and connect it to something specific in the CV. No generic motivation. Format: "The focus on [specific thing from JD] maps directly to my experience with [specific thing from CV]".
 
 - q5 — Why this company: 4-5 bullets. Must reference specific things about this company — a specific product line, a specific market position, a specific strategic move, something about how they operate. At least one bullet must reference something that makes this company different from its direct competitors. No generic sustainability or innovation talking points unless the JD specifically names them concretely.
+
+- q9 — First 30/60/90 days plan: structured as practical prep bullets in three labelled phases, NOT a polished speech. Use this exact bullet shape:
+  "- First 30 days — learn and observe: <2-4 sub-bullets>"
+  "- Days 30-60 — contribute and test: <2-4 sub-bullets>"
+  "- Days 60-90 — own and improve: <2-4 sub-bullets>"
+  Each phase must reference SPECIFIC things from the job description (named systems, named teams, named processes, named stakeholders, named products) and tie to the candidate's CV where possible. No vague consultant language like "build relationships" or "understand the business" without naming what specifically. Output the phase header line, then indent sub-bullets with "  - " (two spaces then hyphen). 9-12 sub-bullets total across the three phases.
 
 - q6 — Recent company news: 3 bullets of specific real or highly plausible news about this company up to training cutoff. Name actual events, product launches, leadership changes, or strategic moves. The LAST bullet MUST be exactly: "- Verify all of the above with current sources — this may be outdated."
 
@@ -168,6 +175,7 @@ Bullet formatting: every bullet starts with "- " (hyphen + space). Never use em-
       q3: normalize(answers.q3),
       q4: normalize(answers.q4),
       q5: normalize(answers.q5),
+      q9: normalize(answers.q9),
       q6: normalize(answers.q6),
       q7: normalize(answers.q7),
       q8: normalize(answers.q8),
