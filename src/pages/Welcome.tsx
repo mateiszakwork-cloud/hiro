@@ -9,10 +9,10 @@ import type { ParsedCVData } from "@/types/cv";
 import ProductTour from "@/components/ProductTour";
 
 const steps = [
-  { icon: UserCircle, title: "Build your profile once" },
+  { icon: UserCircle, title: "Set up your experience bank — once" },
   { icon: Link2, title: "Paste any job URL" },
-  { icon: FileText, title: "Get a tailored CV kit instantly" },
-  { icon: Users, title: "Find contacts and craft your outreach" },
+  { icon: FileText, title: "Hiro picks the most relevant experience, bullets and skills for that role" },
+  { icon: Users, title: "Track applications and craft outreach in one place" },
 ];
 
 const Welcome = () => {
@@ -198,8 +198,10 @@ const Welcome = () => {
             <span className="hiro-welcome-wordmark">
               Hiro<span className="hiro-welcome-dot" />
             </span>
-            <h1 className="hiro-welcome-heading">Welcome to your application toolkit</h1>
-            <p className="hiro-welcome-subtext">Build your profile once. Then turn any job URL into a tailored CV, interview prep, and outreach plan in seconds.</p>
+            <h1 className="hiro-welcome-heading">Set up your experience bank</h1>
+            <p className="hiro-welcome-subtext">
+              We know you've done this a million times for applications. On Hiro, you only do it once — then we reuse your structured background to tailor every future application.
+            </p>
           </div>
 
           {/* 4-step visual flow */}
@@ -214,17 +216,21 @@ const Welcome = () => {
             ))}
           </div>
 
-          {/* Pro tip card */}
-          <div className="hiro-tip-card mt-6">
-            <div className="flex items-start gap-2">
-              <span className="text-base">💡</span>
-              <p>
-                <span className="font-semibold">Pro tip:</span> The more bullet points you add per experience, the better Hiro can tailor your CV. Try adding 4–6 per role — Hiro will always pick the most relevant ones for each job.
-              </p>
-            </div>
+          {/* Optional CV import */}
+          <div className="mt-8">
+            <p className="text-sm font-semibold text-foreground">Optional: import from an existing CV</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              This is a shortcut, not the main path. Building your bank manually usually gives Hiro better material to tailor with.
+            </p>
           </div>
 
-          {/* CV Upload Section */}
+          <div className="mt-3 rounded-lg border border-border bg-muted/40 px-4 py-3 flex items-start gap-2.5">
+            <AlertTriangle className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+            <p className="text-xs text-muted-foreground">
+              CV import can help you get started, but it may miss context or wording. Review every section before saving.
+            </p>
+          </div>
+
           <div className="mt-6 rounded-lg border-2 border-dashed border-border p-6 bg-muted/30">
             <input
               ref={fileInputRef}
@@ -302,32 +308,20 @@ const Welcome = () => {
             )}
           </div>
 
-          {/* Action buttons */}
+          {/* Primary action: build manually. Import stays available above. */}
           <div className="mt-6">
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading || !!parsed}
-              className="hiro-upload-btn"
-            >
-              <Upload className="h-4 w-4" />
-              Upload my CV to get started
-            </button>
             {parsed ? (
-              <button
-                onClick={handleProceed}
-                className="hiro-upload-btn mt-3"
-              >
-                Review & edit my profile
+              <button onClick={handleProceed} className="hiro-upload-btn">
+                Review imported data & continue
               </button>
             ) : (
-              <button
-                onClick={handleProceed}
-                disabled={uploading}
-                className="hiro-build-manual-link"
-              >
-                Build my profile manually
+              <button onClick={handleProceed} disabled={uploading} className="hiro-upload-btn">
+                Build my experience bank
               </button>
             )}
+            <p className="hiro-build-manual-link mt-3 text-center" style={{ background: "transparent", border: "none" }}>
+              You can always import a CV later from your profile.
+            </p>
           </div>
         </div>
       </div>
