@@ -82,6 +82,10 @@ function QuestionBlock({
   regenerating,
   newsDisclaimer,
   hasGenerated,
+  editableTitle,
+  onTitleChange,
+  onDelete,
+  isCustom,
 }: {
   number: string;
   title: string;
@@ -91,18 +95,51 @@ function QuestionBlock({
   regenerating: boolean;
   newsDisclaimer?: boolean;
   hasGenerated: boolean;
+  editableTitle?: boolean;
+  onTitleChange?: (v: string) => void;
+  onDelete?: () => void;
+  isCustom?: boolean;
 }) {
   return (
-    <div className="space-y-2">
-      <h3 className="font-semibold text-foreground text-[15px]">
-        <span className="text-muted-foreground font-medium mr-2">{number}</span>
-        {title}
-      </h3>
+    <div className="space-y-2 group/qb">
+      <div className="flex items-start justify-between gap-3">
+        {editableTitle && onTitleChange ? (
+          <div className="flex-1">
+            <Input
+              value={title}
+              onChange={(e) => onTitleChange(e.target.value)}
+              placeholder="Type your question..."
+              className="font-semibold text-[15px] h-9"
+            />
+          </div>
+        ) : (
+          <h3 className="font-semibold text-foreground text-[15px] flex-1">
+            <span className="text-muted-foreground font-medium mr-2">{number}</span>
+            {title}
+          </h3>
+        )}
+        {isCustom && onDelete && (
+          <button
+            onClick={onDelete}
+            className="text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover/qb:opacity-100"
+            title="Delete question"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+      <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+        <Pencil className="h-3 w-3" />
+        Editable draft answer
+      </div>
       <AutoTextarea
         value={value}
         onChange={onChange}
-        placeholder={hasGenerated ? "" : "Click Generate All to create your answer"}
+        placeholder={hasGenerated ? "Write or paste your answer..." : "Click Generate All to create a draft answer you can then edit"}
       />
+      <p className="text-[11px] text-muted-foreground italic">
+        Edit this to match your real wording, examples, and speaking style.
+      </p>
       {newsDisclaimer && (
         <div className="flex items-start gap-2 p-3 rounded-md bg-amber-50 border border-amber-200 text-amber-900 text-xs">
           <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
