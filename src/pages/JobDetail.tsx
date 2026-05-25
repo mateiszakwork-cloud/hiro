@@ -1740,12 +1740,12 @@ const JobDetail = () => {
                                     w.company_name === block.company && w.job_title === block.job_title
                                   );
                                   if (!matchExp || !Array.isArray(matchExp.bullet_points)) {
-                                    toast({ title: "No more original bullets", description: "This experience has no unused original bullets.", variant: "destructive" });
+                                    toast.error("No more original bullets", { description: "This experience has no unused original bullets." });
                                     return;
                                   }
                                   const unused = matchExp.bullet_points.filter((bp: string) => !currentTexts.has(bp));
                                   if (unused.length === 0) {
-                                    toast({ title: "All originals used", description: "Every original bullet for this role is already shown." });
+                                    toast("All originals used", { description: "Every original bullet for this role is already shown." });
                                     return;
                                   }
                                   const newBullet: BulletItem = { original: unused[0], tailored: unused[0], use_tailored: false, origin: "original" };
@@ -1772,7 +1772,7 @@ const JobDetail = () => {
                                       },
                                     });
                                     if (error || !data?.success) {
-                                      toast({ title: "Couldn't generate bullet", description: data?.error || error?.message || "Try again.", variant: "destructive" });
+                                      toast.error("Couldn't generate bullet", { description: data?.error || error?.message || "Try again." });
                                       return;
                                     }
                                     const text = data.bullet as string;
@@ -1781,9 +1781,9 @@ const JobDetail = () => {
                                       i === blockIdx ? { ...b, bullets: [...b.bullets, newBullet] as BulletItem[] } : b
                                     );
                                     setCvOutput({ ...cvOutput, selected_bullets: updated });
-                                    toast({ title: "Tailored bullet added", description: "Review and edit it inline to keep it true to you." });
+                                    toast.success("Tailored bullet added", { description: "Review and edit it inline to keep it true to you." });
                                   } catch (e: any) {
-                                    toast({ title: "Generation failed", description: String(e?.message || e), variant: "destructive" });
+                                    toast.error("Generation failed", { description: String(e?.message || e) });
                                   }
                                 }}
                                 className="h-7 px-2 rounded border border-[#FBD5D5] bg-[#FFF5F5] text-xs text-[#950606] hover:bg-[#FFE5E5] inline-flex items-center gap-1"
