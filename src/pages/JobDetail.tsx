@@ -29,7 +29,7 @@ import { DEFAULT_SECTION_CONFIG, normalizeSectionConfig, type CvSectionConfig } 
 import { buildCvData } from "@/lib/buildCvData";
 import { Link } from "react-router-dom";
 
-type BulletItem = { original: string; tailored: string; use_tailored: boolean };
+type BulletItem = { original: string; tailored: string; use_tailored: boolean; origin?: "original" | "tailored" | "generated" };
 type BulletBlock = { company: string; job_title: string; bullets: BulletItem[] | string[] };
 
 type CvOutput = {
@@ -74,12 +74,12 @@ type Contact = {
 };
 
 const STATUS_OPTIONS = [
-  { value: "Saved", color: "bg-gray-200 text-gray-700" },
-  { value: "Applied", color: "bg-blue-100 text-blue-700" },
-  { value: "Screening", color: "bg-amber-100 text-amber-700" },
-  { value: "Interview", color: "bg-orange-100 text-orange-700" },
-  { value: "Offer", color: "bg-green-100 text-green-700" },
-  { value: "Rejected", color: "bg-red-100 text-red-700" },
+  { value: "Saved",     color: "bg-gray-200 text-gray-700",   description: "Bookmarked — not yet applied." },
+  { value: "Applied",   color: "bg-blue-100 text-blue-700",   description: "Application submitted, no engagement yet from the company." },
+  { value: "Screening", color: "bg-amber-100 text-amber-700", description: "Recruiter / HR screen, shortlist, or early process contact." },
+  { value: "Interview", color: "bg-orange-100 text-orange-700", description: "In active interview rounds." },
+  { value: "Offer",     color: "bg-green-100 text-green-700", description: "Offer received." },
+  { value: "Rejected",  color: "bg-red-100 text-red-700",     description: "No longer in process." },
 ];
 
 const OUTREACH_STATUSES = ["Not sent", "Request sent", "Connected", "Replied", "Meeting booked"];
@@ -203,8 +203,13 @@ const TagInput = ({ tags, onChange, placeholder = "Type and press Enter" }: { ta
 
 /* ── Bullet toggle helper ── */
 function normalizeBullet(b: any): BulletItem {
-  if (typeof b === "string") return { original: b, tailored: b, use_tailored: true };
-  return { original: b.original || b.tailored || "", tailored: b.tailored || b.original || "", use_tailored: b.use_tailored !== false };
+  if (typeof b === "string") return { original: b, tailored: b, use_tailored: true, origin: "original" };
+  return {
+    original: b.original || b.tailored || "",
+    tailored: b.tailored || b.original || "",
+    use_tailored: b.use_tailored !== false,
+    origin: b.origin === "tailored" || b.origin === "generated" ? b.origin : "original",
+  };
 }
 
 function bulletsAreIdentical(b: BulletItem) {
