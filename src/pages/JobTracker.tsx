@@ -1179,23 +1179,24 @@ const JobTracker = () => {
                         borderBottom: "1px solid #F3F4F6",
                         cursor: "pointer",
                         transition: "var(--transition)",
-                        minHeight: "56px",
+                        minHeight: "44px",
                       }}
                     >
                       {/* Open Full Page arrow - first column */}
-                      <td className="px-3 py-3" onClick={(e) => { e.stopPropagation(); navigate(`/jobs/${job.id}`); }}>
+                      <td className="pl-3 pr-1 py-2" onClick={(e) => { e.stopPropagation(); navigate(`/jobs/${job.id}`); }}>
                         <TooltipProvider delayDuration={200}>
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <button className="text-muted-foreground hover:text-primary transition-colors">
-                                <ArrowRight className="h-4 w-4 stroke-[2.5]" />
+                                <ArrowRight className="h-3.5 w-3.5 stroke-[2.5]" />
                               </button>
                             </TooltipTrigger>
                             <TooltipContent>Open full page</TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       </td>
-                      <td className="px-3 py-3">
+                      {/* Combined Company / Role cell — company primary, title secondary */}
+                      <td className="px-3 py-2">
                         <TooltipProvider delayDuration={300}>
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -1203,50 +1204,38 @@ const JobTracker = () => {
                                 <div className="h-7 w-7 rounded bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground shrink-0">
                                   {safeText(job.company_name)[0].toUpperCase()}
                                 </div>
-                                <span className="font-semibold text-foreground truncate">{safeText(job.company_name)}</span>
+                                <div className="min-w-0 flex-1 leading-tight">
+                                  <div className="font-semibold text-foreground truncate text-[13px]">
+                                    {safeText(job.company_name)}
+                                  </div>
+                                  <div className="truncate text-[12px] text-muted-foreground">
+                                    {!isBlank(job.job_title)
+                                      ? safeText(job.job_title)
+                                      : (job.url ? <span className="italic">Parsing...</span> : "–")}
+                                    {!isBlank(job.function) && (
+                                      <span className="ml-1 text-muted-foreground/70">· {job.function}</span>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
                             </TooltipTrigger>
-                            {!isBlank(job.company_name) && safeText(job.company_name).length > 14 && <TooltipContent>{safeText(job.company_name)}</TooltipContent>}
+                            <TooltipContent>
+                              <div className="text-xs">
+                                <div className="font-semibold">{safeText(job.company_name)}</div>
+                                <div>{safeText(job.job_title)}</div>
+                                {!isBlank(job.function) && <div className="text-muted-foreground">{job.function}</div>}
+                                {!isBlank(job.duration) && <div className="text-muted-foreground">Duration: {job.duration}</div>}
+                                {job.applied_date && <div className="text-muted-foreground">Applied: {format(new Date(job.applied_date), "MMM d, yyyy")}</div>}
+                              </div>
+                            </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       </td>
-                      <td className="px-3 py-3">
+                      <td className="px-3 py-2">
                         <TooltipProvider delayDuration={300}>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <span className="font-medium truncate block">
-                                {!isBlank(job.job_title)
-                                  ? safeText(job.job_title)
-                                  : (job.url ? <span className="text-muted-foreground italic">Parsing...</span> : "–")}
-                              </span>
-                            </TooltipTrigger>
-                            {!isBlank(job.job_title) && safeText(job.job_title).length > 18 && <TooltipContent>{safeText(job.job_title)}</TooltipContent>}
-                          </Tooltip>
-                        </TooltipProvider>
-                      </td>
-                      <td className="px-4 py-3">
-                        {!isBlank(job.function) ? (
-                          <span
-                            style={{
-                              display: "inline-block",
-                              borderRadius: "var(--radius-full)",
-                              padding: "4px 10px",
-                              fontFamily: "var(--font-body)",
-                              fontSize: "11px",
-                              fontWeight: 600,
-                              background: (FUNCTION_PILL[job.function as string] || FUNCTION_PILL.Other).bg,
-                              color: (FUNCTION_PILL[job.function as string] || FUNCTION_PILL.Other).color,
-                            }}
-                          >
-                            {job.function}
-                          </span>
-                        ) : <span className="text-muted-foreground">–</span>}
-                      </td>
-                      <td className="px-3 py-3">
-                        <TooltipProvider delayDuration={300}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="flex items-center gap-1 text-foreground truncate">
+                              <span className="flex items-center gap-1 text-foreground truncate text-[13px]">
                                 {!isBlank(job.location) ? <><MapPin className="h-3 w-3 text-muted-foreground shrink-0" /><span className="truncate">{safeText(job.location)}</span></> : <span className="text-muted-foreground">–</span>}
                               </span>
                             </TooltipTrigger>
@@ -1254,17 +1243,7 @@ const JobTracker = () => {
                           </Tooltip>
                         </TooltipProvider>
                       </td>
-                      <td className="px-3 py-3">
-                        <TooltipProvider delayDuration={300}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="text-foreground truncate block">{safeText(job.duration)}</span>
-                            </TooltipTrigger>
-                            {!isBlank(job.duration) && safeText(job.duration).length > 8 && <TooltipContent>{safeText(job.duration)}</TooltipContent>}
-                          </Tooltip>
-                        </TooltipProvider>
-                      </td>
-                      <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                      <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
                         {(() => {
                           const state = computeDeadlineState(job.application_deadline, job.status);
                           if (state.kind === "none") {
@@ -1307,12 +1286,12 @@ const JobTracker = () => {
                         })()}
                       </td>
                       {/* Start Date column */}
-                      <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                      <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
                         <Popover>
                           <PopoverTrigger asChild>
-                            <button className="text-sm text-foreground hover:text-primary transition-colors whitespace-nowrap">
+                            <button className="text-[12px] text-foreground hover:text-primary transition-colors whitespace-nowrap">
                               {job.start_date
-                                ? format(new Date(job.start_date), "MMM d, yyyy")
+                                ? format(new Date(job.start_date), "MMM d")
                                 : <span className="inline-flex items-center gap-1 text-muted-foreground"><CalendarIcon className="h-3 w-3" /> –</span>}
                             </button>
                           </PopoverTrigger>
@@ -1326,7 +1305,7 @@ const JobTracker = () => {
                           </PopoverContent>
                         </Popover>
                       </td>
-                      <td onClick={(e) => e.stopPropagation()}>
+                      <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
                         <Select value={job.status} onValueChange={(v) => handleStatusChange(job.id, v)}>
                           <SelectTrigger
                             className="h-6 w-auto border-0 gap-1 rounded-full"
@@ -1345,7 +1324,7 @@ const JobTracker = () => {
                           </SelectContent>
                         </Select>
                       </td>
-                      <td>
+                      <td className="px-3 py-2 text-center">
                         {job.match_score !== null ? (
                           <span
                             style={{
@@ -1353,8 +1332,8 @@ const JobTracker = () => {
                               display: "inline-flex",
                               alignItems: "center",
                               justifyContent: "center",
-                              width: "30px",
-                              height: "30px",
+                              width: "28px",
+                              height: "28px",
                               borderRadius: "50%",
                               fontFamily: "var(--font-data)",
                               fontSize: "10px",
@@ -1365,36 +1344,18 @@ const JobTracker = () => {
                           </span>
                         ) : <span className="text-muted-foreground">–</span>}
                       </td>
-                      {/* Kit column */}
-                      <td className="px-3 py-3" onClick={(e) => { e.stopPropagation(); handleKitClick(e, job); }}>
-                        <TooltipProvider delayDuration={200}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button className="transition-colors relative">
-                                {generatingKit === job.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                                ) : cvMap[job.id] ? (
-                                  <span className="relative inline-block">
-                                    <Wand2 className="h-4 w-4 text-[#950606]" />
-                                    <Check className="h-2.5 w-2.5 text-[#950606] absolute -bottom-0.5 -right-1 stroke-[3]" />
-                                  </span>
-                                ) : (
-                                  <Wand2 className="h-4 w-4 text-muted-foreground hover:text-foreground" />
-                                )}
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              {generatingKit === job.id
-                                ? "Generating..."
-                                : cvMap[job.id]
-                                  ? "Kit ready — click to view"
-                                  : "Generate Application Kit"}
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                      <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                        <Select value={job.priority} onValueChange={(v) => handlePriorityChange(job.id, v)}>
+                          <SelectTrigger className={`h-6 w-auto border-0 gap-1 px-2 rounded-full text-[11px] font-medium ${getPriorityColor(job.priority)}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {PRIORITY_OPTIONS.map(p => <SelectItem key={p.value} value={p.value}>{p.value}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
                       </td>
                       {/* Outreach column */}
-                      <td className="px-3 py-3" onClick={(e) => { e.stopPropagation(); navigate(`/jobs/${job.id}?tab=outreach`); }}>
+                      <td className="px-3 py-2" onClick={(e) => { e.stopPropagation(); navigate(`/jobs/${job.id}?tab=outreach`); }}>
                         {(() => {
                           const o = outreachMap[job.id];
                           if (!o || o.count === 0) {
@@ -1441,37 +1402,6 @@ const JobTracker = () => {
                             </TooltipProvider>
                           );
                         })()}
-                      </td>
-                      <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
-                        <Select value={job.priority} onValueChange={(v) => handlePriorityChange(job.id, v)}>
-                          <SelectTrigger className={`h-7 w-auto border-0 gap-1 px-2 rounded-full text-xs font-medium ${getPriorityColor(job.priority)}`}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {PRIORITY_OPTIONS.map(p => <SelectItem key={p.value} value={p.value}>{p.value}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </td>
-                      <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
-                        {job.status === "Saved" && !job.applied_date ? (
-                          <span className="text-muted-foreground">–</span>
-                        ) : (
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <button className="text-sm text-foreground hover:text-primary transition-colors whitespace-nowrap">
-                                {job.applied_date ? format(new Date(job.applied_date), "MMM d") : <span className="flex items-center gap-1 text-muted-foreground"><CalendarIcon className="h-3 w-3" /> Set</span>}
-                              </button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                                mode="single"
-                                selected={job.applied_date ? new Date(job.applied_date) : undefined}
-                                onSelect={(d) => handleAppliedDateChange(job.id, d)}
-                                className={cn("p-3 pointer-events-auto")}
-                              />
-                            </PopoverContent>
-                          </Popover>
-                        )}
                       </td>
                       {/* Custom text columns */}
                       {customColumns.map((cc) => {
