@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Briefcase, MapPin, Trash2, ExternalLink, Loader2, CalendarIcon, ArrowUp, ArrowDown, ArrowUpDown, Wand2, Check, Copy, ArrowRight, Pencil, Users, AlertCircle, X } from "lucide-react";
+import { Plus } from "lucide-react";
 import { computeDeadlineState, DeadlineBadge } from "@/lib/deadlineUtils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -19,13 +20,18 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import ManualJobModal from "@/components/ManualJobModal";
+import CustomColumnCell from "@/components/CustomColumnCell";
 
 type Job = {
   id: string; url: string | null; company_name: string | null; job_title: string | null;
   function: string | null; location: string | null; work_mode: string | null;
   duration: string | null; status: string; match_score: number | null; created_at: string;
   priority: string; applied_date: string | null; application_deadline: string | null;
+  start_date: string | null;
 };
+
+type CustomColumn = { id: string; name: string; sort_order: number };
+type CustomValueMap = Record<string, Record<string, string>>; // jobId -> columnId -> value
 
 type CvOutput = {
   tailored_summary: string | null;
@@ -129,12 +135,13 @@ const isValidUrl = (str: string): boolean => {
   }
 };
 
-type SortKey = "company_name" | "job_title" | "function" | "location" | "duration" | "status" | "match_score" | "priority" | "created_at" | "applied_date" | "application_deadline";
+type SortKey = "company_name" | "job_title" | "function" | "location" | "duration" | "status" | "match_score" | "priority" | "created_at" | "applied_date" | "application_deadline" | "start_date";
 type SortDir = "asc" | "desc";
 
 // Default column widths in pixels — generous so all columns fit a 1280px screen
 // without horizontal scroll (sidebar 240 + page padding ~64 = 304 reserved).
-const COLUMNS: { label: string; key: SortKey | null; width: number; resizable: boolean }[] = [
+type ColDef = { label: string; key: SortKey | null; width: number; resizable: boolean; custom?: { id: string } };
+const DEFAULT_COLUMNS: ColDef[] = [
   { label: "",         key: null,                   width: 36,  resizable: false },
   { label: "Company",  key: "company_name",         width: 140, resizable: true  },
   { label: "Job Title",key: "job_title",            width: 220, resizable: true  },
@@ -142,6 +149,7 @@ const COLUMNS: { label: string; key: SortKey | null; width: number; resizable: b
   { label: "Location", key: "location",             width: 140, resizable: true  },
   { label: "Duration", key: "duration",             width: 90,  resizable: true  },
   { label: "Deadline", key: "application_deadline", width: 110, resizable: true  },
+  { label: "Start Date", key: "start_date",         width: 110, resizable: true  },
   { label: "Status",   key: "status",               width: 110, resizable: true  },
   { label: "Match",    key: "match_score",          width: 80,  resizable: true  },
   { label: "Kit",      key: null,                   width: 44,  resizable: false },
@@ -192,6 +200,18 @@ const JobTracker = () => {
   const [contactsReached, setContactsReached] = useState(0);
   const [onlyOutreach, setOnlyOutreach] = useState(false);
   const [deadlineAlertDismissed, setDeadlineAlertDismissed] = useState(false);
+  const [customColumns, setCustomColumns] = useState<CustomColumn[]>([]);
+  const [customValues, setCustomValues] = useState<CustomValueMap>({});
+  const [addColumnOpen, setAddColumnOpen] = useState(false);
+  const [newColumnName, setNewColumnName] = useState("");
+
+  // Combined columns: default + user-defined (rendered after defaults, before nothing)
+  const COLUMNS: ColDef[] = useMemo(() => [
+    ...DEFAULT_COLUMNS,
+    ...customColumns.map((c) => ({
+      label: c.name, key: null as SortKey | null, width: 140, resizable: true, custom: { id: c.id },
+    })),
+  ], [customColumns]);
 
   // Compute urgent deadline jobs (within 7 days, status Saved or Applied)
   const urgentDeadlineJobs = useMemo(() => {
@@ -321,6 +341,16 @@ const JobTracker = () => {
           ? new Date(bv).getTime() - new Date(av).getTime()
           : new Date(av).getTime() - new Date(bv).getTime();
       }
+      if (sortKey === "start_date") {
+        const av = a.start_date;
+        const bv = b.start_date;
+        if (!av && !bv) return 0;
+        if (!av) return 1;
+        if (!bv) return -1;
+        return sortDir === "desc"
+          ? new Date(bv).getTime() - new Date(av).getTime()
+          : new Date(av).getTime() - new Date(bv).getTime();
+      }
       return compareStr(a[sortKey] as string | null, b[sortKey] as string | null, sortDir);
     });
     return result;
@@ -378,6 +408,28 @@ const JobTracker = () => {
         setOutreachMap(oMap);
         setContactsReached(reached);
       }
+
+      // Fetch custom columns + values
+      const { data: ccData } = await supabase
+        .from("job_custom_columns" as any)
+        .select("id, name, sort_order")
+        .eq("user_id", session.user.id)
+        .order("sort_order", { ascending: true })
+        .order("created_at", { ascending: true });
+      if (ccData) setCustomColumns(ccData as any);
+
+      const { data: ccvData } = await supabase
+        .from("job_custom_column_values" as any)
+        .select("job_id, column_id, value")
+        .eq("user_id", session.user.id);
+      if (ccvData) {
+        const vmap: CustomValueMap = {};
+        for (const r of ccvData as any[]) {
+          if (!vmap[r.job_id]) vmap[r.job_id] = {};
+          vmap[r.job_id][r.column_id] = r.value || "";
+        }
+        setCustomValues(vmap);
+      }
     };
     init();
   }, []);
@@ -385,7 +437,7 @@ const JobTracker = () => {
   const fetchJobs = async (uid: string) => {
     const { data } = await supabase
       .from("jobs")
-      .select("id, url, company_name, job_title, function, location, work_mode, duration, status, match_score, created_at, priority, applied_date, application_deadline")
+      .select("id, url, company_name, job_title, function, location, work_mode, duration, status, match_score, created_at, priority, applied_date, application_deadline, start_date")
       .eq("user_id", uid)
       .order("created_at", { ascending: false });
     if (data) setJobs(data as any);
@@ -503,11 +555,12 @@ const JobTracker = () => {
       duration: data.duration.trim() || null, hard_skills: data.hard_skills,
       soft_skills: data.soft_skills, languages_required: data.languages_required,
       application_deadline: data.application_deadline || null,
+      start_date: data.start_date || null,
     };
     const { data: job, error } = await supabase
       .from("jobs")
       .insert(insertData)
-      .select("id, url, company_name, job_title, function, location, work_mode, duration, status, match_score, created_at, priority, applied_date, application_deadline")
+      .select("id, url, company_name, job_title, function, location, work_mode, duration, status, match_score, created_at, priority, applied_date, application_deadline, start_date")
       .single();
     if (error || !job) { toast.error("Failed to save job."); return; }
     setJobs((prev) => [job as any, ...prev]);
@@ -576,6 +629,56 @@ const JobTracker = () => {
     setJobs((prev) => prev.map((j) => (j.id === jobId ? { ...j, application_deadline } : j)));
   };
 
+  const handleStartDateChange = async (jobId: string, date: Date | undefined) => {
+    const start_date = date ? format(date, "yyyy-MM-dd") : null;
+    await supabase.from("jobs").update({ start_date }).eq("id", jobId);
+    setJobs((prev) => prev.map((j) => (j.id === jobId ? { ...j, start_date } : j)));
+  };
+
+  const handleCreateCustomColumn = async () => {
+    if (!userId) return;
+    const name = newColumnName.trim();
+    if (!name) return;
+    const nextOrder = customColumns.length
+      ? Math.max(...customColumns.map(c => c.sort_order)) + 1
+      : 0;
+    const { data, error } = await supabase
+      .from("job_custom_columns" as any)
+      .insert({ user_id: userId, name, sort_order: nextOrder } as any)
+      .select("id, name, sort_order")
+      .single();
+    if (error || !data) { toast.error("Failed to add column"); return; }
+    setCustomColumns(prev => [...prev, data as any]);
+    setNewColumnName("");
+    setAddColumnOpen(false);
+    toast.success(`Column "${name}" added`);
+  };
+
+  const handleDeleteCustomColumn = async (columnId: string) => {
+    if (!userId) return;
+    await supabase.from("job_custom_columns" as any).delete().eq("id", columnId);
+    setCustomColumns(prev => prev.filter(c => c.id !== columnId));
+    setCustomValues(prev => {
+      const next: CustomValueMap = {};
+      for (const jid of Object.keys(prev)) {
+        const { [columnId]: _, ...rest } = prev[jid];
+        next[jid] = rest;
+      }
+      return next;
+    });
+  };
+
+  const handleSetCustomValue = async (jobId: string, columnId: string, value: string) => {
+    if (!userId) return;
+    setCustomValues(prev => ({
+      ...prev,
+      [jobId]: { ...(prev[jobId] || {}), [columnId]: value },
+    }));
+    await supabase
+      .from("job_custom_column_values" as any)
+      .upsert({ user_id: userId, job_id: jobId, column_id: columnId, value, updated_at: new Date().toISOString() } as any, { onConflict: "job_id,column_id" });
+  };
+
   const confirmDeleteJob = async () => {
     if (!deleteJobId) return;
     await supabase.from("jobs").delete().eq("id", deleteJobId);
@@ -622,16 +725,11 @@ const JobTracker = () => {
       <div
         style={{
           background: "var(--color-bg-white)",
-          padding: "20px 28px",
+          padding: "20px 28px 18px",
           borderBottom: "1px solid var(--color-border)",
-          display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "space-between",
-          gap: "24px",
-          flexWrap: "wrap",
         }}
       >
-        <div>
+        <div style={{ maxWidth: 880 }}>
           <h1
             style={{
               fontFamily: "var(--font-heading)",
@@ -650,18 +748,17 @@ const JobTracker = () => {
               fontSize: "13px",
               color: "var(--color-text-muted)",
               marginTop: "6px",
+              marginBottom: "14px",
             }}
           >
-            Paste a job URL to automatically fill every column
+            Paste a general job posting URL from LinkedIn, Greenhouse, Workday, Lever, or a company careers page — Hiro will fill every column for you.
           </p>
-        </div>
 
-        <div style={{ flex: 1, maxWidth: "520px", minWidth: "280px" }}>
-          <div style={{ display: "flex", gap: "10px" }}>
+          <div style={{ display: "flex", gap: "10px", alignItems: "stretch" }}>
             <Input
               value={url}
               onChange={(e) => { setUrl(e.target.value); if (urlError) setUrlError(""); }}
-              placeholder="Paste a job posting URL..."
+              placeholder="Paste a general job posting URL from LinkedIn, Greenhouse, Workday, Lever, or a company careers page..."
               onKeyDown={(e) => e.key === "Enter" && !loading && handleAddJob()}
               disabled={loading}
               style={{
@@ -707,23 +804,32 @@ const JobTracker = () => {
             >
               {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Parsing...</> : "Add Job"}
             </button>
-          </div>
-          <div className="flex items-center gap-3 mt-1.5">
-            {urlError && <p className="text-destructive text-xs">{urlError}</p>}
             <button
               type="button"
               onClick={() => { setManualPrefillUrl(url.trim()); setManualOpen(true); }}
-              className="text-xs ml-auto"
-              style={{ color: "var(--color-text-muted)" }}
+              style={{
+                height: "44px",
+                background: "var(--color-bg-white)",
+                color: "var(--color-text-primary)",
+                fontFamily: "var(--font-body)",
+                fontSize: "14px",
+                fontWeight: 600,
+                borderRadius: "var(--radius-md)",
+                padding: "0 16px",
+                border: "1px solid var(--color-border)",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+              }}
             >
               Add manually
             </button>
           </div>
+          {urlError && <p className="text-destructive text-xs mt-1.5">{urlError}</p>}
         </div>
       </div>
 
       {/* Metrics bar */}
-      <div style={{ padding: "16px 28px" }}>
+      <div style={{ padding: "14px 28px 6px" }}>
         {stats.total === 0 ? (
           <div
             style={{
@@ -837,6 +943,33 @@ const JobTracker = () => {
       {showTable && (
         <div style={{ padding: "0 28px 12px" }}>
           <div className="flex items-center gap-3 flex-wrap">
+            <Popover open={addColumnOpen} onOpenChange={setAddColumnOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  className="h-8 inline-flex items-center gap-1.5 px-3 text-xs font-medium rounded-lg border border-input bg-background text-foreground hover:bg-muted transition-colors"
+                  title="Add a custom text column"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Add column
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-64 p-3">
+                <p className="text-xs font-medium text-foreground mb-2">New custom column</p>
+                <Input
+                  value={newColumnName}
+                  onChange={(e) => setNewColumnName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleCreateCustomColumn(); }}
+                  placeholder="Column name"
+                  className="h-8 text-sm"
+                  autoFocus
+                />
+                <p className="text-[11px] text-muted-foreground mt-1.5">Free text only. You can edit values per job.</p>
+                <div className="flex justify-end gap-2 mt-3">
+                  <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => { setAddColumnOpen(false); setNewColumnName(""); }}>Cancel</Button>
+                  <Button size="sm" className="h-7 text-xs" onClick={handleCreateCustomColumn} disabled={!newColumnName.trim()}>Add</Button>
+                </div>
+              </PopoverContent>
+            </Popover>
             <div className="ml-auto flex items-center gap-2">
               <button
                 onClick={() => setOnlyOutreach(v => !v)}
@@ -946,7 +1079,7 @@ const JobTracker = () => {
                   marginRight: "auto",
                 }}
               >
-                Paste a job URL at the top of the page and Hiro will fill in every column for you.
+                Paste a general job posting URL (LinkedIn, Greenhouse, Workday, Lever, or a company careers page) at the top — Hiro will fill in every column for you.
               </p>
             </div>
           ) : (
@@ -995,6 +1128,16 @@ const JobTracker = () => {
                                    <ArrowUpDown className="h-3 w-3 opacity-0 group-hover/th:opacity-50 transition-opacity" />
                                  )
                                )}
+                               {col.custom && (
+                                 <button
+                                   type="button"
+                                   onClick={(e) => { e.stopPropagation(); handleDeleteCustomColumn(col.custom!.id); }}
+                                   className="ml-1 text-muted-foreground hover:text-destructive opacity-0 group-hover/th:opacity-100 transition-opacity"
+                                   title="Delete column"
+                                 >
+                                   <X className="h-3 w-3" />
+                                 </button>
+                               )}
                              </span>
                            )}
                            {col.resizable && (
@@ -1016,24 +1159,18 @@ const JobTracker = () => {
                 <tbody>
                   {parsing && (
                     <tr className="border-b animate-pulse">
-                      <td className="px-3 py-3"></td>
-                      <td className="px-3 py-3"><div className="flex items-center gap-2.5"><Skeleton className="h-8 w-8 rounded" /><Skeleton className="h-4 w-24" /></div></td>
-                      <td className="px-3 py-3">
-                        <div className="flex items-center gap-2">
-                          <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-                          <span className="text-muted-foreground text-sm italic">Reading...</span>
-                        </div>
-                      </td>
-                      <td className="px-3 py-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
-                      <td className="px-3 py-3"><Skeleton className="h-4 w-20" /></td>
-                      <td className="px-3 py-3"><Skeleton className="h-5 w-14 rounded-full" /></td>
-                      <td className="px-3 py-3"><Skeleton className="h-4 w-14" /></td>
-                      <td className="px-3 py-3"><Skeleton className="h-4 w-16" /></td>
-                      <td className="px-3 py-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
-                      <td className="px-3 py-3"><Skeleton className="h-8 w-8 rounded-full" /></td>
-                      <td className="px-3 py-3"><Skeleton className="h-4 w-4" /></td>
-                      <td className="px-3 py-3"><Skeleton className="h-5 w-14 rounded-full" /></td>
-                      <td className="px-3 py-3"><Skeleton className="h-4 w-14" /></td>
+                      {COLUMNS.map((col, i) => (
+                        <td key={i} className="px-3 py-3">
+                          {i === 0 ? null : i === 2 ? (
+                            <div className="flex items-center gap-2">
+                              <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                              <span className="text-muted-foreground text-sm italic">Reading...</span>
+                            </div>
+                          ) : (
+                            <Skeleton className="h-4 w-16" />
+                          )}
+                        </td>
+                      ))}
                     </tr>
                   )}
                   {filteredAndSorted.map((job) => (
@@ -1171,6 +1308,26 @@ const JobTracker = () => {
                             </Popover>
                           );
                         })()}
+                      </td>
+                      {/* Start Date column */}
+                      <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button className="text-sm text-foreground hover:text-primary transition-colors whitespace-nowrap">
+                              {job.start_date
+                                ? format(new Date(job.start_date), "MMM d, yyyy")
+                                : <span className="inline-flex items-center gap-1 text-muted-foreground"><CalendarIcon className="h-3 w-3" /> –</span>}
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={job.start_date ? new Date(job.start_date) : undefined}
+                              onSelect={(d) => handleStartDateChange(job.id, d)}
+                              className={cn("p-3 pointer-events-auto")}
+                            />
+                          </PopoverContent>
+                        </Popover>
                       </td>
                       <td onClick={(e) => e.stopPropagation()}>
                         <Select value={job.status} onValueChange={(v) => handleStatusChange(job.id, v)}>
@@ -1319,6 +1476,18 @@ const JobTracker = () => {
                           </Popover>
                         )}
                       </td>
+                      {/* Custom text columns */}
+                      {customColumns.map((cc) => {
+                        const val = customValues[job.id]?.[cc.id] || "";
+                        return (
+                          <td key={cc.id} className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                            <CustomColumnCell
+                              value={val}
+                              onSave={(next) => handleSetCustomValue(job.id, cc.id, next)}
+                            />
+                          </td>
+                        );
+                      })}
                     </tr>
                   ))}
                 </tbody>
