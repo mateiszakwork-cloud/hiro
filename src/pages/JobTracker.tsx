@@ -1314,6 +1314,26 @@ const JobTracker = () => {
                           );
                         })()}
                       </td>
+                      {/* Start Date column */}
+                      <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button className="text-sm text-foreground hover:text-primary transition-colors whitespace-nowrap">
+                              {job.start_date
+                                ? format(new Date(job.start_date), "MMM d, yyyy")
+                                : <span className="inline-flex items-center gap-1 text-muted-foreground"><CalendarIcon className="h-3 w-3" /> –</span>}
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={job.start_date ? new Date(job.start_date) : undefined}
+                              onSelect={(d) => handleStartDateChange(job.id, d)}
+                              className={cn("p-3 pointer-events-auto")}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </td>
                       <td onClick={(e) => e.stopPropagation()}>
                         <Select value={job.status} onValueChange={(v) => handleStatusChange(job.id, v)}>
                           <SelectTrigger
