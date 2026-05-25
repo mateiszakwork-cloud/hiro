@@ -1079,7 +1079,7 @@ const JobTracker = () => {
                   marginRight: "auto",
                 }}
               >
-                Paste a job URL at the top of the page and Hiro will fill in every column for you.
+                Paste a general job posting URL (LinkedIn, Greenhouse, Workday, Lever, or a company careers page) at the top — Hiro will fill in every column for you.
               </p>
             </div>
           ) : (
