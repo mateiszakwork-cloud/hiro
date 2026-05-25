@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -8,9 +8,6 @@ import StepWorkExperience from "@/components/onboarding/StepWorkExperience";
 import StepEducation from "@/components/onboarding/StepEducation";
 import StepSkills from "@/components/onboarding/StepSkills";
 import StepLanguages from "@/components/onboarding/StepLanguages";
-import StepAwards from "@/components/onboarding/StepAwards";
-import StepVolunteering from "@/components/onboarding/StepVolunteering";
-import StepInterests from "@/components/onboarding/StepInterests";
 import type { ParsedCVData } from "@/types/cv";
 
 const STEPS = [
@@ -18,9 +15,6 @@ const STEPS = [
   { n: 2, label: "Education" },
   { n: 3, label: "Skills" },
   { n: 4, label: "Languages" },
-  { n: 5, label: "Awards" },
-  { n: 6, label: "Volunteer" },
-  { n: 7, label: "Interests" },
 ];
 
 const Onboarding = () => {
@@ -33,6 +27,12 @@ const Onboarding = () => {
 
   const handleNext = () => { if (currentStep < STEPS.length) setCurrentStep(s => s + 1); };
   const handleBack = () => { if (currentStep > 1) setCurrentStep(s => s - 1); };
+  const handleFinish = () => navigate("/dashboard");
+
+  // Scroll to top whenever the step changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [currentStep]);
 
   if (!isReady) {
     return (
@@ -60,6 +60,16 @@ const Onboarding = () => {
   return (
     <div className="hiro-onboarding-bg">
       <div className="hiro-onboarding-container">
+        {/* Intro framing */}
+        <div className="mb-6 rounded-lg border border-border bg-card px-5 py-4">
+          <p className="text-sm text-foreground">
+            <span className="font-semibold">Set up your experience bank — once.</span>{" "}
+            <span className="text-muted-foreground">
+              We know you've done this a million times for applications. On Hiro, you only do it once. Hiro stores your structured background and reuses it to tailor every future application.
+            </span>
+          </p>
+        </div>
+
         {/* Stepper */}
         <div className="mb-8">
           <div className="hiro-stepper">
@@ -110,13 +120,10 @@ const Onboarding = () => {
           <StepLanguages
             userId={userId}
             onBack={handleBack}
-            onNext={handleNext}
+            onNext={handleFinish}
             initialData={cvData?.languages}
           />
         )}
-        {currentStep === 5 && <StepAwards userId={userId} onBack={handleBack} onNext={handleNext} />}
-        {currentStep === 6 && <StepVolunteering userId={userId} onBack={handleBack} onNext={handleNext} />}
-        {currentStep === 7 && <StepInterests userId={userId} onBack={handleBack} onFinish={() => navigate("/dashboard")} />}
       </div>
     </div>
   );

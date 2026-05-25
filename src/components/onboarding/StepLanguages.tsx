@@ -52,7 +52,7 @@ const StepLanguages = ({ userId, onBack, onNext, initialData }: Props) => {
   return (
     <div className="rounded-lg bg-card p-8 shadow-sm">
       <h1 className="text-2xl font-bold text-foreground">Languages you speak</h1>
-      <p className="mt-1 text-muted-foreground">Include all languages you can work in professionally.</p>
+      <p className="mt-1 text-muted-foreground">Include every language you could work in — Hiro uses this when a role asks for specific language requirements.</p>
 
       <div className="mt-6 space-y-4">
         {rows.map((row, idx) => (
@@ -82,7 +82,7 @@ const StepLanguages = ({ userId, onBack, onNext, initialData }: Props) => {
       <div className="mt-8 flex justify-between">
         <button onClick={onBack} className="text-sm font-medium text-muted-foreground hover:text-foreground">← Back</button>
         <button onClick={handleNext} disabled={saving} className="rounded-lg bg-primary px-6 py-2 text-sm font-semibold text-primary-foreground hover:bg-accent transition-colors disabled:opacity-50">
-          {saving ? "Saving..." : "Next →"}
+          {saving ? "Saving..." : "Finish setup →"}
         </button>
       </div>
     </div>

@@ -231,12 +231,15 @@ export type Database = {
           created_at: string
           degree: string
           description: string | null
+          end_month: number | null
           end_year: number | null
-          field_of_study: string
+          field_of_study: string | null
           grade: string | null
           id: string
           institution: string
           is_expected: boolean
+          level_of_study: string | null
+          start_month: number | null
           start_year: number
           user_id: string
         }
@@ -245,12 +248,15 @@ export type Database = {
           created_at?: string
           degree: string
           description?: string | null
+          end_month?: number | null
           end_year?: number | null
-          field_of_study: string
+          field_of_study?: string | null
           grade?: string | null
           id?: string
           institution: string
           is_expected?: boolean
+          level_of_study?: string | null
+          start_month?: number | null
           start_year: number
           user_id: string
         }
@@ -259,12 +265,15 @@ export type Database = {
           created_at?: string
           degree?: string
           description?: string | null
+          end_month?: number | null
           end_year?: number | null
-          field_of_study?: string
+          field_of_study?: string | null
           grade?: string | null
           id?: string
           institution?: string
           is_expected?: boolean
+          level_of_study?: string | null
+          start_month?: number | null
           start_year?: number
           user_id?: string
         }
