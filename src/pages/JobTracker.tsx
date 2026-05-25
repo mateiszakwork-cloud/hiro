@@ -1000,7 +1000,7 @@ const JobTracker = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="All">All Statuses</SelectItem>
-                  {STATUS_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.value}</SelectItem>)}
+                  {STATUS_OPTIONS.map(s => (<SelectItem key={s.value} value={s.value}><div className="flex flex-col py-0.5"><span className="text-sm font-medium">{s.value}</span><span className="text-[11px] text-muted-foreground leading-snug">{s.description}</span></div></SelectItem>))}
                 </SelectContent>
               </Select>
               <Select value={filterFunction} onValueChange={setFilterFunction}>
@@ -1344,7 +1344,7 @@ const JobTracker = () => {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {STATUS_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.value}</SelectItem>)}
+                            {STATUS_OPTIONS.map(s => (<SelectItem key={s.value} value={s.value}><div className="flex flex-col py-0.5"><span className="text-sm font-medium">{s.value}</span><span className="text-[11px] text-muted-foreground leading-snug">{s.description}</span></div></SelectItem>))}
                           </SelectContent>
                         </Select>
                       </td>
