@@ -10,7 +10,8 @@ import { Trash2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-const YEARS = Array.from({ length: 37 }, (_, i) => 2026 - i);
+// 1990 → 2035 so future / planned roles are selectable
+const YEARS = Array.from({ length: 46 }, (_, i) => 2035 - i);
 
 interface WorkBlock {
   companyName: string;
@@ -27,7 +28,7 @@ interface WorkBlock {
 const emptyBlock = (): WorkBlock => ({
   companyName: "", jobTitle: "", location: "",
   startMonth: "", startYear: "", endMonth: "", endYear: "",
-  isCurrent: false, bullets: [""],
+  isCurrent: false, bullets: ["", "", ""],
 });
 
 interface Props { userId: string; onNext: () => void; initialData?: import("@/types/cv").ParsedWorkExperience[]; }
@@ -44,7 +45,7 @@ const StepWorkExperience = ({ userId, onNext, initialData }: Props) => {
         endMonth: d.end_month || "",
         endYear: d.end_year ? String(d.end_year) : "",
         isCurrent: d.is_current || false,
-        bullets: d.bullet_points?.length ? d.bullet_points : [""],
+        bullets: d.bullet_points?.length ? d.bullet_points : ["", "", ""],
       }));
     }
     return [emptyBlock()];
@@ -104,13 +105,10 @@ const StepWorkExperience = ({ userId, onNext, initialData }: Props) => {
 
   return (
     <div className="rounded-lg bg-card p-8 shadow-sm">
-      <h1 className="text-2xl font-bold text-foreground">Tell us about your experience</h1>
-      <p className="mt-1 text-muted-foreground">Add your work history. Be detailed with your bullet points, as the AI will use them to tailor your CV.</p>
-
-      <div className="mt-4 mb-6 rounded-lg bg-muted/60 border border-border px-4 py-3 flex items-start gap-2.5">
-        <span className="text-muted-foreground shrink-0 mt-0.5 text-sm">ℹ️</span>
-        <p className="text-sm text-muted-foreground">Add as many bullet points as you can (up to 10 per role). Hiro will select the most relevant ones for each job application.</p>
-      </div>
+      <h1 className="text-2xl font-bold text-foreground">Build your experience bank</h1>
+      <p className="mt-1 text-muted-foreground">
+        Add every role you might want to draw from. For each application, Hiro will pick the most relevant experience, bullets, and skills — so the more concrete you are here, the sharper your tailored CVs will be.
+      </p>
 
       <div className="mt-6 space-y-6">
         {blocks.map((block, idx) => (
@@ -169,12 +167,13 @@ const StepWorkExperience = ({ userId, onNext, initialData }: Props) => {
 
             <div className="space-y-2">
               <Label>Key Responsibilities / Achievements *</Label>
+              <p className="text-xs text-muted-foreground">Strong, specific bullets work best — include numbers, tools, and outcomes. These become the building blocks for every future tailored CV.</p>
               {block.bullets.map((bp, bIdx) => (
                 <div key={bIdx} className="flex items-start gap-2">
                   <Textarea
                     value={bp}
                     onChange={(e) => updateBullet(idx, bIdx, e.target.value)}
-                    placeholder="Describe a key responsibility or achievement..."
+                    placeholder="e.g. Led a 4-person team to launch X, increasing Y by 30% in 6 months"
                     className="rounded-lg min-h-[56px]"
                     rows={2}
                   />
