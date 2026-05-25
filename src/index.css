@@ -1565,7 +1565,7 @@
 /* How it works */
 .hiro-how-grid {
   display: grid;
-  grid-template-columns: 1fr auto 1fr auto 1fr;
+  grid-template-columns: repeat(4, 1fr);
   gap: 24px;
   align-items: stretch;
 }
