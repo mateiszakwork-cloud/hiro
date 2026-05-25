@@ -2374,3 +2374,95 @@ select:focus-visible,
   border-color: var(--color-primary) !important;
   box-shadow: 0 0 0 3px var(--color-primary-light) !important;
 }
+
+/* ===== Landing demo placeholder section ===== */
+.hiro-demo-frame {
+  margin-top: 40px;
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(255,255,255,0.1);
+  background:
+    radial-gradient(circle at 30% 20%, rgba(149,6,6,0.18), transparent 55%),
+    linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+  aspect-ratio: 16 / 9;
+  max-height: 520px;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+.hiro-demo-frame::after {
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  mask-image: radial-gradient(ellipse at center, #000 40%, transparent 75%);
+}
+.hiro-demo-inner {
+  text-align: center;
+  max-width: 520px;
+  padding: 24px;
+  position: relative;
+  z-index: 1;
+}
+.hiro-demo-icon { color: #fff; opacity: 0.85; margin: 0 auto 16px; display: block; }
+.hiro-demo-label {
+  font-family: var(--font-heading);
+  font-size: 20px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 8px;
+}
+.hiro-demo-sub {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: rgba(255,255,255,0.6);
+  line-height: 1.6;
+  margin: 0;
+}
+.hiro-demo-proof {
+  margin-top: 32px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.hiro-demo-proof-cell {
+  display: flex;
+  gap: 12px;
+  padding: 20px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-lg);
+  color: rgba(255,255,255,0.85);
+}
+.hiro-demo-proof-cell svg { color: var(--color-primary); flex-shrink: 0; margin-top: 2px; }
+.hiro-demo-proof-h {
+  font-family: var(--font-heading);
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 4px;
+}
+.hiro-demo-proof-body {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: rgba(255,255,255,0.6);
+  line-height: 1.55;
+}
+
+/* Equalize hero CTA heights */
+.hiro-hero-cta-row .hiro-cta-primary,
+.hiro-hero-cta-row .hiro-cta-secondary {
+  min-height: 52px;
+  padding: 14px 28px;
+}
+
+@media (max-width: 900px) {
+  .hiro-how-grid { grid-template-columns: 1fr 1fr; }
+  .hiro-demo-proof { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .hiro-how-grid { grid-template-columns: 1fr; }
+  .hiro-demo-frame { aspect-ratio: 4 / 3; }
+}
