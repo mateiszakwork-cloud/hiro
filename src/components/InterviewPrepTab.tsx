@@ -162,6 +162,34 @@ function QuestionBlock({
   );
 }
 
+/* ── Add Core Question control with insertAfter selector ── */
+function AddCoreQuestion({ onAdd }: { onAdd: (insertAfter: string) => void }) {
+  const [pos, setPos] = useState<string>(FIXED_QUESTIONS[FIXED_QUESTIONS.length - 1].id);
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-xs text-muted-foreground hidden sm:inline">Insert after</span>
+      <Select value={pos} onValueChange={setPos}>
+        <SelectTrigger className="h-8 w-[150px] text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {FIXED_QUESTIONS.map((q, i) => (
+            <SelectItem key={q.id} value={q.id} className="text-xs">
+              Q{i + 1}. {q.label.length > 28 ? q.label.slice(0, 28) + "…" : q.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <button
+        onClick={() => onAdd(pos)}
+        className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-lg border border-input bg-background text-foreground hover:bg-muted transition-colors"
+      >
+        <Plus className="h-3.5 w-3.5" /> Add question
+      </button>
+    </div>
+  );
+}
+
 const CAT_COLORS: Record<string, string> = {
   Behavioral: "bg-blue-100 text-blue-700",
   Technical: "bg-purple-100 text-purple-700",
