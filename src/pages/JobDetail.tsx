@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, ExternalLink, MapPin, Copy, Check, Trash2, ChevronDown, ChevronUp, FileText, CheckCircle2, XCircle, CalendarIcon, RefreshCw, Lightbulb, History, RotateCcw, Pencil, X as XIcon, AlertTriangle, Loader2, Minus, Plus, AlertCircle } from "lucide-react";
+import { ArrowLeft, ExternalLink, MapPin, Copy, Check, Trash2, ChevronDown, ChevronUp, FileText, CheckCircle2, XCircle, CalendarIcon, RefreshCw, Lightbulb, History, RotateCcw, Pencil, X as XIcon, AlertTriangle, Loader2, Minus, Plus, AlertCircle, Download } from "lucide-react";
 import { computeDeadlineState, DeadlineBadge } from "@/lib/deadlineUtils";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -19,6 +19,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { toast } from "sonner";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import OutreachTab from "@/components/OutreachTab";
 import InterviewPrepTab from "@/components/InterviewPrepTab";
@@ -378,6 +379,9 @@ const JobDetail = () => {
 
   // Bullet toggle state: map of "blockIdx-bulletIdx" -> boolean (true = show tailored)
   const [bulletToggles, setBulletToggles] = useState<Record<string, boolean>>({});
+
+  // CV download state
+  const [downloadingCv, setDownloadingCv] = useState(false);
 
   // Master skills for suggestions
   const [masterHardSkills, setMasterHardSkills] = useState<string[]>([]);
@@ -781,6 +785,36 @@ const JobDetail = () => {
     setCvOutput(prev => prev ? { ...prev, ...snapshot, updated_at: new Date().toISOString() } : prev);
     setPreviewVersion(null);
     toast.success("Version restored!");
+  };
+
+  const handleDownloadCv = async (fmt: "docx" | "pdf") => {
+    if (!cvOutput || !job) return;
+    setDownloadingCv(true);
+    try {
+      const { buildCvData } = await import("@/lib/buildCvData");
+      const data = buildCvData({
+        cvOutput: {
+          tailored_summary: cvOutput.tailored_summary,
+          selected_bullets: cvOutput.selected_bullets,
+          selected_hard_skills: cvOutput.selected_hard_skills,
+          selected_soft_skills: cvOutput.selected_soft_skills,
+        },
+        profile: userProfile,
+        job: { company_name: job.company_name, location: job.location },
+      });
+      if (fmt === "docx") {
+        const { generateCvDocx } = await import("@/lib/generateCvDocx");
+        await generateCvDocx(data);
+      } else {
+        const { generateCvPdf } = await import("@/lib/generateCvPdf");
+        await generateCvPdf(data);
+      }
+    } catch (e) {
+      console.error("CV download error:", e);
+      toast.error("Could not generate CV. Please try again.");
+    } finally {
+      setDownloadingCv(false);
+    }
   };
 
   const startEdit = () => {
@@ -1385,19 +1419,42 @@ const JobDetail = () => {
                 </p>
               )}
             </div>
-            <Button
-              onClick={() => handleGenerateCv()}
-              disabled={cvLoading}
-              className="gap-1.5 bg-[#950606] hover:bg-[#7a0505] text-white"
-            >
-              {cvLoading ? (
-                <><RefreshCw className="h-4 w-4 animate-spin" /> Generating...</>
-              ) : cvOutput ? (
-                <><RefreshCw className="h-4 w-4" /> Regenerate</>
-              ) : (
-                <><FileText className="h-4 w-4" /> Generate Tailored CV</>
+            <div className="flex items-center gap-2">
+              {cvOutput && !cvLoading && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" disabled={downloadingCv} className="gap-1.5">
+                      {downloadingCv ? (
+                        <><Loader2 className="h-4 w-4 animate-spin" /> Preparing...</>
+                      ) : (
+                        <><Download className="h-4 w-4" /> Download CV</>
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleDownloadCv("docx")}>
+                      Word (.docx)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleDownloadCv("pdf")}>
+                      PDF
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
-            </Button>
+              <Button
+                onClick={() => handleGenerateCv()}
+                disabled={cvLoading}
+                className="gap-1.5 bg-[#950606] hover:bg-[#7a0505] text-white"
+              >
+                {cvLoading ? (
+                  <><RefreshCw className="h-4 w-4 animate-spin" /> Generating...</>
+                ) : cvOutput ? (
+                  <><RefreshCw className="h-4 w-4" /> Regenerate</>
+                ) : (
+                  <><FileText className="h-4 w-4" /> Generate Tailored CV</>
+                )}
+              </Button>
+            </div>
           </div>
 
           {/* Loading state */}
