@@ -628,6 +628,56 @@ const JobTracker = () => {
     setJobs((prev) => prev.map((j) => (j.id === jobId ? { ...j, application_deadline } : j)));
   };
 
+  const handleStartDateChange = async (jobId: string, date: Date | undefined) => {
+    const start_date = date ? format(date, "yyyy-MM-dd") : null;
+    await supabase.from("jobs").update({ start_date }).eq("id", jobId);
+    setJobs((prev) => prev.map((j) => (j.id === jobId ? { ...j, start_date } : j)));
+  };
+
+  const handleCreateCustomColumn = async () => {
+    if (!userId) return;
+    const name = newColumnName.trim();
+    if (!name) return;
+    const nextOrder = customColumns.length
+      ? Math.max(...customColumns.map(c => c.sort_order)) + 1
+      : 0;
+    const { data, error } = await supabase
+      .from("job_custom_columns" as any)
+      .insert({ user_id: userId, name, sort_order: nextOrder } as any)
+      .select("id, name, sort_order")
+      .single();
+    if (error || !data) { toast.error("Failed to add column"); return; }
+    setCustomColumns(prev => [...prev, data as any]);
+    setNewColumnName("");
+    setAddColumnOpen(false);
+    toast.success(`Column "${name}" added`);
+  };
+
+  const handleDeleteCustomColumn = async (columnId: string) => {
+    if (!userId) return;
+    await supabase.from("job_custom_columns" as any).delete().eq("id", columnId);
+    setCustomColumns(prev => prev.filter(c => c.id !== columnId));
+    setCustomValues(prev => {
+      const next: CustomValueMap = {};
+      for (const jid of Object.keys(prev)) {
+        const { [columnId]: _, ...rest } = prev[jid];
+        next[jid] = rest;
+      }
+      return next;
+    });
+  };
+
+  const handleSetCustomValue = async (jobId: string, columnId: string, value: string) => {
+    if (!userId) return;
+    setCustomValues(prev => ({
+      ...prev,
+      [jobId]: { ...(prev[jobId] || {}), [columnId]: value },
+    }));
+    await supabase
+      .from("job_custom_column_values" as any)
+      .upsert({ user_id: userId, job_id: jobId, column_id: columnId, value, updated_at: new Date().toISOString() } as any, { onConflict: "job_id,column_id" });
+  };
+
   const confirmDeleteJob = async () => {
     if (!deleteJobId) return;
     await supabase.from("jobs").delete().eq("id", deleteJobId);
