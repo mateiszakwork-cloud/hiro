@@ -7,19 +7,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
-const START_YEARS = Array.from({ length: 37 }, (_, i) => 2026 - i);
-const END_YEARS = Array.from({ length: 37 }, (_, i) => 2026 - i);
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+// 1990 → 2035 so future expected graduation years are selectable
+const YEARS = Array.from({ length: 46 }, (_, i) => 2035 - i);
+const LEVELS = ["High school", "Bachelor's", "Master's", "MBA", "PhD", "Exchange", "Certificate", "Other"];
 
 interface EduBlock {
-  institution: string; degree: string; fieldOfStudy: string;
-  startYear: string; endYear: string;
-  grade: string; activities: string; description: string;
+  institution: string; degree: string; levelOfStudy: string;
+  startMonth: string; startYear: string;
+  endMonth: string; endYear: string; isExpected: boolean;
+  grade: string; description: string;
 }
 
 const emptyBlock = (): EduBlock => ({
-  institution: "", degree: "", fieldOfStudy: "",
-  startYear: "", endYear: "",
-  grade: "", activities: "", description: "",
+  institution: "", degree: "", levelOfStudy: "",
+  startMonth: "", startYear: "",
+  endMonth: "", endYear: "", isExpected: false,
+  grade: "", description: "",
 });
 
 interface Props { userId: string; onNext: () => void; onBack: () => void; initialData?: import("@/types/cv").ParsedEducation[]; }
@@ -30,11 +34,13 @@ const StepEducation = ({ userId, onNext, onBack, initialData }: Props) => {
       return initialData.map(d => ({
         institution: d.institution || "",
         degree: d.degree || "",
-        fieldOfStudy: d.field_of_study || "",
+        levelOfStudy: "",
+        startMonth: "",
         startYear: d.start_year ? String(d.start_year) : "",
+        endMonth: "",
         endYear: d.end_year ? String(d.end_year) : "",
+        isExpected: false,
         grade: d.grade || "",
-        activities: d.activities || "",
         description: d.description || "",
       }));
     }
@@ -56,7 +62,8 @@ const StepEducation = ({ userId, onNext, onBack, initialData }: Props) => {
       const b = blocks[i];
       if (!b.institution.trim()) { setError(`Education ${i+1}: Institution name is required.`); return false; }
       if (!b.degree.trim()) { setError(`Education ${i+1}: Degree is required.`); return false; }
-      if (!b.fieldOfStudy.trim()) { setError(`Education ${i+1}: Field of study is required.`); return false; }
+      if (!b.levelOfStudy) { setError(`Education ${i+1}: Level of study is required.`); return false; }
+      if (!b.startYear) { setError(`Education ${i+1}: Start year is required.`); return false; }
     }
     setError(null); return true;
   };
@@ -66,15 +73,18 @@ const StepEducation = ({ userId, onNext, onBack, initialData }: Props) => {
     setSaving(true);
     await supabase.from("education").delete().eq("user_id", userId);
     const rows = blocks.map((b) => ({
-      user_id: userId, institution: b.institution.trim(), degree: b.degree.trim(),
-      field_of_study: b.fieldOfStudy.trim(),
-      start_year: b.startYear ? parseInt(b.startYear) : new Date().getFullYear(),
-      end_year: b.endYear === "expected" || !b.endYear ? null : parseInt(b.endYear),
-      is_expected: b.endYear === "expected",
+      user_id: userId,
+      institution: b.institution.trim(),
+      degree: b.degree.trim(),
+      level_of_study: b.levelOfStudy,
+      start_month: b.startMonth ? MONTHS.indexOf(b.startMonth) + 1 : null,
+      start_year: parseInt(b.startYear),
+      end_month: b.isExpected || !b.endMonth ? null : MONTHS.indexOf(b.endMonth) + 1,
+      end_year: b.isExpected || !b.endYear ? null : parseInt(b.endYear),
+      is_expected: b.isExpected,
       grade: b.grade.trim() || null,
-      activities: b.activities.trim() || null,
       description: b.description.trim() || null,
-    }));
+    } as any));
     const { error: insertError } = await supabase.from("education").insert(rows);
     setSaving(false);
     if (insertError) toast.error(insertError.message); else onNext();
@@ -82,8 +92,8 @@ const StepEducation = ({ userId, onNext, onBack, initialData }: Props) => {
 
   return (
     <div className="rounded-lg bg-card p-8 shadow-sm">
-      <h1 className="text-2xl font-bold text-foreground">Your educational background</h1>
-      <p className="mt-1 text-muted-foreground">Add your degrees and institutions.</p>
+      <h1 className="text-2xl font-bold text-foreground">Your education</h1>
+      <p className="mt-1 text-muted-foreground">Add the schools and degrees Hiro should mention when tailoring your CV.</p>
 
       <div className="mt-6 space-y-6">
         {blocks.map((block, idx) => (
@@ -95,46 +105,62 @@ const StepEducation = ({ userId, onNext, onBack, initialData }: Props) => {
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label>Degree *</Label>
-                <Input value={block.degree} onChange={(e) => updateBlock(idx, { degree: e.target.value })} placeholder="e.g. Master of Science" className="rounded-lg" />
+                <Label>Level of study *</Label>
+                <Select value={block.levelOfStudy} onValueChange={(v) => updateBlock(idx, { levelOfStudy: v })}>
+                  <SelectTrigger className="rounded-lg"><SelectValue placeholder="Select level" /></SelectTrigger>
+                  <SelectContent>{LEVELS.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent>
+                </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>Field of Study *</Label>
-                <Input value={block.fieldOfStudy} onChange={(e) => updateBlock(idx, { fieldOfStudy: e.target.value })} placeholder="e.g. Management in International Context" className="rounded-lg" />
+                <Label>Degree / programme *</Label>
+                <Input value={block.degree} onChange={(e) => updateBlock(idx, { degree: e.target.value })} placeholder="e.g. MSc International Management" className="rounded-lg" />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>Start Year</Label>
+            <div>
+              <Label>Start Date *</Label>
+              <div className="mt-1.5 grid grid-cols-2 gap-3">
+                <Select value={block.startMonth} onValueChange={(v) => updateBlock(idx, { startMonth: v })}>
+                  <SelectTrigger className="rounded-lg"><SelectValue placeholder="Month (optional)" /></SelectTrigger>
+                  <SelectContent>{MONTHS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
+                </Select>
                 <Select value={block.startYear} onValueChange={(v) => updateBlock(idx, { startYear: v })}>
                   <SelectTrigger className="rounded-lg"><SelectValue placeholder="Year" /></SelectTrigger>
-                  <SelectContent>{START_YEARS.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>End Year</Label>
-                <Select value={block.endYear} onValueChange={(v) => updateBlock(idx, { endYear: v })}>
-                  <SelectTrigger className="rounded-lg"><SelectValue placeholder="Year" /></SelectTrigger>
-                  <SelectContent>{END_YEARS.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}<SelectItem value="expected">Expected</SelectItem></SelectContent>
+                  <SelectContent>{YEARS.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label>Grade / GPA</Label>
-                <Input value={block.grade} onChange={(e) => updateBlock(idx, { grade: e.target.value })} placeholder="e.g. 3.8 / 4.0" className="rounded-lg" />
+            <div>
+              <div className="flex items-center gap-2 mb-1.5">
+                <Label>End Date</Label>
+                <label className="ml-auto flex items-center gap-1.5 text-sm text-muted-foreground cursor-pointer select-none">
+                  <input type="checkbox" checked={block.isExpected} onChange={(e) => updateBlock(idx, { isExpected: e.target.checked })} />
+                  Ongoing / expected
+                </label>
               </div>
-              <div className="space-y-1.5">
-                <Label>Activities and Societies</Label>
-                <Input value={block.activities} onChange={(e) => updateBlock(idx, { activities: e.target.value })} placeholder="e.g. CEMS Club, Student Council" className="rounded-lg" />
-              </div>
+              {!block.isExpected && (
+                <div className="grid grid-cols-2 gap-3">
+                  <Select value={block.endMonth} onValueChange={(v) => updateBlock(idx, { endMonth: v })}>
+                    <SelectTrigger className="rounded-lg"><SelectValue placeholder="Month (optional)" /></SelectTrigger>
+                    <SelectContent>{MONTHS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
+                  </Select>
+                  <Select value={block.endYear} onValueChange={(v) => updateBlock(idx, { endYear: v })}>
+                    <SelectTrigger className="rounded-lg"><SelectValue placeholder="Year" /></SelectTrigger>
+                    <SelectContent>{YEARS.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Grade / GPA</Label>
+              <Input value={block.grade} onChange={(e) => updateBlock(idx, { grade: e.target.value })} placeholder="e.g. 3.8 / 4.0" className="rounded-lg" />
             </div>
 
             <div className="space-y-1.5">
               <Label>Description</Label>
-              <Textarea value={block.description} onChange={(e) => updateBlock(idx, { description: e.target.value })} placeholder="Additional context about your studies, thesis, or achievements" className="rounded-lg" rows={3} />
+              <Textarea value={block.description} onChange={(e) => updateBlock(idx, { description: e.target.value })} placeholder="Optional: thesis topic, relevant coursework, or notable achievements" className="rounded-lg" rows={3} />
             </div>
 
             {blocks.length > 0 && (
