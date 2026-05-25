@@ -1389,19 +1389,42 @@ const JobDetail = () => {
                 </p>
               )}
             </div>
-            <Button
-              onClick={() => handleGenerateCv()}
-              disabled={cvLoading}
-              className="gap-1.5 bg-[#950606] hover:bg-[#7a0505] text-white"
-            >
-              {cvLoading ? (
-                <><RefreshCw className="h-4 w-4 animate-spin" /> Generating...</>
-              ) : cvOutput ? (
-                <><RefreshCw className="h-4 w-4" /> Regenerate</>
-              ) : (
-                <><FileText className="h-4 w-4" /> Generate Tailored CV</>
+            <div className="flex items-center gap-2">
+              {cvOutput && !cvLoading && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" disabled={downloadingCv} className="gap-1.5">
+                      {downloadingCv ? (
+                        <><Loader2 className="h-4 w-4 animate-spin" /> Preparing...</>
+                      ) : (
+                        <><Download className="h-4 w-4" /> Download CV</>
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleDownloadCv("docx")}>
+                      Word (.docx)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleDownloadCv("pdf")}>
+                      PDF
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
-            </Button>
+              <Button
+                onClick={() => handleGenerateCv()}
+                disabled={cvLoading}
+                className="gap-1.5 bg-[#950606] hover:bg-[#7a0505] text-white"
+              >
+                {cvLoading ? (
+                  <><RefreshCw className="h-4 w-4 animate-spin" /> Generating...</>
+                ) : cvOutput ? (
+                  <><RefreshCw className="h-4 w-4" /> Regenerate</>
+                ) : (
+                  <><FileText className="h-4 w-4" /> Generate Tailored CV</>
+                )}
+              </Button>
+            </div>
           </div>
 
           {/* Loading state */}
