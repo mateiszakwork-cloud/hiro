@@ -49,10 +49,12 @@ type MatchDetails = {
   hard_skills_match: number | null;
   soft_skills_match: number | null;
   experience_match: number | null;
-  language_match: number | null;
+  language_match?: number | null; // deprecated, no longer in score
   match_summary: string | null;
   missing_skills: string[];
   strengths: string[];
+  language_requirement?: "none" | "met" | "missing";
+  missing_languages?: string[];
 };
 
 type Job = {
@@ -1396,7 +1398,6 @@ const JobDetail = () => {
                       { label: "Hard Skills", value: job.match_details.hard_skills_match },
                       { label: "Soft Skills", value: job.match_details.soft_skills_match },
                       { label: "Experience", value: job.match_details.experience_match },
-                      { label: "Languages", value: job.match_details.language_match },
                     ].map(({ label, value }) => (
                       <div key={label} className="space-y-1.5">
                         <div className="flex justify-between text-xs">
@@ -1406,6 +1407,18 @@ const JobDetail = () => {
                         <Progress value={value ?? 0} className="h-2 hiro-match-progress" />
                       </div>
                     ))}
+                    {job.match_details.language_requirement && job.match_details.language_requirement !== "none" && (
+                      <div className="space-y-1.5 sm:col-span-2">
+                        <div className="flex justify-between text-xs">
+                          <span className="font-medium text-muted-foreground">Language requirement</span>
+                          <span className={`font-semibold ${job.match_details.language_requirement === "met" ? "text-emerald-700" : "text-amber-700"}`}>
+                            {job.match_details.language_requirement === "met"
+                              ? "Met"
+                              : `Missing: ${(job.match_details.missing_languages || []).join(", ") || "see job"}`}
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     {job.match_details.strengths?.length > 0 && (
