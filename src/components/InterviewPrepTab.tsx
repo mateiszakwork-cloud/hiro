@@ -203,6 +203,7 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
         setAnswers({
           q1: a.q1 || "", q2: a.q2 || "", q3: a.q3 || "", q4: a.q4 || "",
           q5: a.q5 || "", q6: a.q6 || "", q7: a.q7 || "", q8: a.q8 || "",
+          q9: a.q9 || "",
           section1_extra: (data.section1_extra as ExtraQ[]) || [],
           role_specific: (data.role_specific as RoleQ[]) || [],
         });
