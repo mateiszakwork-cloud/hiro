@@ -1090,18 +1090,13 @@ const JobDetail = () => {
               {job.duration && <span className="hiro-job-meta-pill">{job.duration}</span>}
               {job.function && <span className="hiro-job-meta-pill">{job.function}</span>}
             </div>
-            {/* Outreach summary widget */}
-            <OutreachSummary
-              summary={outreachSummary}
-              onJump={() => setActiveTab("outreach")}
-            />
           </div>
           <div className="flex items-center gap-2 flex-wrap justify-end">
             {deadlineState.kind !== "none" && (
               <Popover>
                 <PopoverTrigger asChild>
                   <button className="hover:opacity-80 transition-opacity">
-                    <DeadlineBadge state={deadlineState} size="md" />
+                    <DeadlineBadge state={deadlineState} size="sm" />
                   </button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="end">
@@ -1116,9 +1111,9 @@ const JobDetail = () => {
             )}
             <Popover>
               <PopoverTrigger asChild>
-                <button className="hiro-job-action-btn">
-                  <CalendarIcon className="h-3.5 w-3.5" />
-                  {job.applied_date ? `Applied ${format(new Date(job.applied_date), "MMM d, yyyy")}` : "Set applied date"}
+                <button className="hiro-job-action-btn text-xs py-1.5 px-3">
+                  <CalendarIcon className="h-3 w-3" />
+                  {job.applied_date ? format(new Date(job.applied_date), "MMM d") : "Applied"}
                 </button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="end">
@@ -1131,12 +1126,12 @@ const JobDetail = () => {
               </PopoverContent>
             </Popover>
             <Select value={job.status} onValueChange={handleStatusChange}>
-              <SelectTrigger className={`h-9 w-auto border-0 gap-1.5 px-4 rounded-full text-sm font-medium ${getStatusColor(job.status)}`}>
-                <SelectValue />
+              <SelectTrigger className={`h-8 w-auto border-0 gap-1.5 px-3 rounded-full text-xs font-medium ${getStatusColor(job.status)}`}>
+                <SelectValue>{job.status}</SelectValue>
               </SelectTrigger>
               <SelectContent className="w-72">
                 {STATUS_OPTIONS.map(s => (
-                  <SelectItem key={s.value} value={s.value}>
+                  <SelectItem key={s.value} value={s.value} textValue={s.value}>
                     <div className="flex flex-col py-0.5">
                       <span className="text-sm font-medium">{s.value}</span>
                       <span className="text-[11px] text-muted-foreground leading-snug">{s.description}</span>
@@ -1175,18 +1170,19 @@ const JobDetail = () => {
         {/* Overview Tab */}
         <TabsContent value="overview" className="hiro-tab-content mt-0">
           <Card>
-            <CardContent className="p-6">
-              <div className="flex justify-end mb-4">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-sm font-semibold text-foreground">Job Details</h2>
                 {isEditing ? (
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={cancelEdit}>Cancel</Button>
-                    <Button size="sm" onClick={saveEdit} className="gap-1.5" style={{ backgroundColor: '#950606' }}>
-                      <Check className="h-3.5 w-3.5" /> Save
+                    <Button variant="outline" size="sm" onClick={cancelEdit} className="h-8 text-xs">Cancel</Button>
+                    <Button size="sm" onClick={saveEdit} className="h-8 text-xs gap-1" style={{ backgroundColor: '#950606' }}>
+                      <Check className="h-3 w-3" /> Save
                     </Button>
                   </div>
                 ) : (
-                  <Button variant="outline" size="sm" onClick={startEdit} className="gap-1.5">
-                    <Pencil className="h-3.5 w-3.5" /> Edit
+                  <Button variant="ghost" size="sm" onClick={startEdit} className="h-8 text-xs gap-1 text-muted-foreground hover:text-foreground">
+                    <Pencil className="h-3 w-3" /> Edit
                   </Button>
                 )}
               </div>
@@ -1290,34 +1286,34 @@ const JobDetail = () => {
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Location</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                  <div className="space-y-0.5">
+                    <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Location</p>
                     <p className="text-sm text-foreground flex items-center gap-1.5">
                       {job.location ? <><MapPin className="h-3.5 w-3.5 text-muted-foreground" />{job.location}</> : "–"}
                     </p>
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Work Mode</p>
+                  <div className="space-y-0.5">
+                    <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Work Mode</p>
                     <p className="text-sm text-foreground">{job.work_mode || "–"}</p>
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Duration</p>
+                  <div className="space-y-0.5">
+                    <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Duration</p>
                     <p className="text-sm text-foreground">{job.duration || "–"}</p>
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Function</p>
+                  <div className="space-y-0.5">
+                    <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Function</p>
                     <p className="text-sm text-foreground">{job.function || "–"}</p>
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Application Deadline</p>
+                  <div className="space-y-0.5">
+                    <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Deadline</p>
                     <Popover>
                       <PopoverTrigger asChild>
-                        <button className="text-sm flex items-center gap-2 hover:opacity-80 transition-opacity">
+                        <button className="text-sm flex items-center gap-1.5 hover:opacity-80 transition-opacity">
                           {deadlineState.kind === "none" ? (
                             <span className="text-muted-foreground">–</span>
                           ) : (
-                            <DeadlineBadge state={deadlineState} size="md" />
+                            <DeadlineBadge state={deadlineState} size="sm" />
                           )}
                           <Pencil className="h-3 w-3 text-muted-foreground" />
                         </button>
@@ -1332,35 +1328,29 @@ const JobDetail = () => {
                       </PopoverContent>
                     </Popover>
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Match Score</p>
-                    <span className={`inline-flex items-center justify-center h-12 w-12 rounded-full border-2 text-lg font-bold ${getScoreColor(job.match_score)}`}>
+                  <div className="space-y-0.5">
+                    <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Match</p>
+                    <span className={`inline-flex items-center justify-center h-9 w-9 rounded-full border-2 text-sm font-bold ${getScoreColor(job.match_score)}`}>
                       {job.match_score ?? "–"}
                     </span>
                   </div>
-                  <div className="space-y-1 col-span-full">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Required Skills</p>
+                  <div className="space-y-1.5 col-span-full">
+                    <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Required Skills</p>
                     <TagList tags={[...(job.hard_skills || []), ...(job.soft_skills || [])]} />
                   </div>
                   {(job.skills_nice_to_have?.length ?? 0) > 0 && (
-                    <div className="space-y-1 col-span-full">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Nice-to-Have Skills</p>
+                    <div className="space-y-1.5 col-span-full">
+                      <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Nice-to-Have Skills</p>
                       <TagList tags={job.skills_nice_to_have} soft />
                     </div>
                   )}
-                  <div className="space-y-1 col-span-full">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Required Languages</p>
-                    <TagList tags={job.languages_required} />
+                  <div className="space-y-1.5 col-span-full">
+                    <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Languages</p>
+                    <TagList tags={[...(job.languages_required || []), ...(job.languages_nice_to_have || [])]} soft={!(job.languages_required?.length)} />
                   </div>
-                  {(job.languages_nice_to_have?.length ?? 0) > 0 && (
-                    <div className="space-y-1 col-span-full">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Nice-to-Have Languages</p>
-                      <TagList tags={job.languages_nice_to_have} soft />
-                    </div>
-                  )}
                   {job.url && (
-                    <div className="space-y-1 col-span-full">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Job URL</p>
+                    <div className="space-y-0.5 col-span-full">
+                      <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Job URL</p>
                       <a href={job.url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1">
                         {job.url} <ExternalLink className="h-3.5 w-3.5" />
                       </a>
@@ -1372,9 +1362,9 @@ const JobDetail = () => {
           </Card>
 
           {/* Match Analysis */}
-          <Card className="mt-6">
-            <CardContent className="p-6">
-              <h3 className="font-semibold text-foreground mb-4">Match Analysis</h3>
+          <Card className="mt-5">
+            <CardContent className="p-5">
+              <h3 className="text-sm font-semibold text-foreground mb-3">Match Analysis</h3>
               {matchLoading ? (
                 <div className="space-y-4">
                   <div className="flex items-center gap-4">
@@ -1394,22 +1384,22 @@ const JobDetail = () => {
                   </div>
                 </div>
               ) : job.match_score !== null && job.match_details ? (
-                <div className="space-y-6">
-                  <div className="flex items-center gap-5">
-                    <span className={`inline-flex items-center justify-center h-16 w-16 rounded-full border-2 text-2xl font-bold shrink-0 ${getScoreColor(job.match_score)}`}>
+                <div className="space-y-5">
+                  <div className="flex items-center gap-4">
+                    <span className={`inline-flex items-center justify-center h-14 w-14 rounded-full border-2 text-xl font-bold shrink-0 ${getScoreColor(job.match_score)}`}>
                       {job.match_score}
                     </span>
                     {job.match_details.match_summary && (
-                      <p className="text-sm text-muted-foreground italic">{job.match_details.match_summary}</p>
+                      <p className="text-sm text-muted-foreground italic leading-relaxed">{job.match_details.match_summary}</p>
                     )}
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {[
                       { label: "Hard Skills", value: job.match_details.hard_skills_match },
                       { label: "Soft Skills", value: job.match_details.soft_skills_match },
                       { label: "Experience", value: job.match_details.experience_match },
                     ].map(({ label, value }) => (
-                      <div key={label} className="space-y-1.5">
+                      <div key={label} className="space-y-1">
                         <div className="flex justify-between text-xs">
                           <span className="font-medium text-muted-foreground">{label}</span>
                           <span className="font-semibold text-foreground">{value ?? "–"}</span>
@@ -1418,7 +1408,7 @@ const JobDetail = () => {
                       </div>
                     ))}
                     {job.match_details.language_requirement && job.match_details.language_requirement !== "none" && (
-                      <div className="space-y-1.5 sm:col-span-2">
+                      <div className="space-y-1 sm:col-span-2">
                         <div className="flex justify-between text-xs">
                           <span className="font-medium text-muted-foreground">Language requirement</span>
                           <span className={`font-semibold ${job.match_details.language_requirement === "met" ? "text-emerald-700" : "text-amber-700"}`}>
@@ -1430,14 +1420,14 @@ const JobDetail = () => {
                       </div>
                     )}
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {job.match_details.strengths?.length > 0 && (
                       <div>
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Strengths</p>
-                        <ul className="space-y-1.5">
+                        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-1.5">Strengths</p>
+                        <ul className="space-y-1">
                           {job.match_details.strengths.map((s, i) => (
                             <li key={i} className="flex items-start gap-2 text-sm text-foreground">
-                              <CheckCircle2 className="h-4 w-4 text-[#22C55E] shrink-0 mt-0.5" />
+                              <CheckCircle2 className="h-3.5 w-3.5 text-[#22C55E] shrink-0 mt-0.5" />
                               {s}
                             </li>
                           ))}
@@ -1446,11 +1436,11 @@ const JobDetail = () => {
                     )}
                     {job.match_details.missing_skills?.length > 0 && (
                       <div>
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Missing Skills</p>
-                        <ul className="space-y-1.5">
+                        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-1.5">Missing Skills</p>
+                        <ul className="space-y-1">
                           {job.match_details.missing_skills.map((s, i) => (
                             <li key={i} className="flex items-start gap-2 text-sm text-foreground">
-                              <XCircle className="h-4 w-4 text-[var(--color-primary)] shrink-0 mt-0.5" />
+                              <XCircle className="h-3.5 w-3.5 text-[var(--color-primary)] shrink-0 mt-0.5" />
                               {s}
                             </li>
                           ))}
