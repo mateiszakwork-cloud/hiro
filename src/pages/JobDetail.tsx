@@ -1362,9 +1362,9 @@ const JobDetail = () => {
           </Card>
 
           {/* Match Analysis */}
-          <Card className="mt-6">
-            <CardContent className="p-6">
-              <h3 className="font-semibold text-foreground mb-4">Match Analysis</h3>
+          <Card className="mt-5">
+            <CardContent className="p-5">
+              <h3 className="text-sm font-semibold text-foreground mb-3">Match Analysis</h3>
               {matchLoading ? (
                 <div className="space-y-4">
                   <div className="flex items-center gap-4">
