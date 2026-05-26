@@ -1170,7 +1170,7 @@ const JobDetail = () => {
         {/* Overview Tab */}
         <TabsContent value="overview" className="hiro-tab-content mt-0">
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-5">
               <div className="flex items-center justify-between mb-5">
                 <h2 className="text-sm font-semibold text-foreground">Job Details</h2>
                 {isEditing ? (
