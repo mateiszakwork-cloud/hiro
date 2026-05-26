@@ -1750,7 +1750,7 @@ const JobDetail = () => {
                                       title="Remove this bullet"
                                       aria-label="Remove bullet"
                                     >
-                                      <X className="h-3.5 w-3.5" />
+                                      <XIcon className="h-3.5 w-3.5" />
                                     </button>
                                   </li>
                                 );
