@@ -1096,7 +1096,7 @@ const JobDetail = () => {
               <Popover>
                 <PopoverTrigger asChild>
                   <button className="hover:opacity-80 transition-opacity">
-                    <DeadlineBadge state={deadlineState} size="md" />
+                    <DeadlineBadge state={deadlineState} size="sm" />
                   </button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="end">
@@ -1111,9 +1111,9 @@ const JobDetail = () => {
             )}
             <Popover>
               <PopoverTrigger asChild>
-                <button className="hiro-job-action-btn">
-                  <CalendarIcon className="h-3.5 w-3.5" />
-                  {job.applied_date ? `Applied ${format(new Date(job.applied_date), "MMM d, yyyy")}` : "Set applied date"}
+                <button className="hiro-job-action-btn text-xs py-1.5 px-3">
+                  <CalendarIcon className="h-3 w-3" />
+                  {job.applied_date ? format(new Date(job.applied_date), "MMM d") : "Applied"}
                 </button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="end">
@@ -1126,12 +1126,12 @@ const JobDetail = () => {
               </PopoverContent>
             </Popover>
             <Select value={job.status} onValueChange={handleStatusChange}>
-              <SelectTrigger className={`h-9 w-auto border-0 gap-1.5 px-4 rounded-full text-sm font-medium ${getStatusColor(job.status)}`}>
-                <SelectValue />
+              <SelectTrigger className={`h-8 w-auto border-0 gap-1.5 px-3 rounded-full text-xs font-medium ${getStatusColor(job.status)}`}>
+                <SelectValue>{job.status}</SelectValue>
               </SelectTrigger>
               <SelectContent className="w-72">
                 {STATUS_OPTIONS.map(s => (
-                  <SelectItem key={s.value} value={s.value}>
+                  <SelectItem key={s.value} value={s.value} textValue={s.value}>
                     <div className="flex flex-col py-0.5">
                       <span className="text-sm font-medium">{s.value}</span>
                       <span className="text-[11px] text-muted-foreground leading-snug">{s.description}</span>
