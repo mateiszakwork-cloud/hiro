@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { InfoHint } from "@/components/InfoHint";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -735,9 +736,13 @@ const JobTracker = () => {
               color: "var(--color-text-primary)",
               letterSpacing: "-0.02em",
               lineHeight: 1.1,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
             }}
           >
             Job Tracker
+            <InfoHint size={15} label="Your pipeline of roles. Paste a job link to auto-fill a row, then track each opportunity from saved to offer." />
           </h1>
           <p
             style={{
