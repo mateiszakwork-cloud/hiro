@@ -1829,8 +1829,7 @@ const JobDetail = () => {
 
               {/* Card 3: Hard Skills */}
               {cvOutput.selected_hard_skills && Object.keys(cvOutput.selected_hard_skills).length > 0 && (
-                <>
-                  <Card>
+                <Card>
                     <CardContent className="p-5">
                       <div className="flex items-center justify-between mb-3">
                         <h4 className="font-semibold text-foreground">Hard Skills</h4>
@@ -1863,58 +1862,58 @@ const JobDetail = () => {
                           </div>
                         ))}
                       </div>
+                      {(() => {
+                        const { fromJob, fromProfile } = getHardSkillSuggestions();
+                        if (fromJob.length === 0 && fromProfile.length === 0) return null;
+                        return (
+                          <div className="mt-5 pt-4 border-t border-border space-y-3">
+                            <div className="flex items-center gap-1.5">
+                              <Sparkles className="h-3.5 w-3.5 text-[#950606]" />
+                              <p className="text-sm font-semibold text-foreground">Add more skills</p>
+                              <span className="text-xs text-muted-foreground">— click to add to your CV</span>
+                            </div>
+                            {fromJob.length > 0 && (
+                              <div>
+                                <p className="text-[10px] uppercase tracking-widest text-muted-foreground/80 mb-2">From this job description</p>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {fromJob.map((skill) => (
+                                    <button
+                                      key={skill}
+                                      onClick={() => addHardSkill(skill)}
+                                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-[#FFF5F5] text-[#950606] border border-[#FBD5D5] hover:bg-[#FFE5E5] hover:border-[#F5B5B5] transition-all cursor-pointer"
+                                    >
+                                      <Plus className="h-3 w-3" /> {skill}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {fromProfile.length > 0 && (
+                              <div>
+                                <p className="text-[10px] uppercase tracking-widest text-muted-foreground/80 mb-2">From your profile</p>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {fromProfile.map((skill) => (
+                                    <button
+                                      key={skill}
+                                      onClick={() => addHardSkill(skill)}
+                                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-muted text-foreground border border-border hover:bg-accent transition-all cursor-pointer"
+                                    >
+                                      <Plus className="h-3 w-3" /> {skill}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </CardContent>
                   </Card>
-
-                  {/* Hard Skill Suggestions */}
-                  {(() => {
-                    const { fromJob, fromProfile } = getHardSkillSuggestions();
-                    if (fromJob.length === 0 && fromProfile.length === 0) return null;
-                    return (
-                      <div className="space-y-2 -mt-3">
-                        <p className="text-xs font-medium text-muted-foreground">Also relevant for this role</p>
-                        {fromJob.length > 0 && (
-                          <div>
-                            <p className="text-[10px] uppercase tracking-widest text-muted-foreground/70 mb-1.5">From job requirements</p>
-                            <div className="flex flex-wrap gap-1.5 overflow-x-auto">
-                              {fromJob.map((skill) => (
-                                <button
-                                  key={skill}
-                                  onClick={() => addHardSkill(skill)}
-                                  className="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#F3F4F6] text-gray-600 border border-gray-200 hover:scale-105 hover:border-gray-300 transition-all cursor-pointer"
-                                >
-                                  + {skill}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        {fromProfile.length > 0 && (
-                          <div>
-                            <p className="text-[10px] uppercase tracking-widest text-muted-foreground/70 mb-1.5">From your profile</p>
-                            <div className="flex flex-wrap gap-1.5 overflow-x-auto">
-                              {fromProfile.map((skill) => (
-                                <button
-                                  key={skill}
-                                  onClick={() => addHardSkill(skill)}
-                                  className="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#F3F4F6] text-gray-600 border border-gray-200 hover:scale-105 hover:border-gray-300 transition-all cursor-pointer"
-                                >
-                                  + {skill}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-                </>
               )}
 
               {/* Card 4: Soft Skills */}
               {cvOutput.selected_soft_skills?.length > 0 && (
-                <>
-                  <Card>
+                <Card>
                     <CardContent className="p-5">
                       <div className="flex items-center justify-between mb-3">
                         <h4 className="font-semibold text-foreground">Soft Skills</h4>
@@ -1937,52 +1936,53 @@ const JobDetail = () => {
                           </span>
                         ))}
                       </div>
+                      {(() => {
+                        const { fromJob, fromProfile } = getSoftSkillSuggestions();
+                        if (fromJob.length === 0 && fromProfile.length === 0) return null;
+                        return (
+                          <div className="mt-5 pt-4 border-t border-border space-y-3">
+                            <div className="flex items-center gap-1.5">
+                              <Sparkles className="h-3.5 w-3.5 text-[#950606]" />
+                              <p className="text-sm font-semibold text-foreground">Add more skills</p>
+                              <span className="text-xs text-muted-foreground">— click to add to your CV</span>
+                            </div>
+                            {fromJob.length > 0 && (
+                              <div>
+                                <p className="text-[10px] uppercase tracking-widest text-muted-foreground/80 mb-2">From this job description</p>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {fromJob.map((skill) => (
+                                    <button
+                                      key={skill}
+                                      onClick={() => addSoftSkill(skill)}
+                                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-[#FFF5F5] text-[#950606] border border-[#FBD5D5] hover:bg-[#FFE5E5] hover:border-[#F5B5B5] transition-all cursor-pointer"
+                                    >
+                                      <Plus className="h-3 w-3" /> {skill}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {fromProfile.length > 0 && (
+                              <div>
+                                <p className="text-[10px] uppercase tracking-widest text-muted-foreground/80 mb-2">From your profile</p>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {fromProfile.map((skill) => (
+                                    <button
+                                      key={skill}
+                                      onClick={() => addSoftSkill(skill)}
+                                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-muted text-foreground border border-border hover:bg-accent transition-all cursor-pointer"
+                                    >
+                                      <Plus className="h-3 w-3" /> {skill}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </CardContent>
                   </Card>
-
-                  {/* Soft Skill Suggestions */}
-                  {(() => {
-                    const { fromJob, fromProfile } = getSoftSkillSuggestions();
-                    if (fromJob.length === 0 && fromProfile.length === 0) return null;
-                    return (
-                      <div className="space-y-2 -mt-3">
-                        <p className="text-xs font-medium text-muted-foreground">Also relevant for this role</p>
-                        {fromJob.length > 0 && (
-                          <div>
-                            <p className="text-[10px] uppercase tracking-widest text-muted-foreground/70 mb-1.5">From job requirements</p>
-                            <div className="flex flex-wrap gap-1.5 overflow-x-auto">
-                              {fromJob.map((skill) => (
-                                <button
-                                  key={skill}
-                                  onClick={() => addSoftSkill(skill)}
-                                  className="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#F3F4F6] text-gray-600 border border-gray-200 hover:scale-105 hover:border-gray-300 transition-all cursor-pointer"
-                                >
-                                  + {skill}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        {fromProfile.length > 0 && (
-                          <div>
-                            <p className="text-[10px] uppercase tracking-widest text-muted-foreground/70 mb-1.5">From your profile</p>
-                            <div className="flex flex-wrap gap-1.5 overflow-x-auto">
-                              {fromProfile.map((skill) => (
-                                <button
-                                  key={skill}
-                                  onClick={() => addSoftSkill(skill)}
-                                  className="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#F3F4F6] text-gray-600 border border-gray-200 hover:scale-105 hover:border-gray-300 transition-all cursor-pointer"
-                                >
-                                  + {skill}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-                </>
               )}
 
               {/* Tailoring Notes */}
