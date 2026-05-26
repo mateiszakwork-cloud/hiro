@@ -988,6 +988,18 @@ const JobDetail = () => {
   };
 
   // Compute hard skill suggestions
+  // Remove a specific bullet from a block
+  const removeBullet = (blockIdx: number, bulletIdx: number) => {
+    if (!cvOutput || !Array.isArray(cvOutput.selected_bullets)) return;
+    const updated = (cvOutput.selected_bullets as BulletBlock[]).map((b, i) => {
+      if (i !== blockIdx) return b;
+      const next = [...(b.bullets as any[])];
+      next.splice(bulletIdx, 1);
+      return { ...b, bullets: next };
+    });
+    setCvOutput({ ...cvOutput, selected_bullets: updated });
+  };
+
   const getHardSkillSuggestions = () => {
     if (!cvOutput || !job) return { fromJob: [] as string[], fromProfile: [] as string[] };
     const selectedFlat = new Set(
@@ -995,11 +1007,11 @@ const JobDetail = () => {
     );
 
     const jobSkills = [...(job.hard_skills || []), ...(job.skills_nice_to_have || [])];
-    const fromJob = jobSkills.filter(s => !selectedFlat.has(s.toLowerCase())).slice(0, 8);
+    const fromJob = jobSkills.filter(s => !selectedFlat.has(s.toLowerCase())).slice(0, 14);
 
     const fromProfile = masterHardSkills
       .filter(s => !selectedFlat.has(s.toLowerCase()) && !fromJob.some(j => j.toLowerCase() === s.toLowerCase()))
-      .slice(0, 6);
+      .slice(0, 12);
 
     return { fromJob, fromProfile };
   };
@@ -1011,11 +1023,11 @@ const JobDetail = () => {
 
     const fromJob = (job.soft_skills || [])
       .filter(s => !selectedFlat.has(s.toLowerCase()))
-      .slice(0, 8);
+      .slice(0, 12);
 
     const fromProfile = masterSoftSkills
       .filter(s => !selectedFlat.has(s.toLowerCase()) && !fromJob.some(j => j.toLowerCase() === s.toLowerCase()))
-      .slice(0, 6);
+      .slice(0, 10);
 
     return { fromJob, fromProfile };
   };
