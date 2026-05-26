@@ -1286,34 +1286,34 @@ const JobDetail = () => {
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Location</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                  <div className="space-y-0.5">
+                    <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Location</p>
                     <p className="text-sm text-foreground flex items-center gap-1.5">
                       {job.location ? <><MapPin className="h-3.5 w-3.5 text-muted-foreground" />{job.location}</> : "–"}
                     </p>
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Work Mode</p>
+                  <div className="space-y-0.5">
+                    <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Work Mode</p>
                     <p className="text-sm text-foreground">{job.work_mode || "–"}</p>
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Duration</p>
+                  <div className="space-y-0.5">
+                    <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Duration</p>
                     <p className="text-sm text-foreground">{job.duration || "–"}</p>
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Function</p>
+                  <div className="space-y-0.5">
+                    <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Function</p>
                     <p className="text-sm text-foreground">{job.function || "–"}</p>
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Application Deadline</p>
+                  <div className="space-y-0.5">
+                    <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Deadline</p>
                     <Popover>
                       <PopoverTrigger asChild>
-                        <button className="text-sm flex items-center gap-2 hover:opacity-80 transition-opacity">
+                        <button className="text-sm flex items-center gap-1.5 hover:opacity-80 transition-opacity">
                           {deadlineState.kind === "none" ? (
                             <span className="text-muted-foreground">–</span>
                           ) : (
-                            <DeadlineBadge state={deadlineState} size="md" />
+                            <DeadlineBadge state={deadlineState} size="sm" />
                           )}
                           <Pencil className="h-3 w-3 text-muted-foreground" />
                         </button>
@@ -1328,35 +1328,29 @@ const JobDetail = () => {
                       </PopoverContent>
                     </Popover>
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Match Score</p>
-                    <span className={`inline-flex items-center justify-center h-12 w-12 rounded-full border-2 text-lg font-bold ${getScoreColor(job.match_score)}`}>
+                  <div className="space-y-0.5">
+                    <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Match</p>
+                    <span className={`inline-flex items-center justify-center h-9 w-9 rounded-full border-2 text-sm font-bold ${getScoreColor(job.match_score)}`}>
                       {job.match_score ?? "–"}
                     </span>
                   </div>
-                  <div className="space-y-1 col-span-full">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Required Skills</p>
+                  <div className="space-y-1.5 col-span-full">
+                    <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Required Skills</p>
                     <TagList tags={[...(job.hard_skills || []), ...(job.soft_skills || [])]} />
                   </div>
                   {(job.skills_nice_to_have?.length ?? 0) > 0 && (
-                    <div className="space-y-1 col-span-full">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Nice-to-Have Skills</p>
+                    <div className="space-y-1.5 col-span-full">
+                      <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Nice-to-Have Skills</p>
                       <TagList tags={job.skills_nice_to_have} soft />
                     </div>
                   )}
-                  <div className="space-y-1 col-span-full">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Required Languages</p>
-                    <TagList tags={job.languages_required} />
+                  <div className="space-y-1.5 col-span-full">
+                    <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Languages</p>
+                    <TagList tags={[...(job.languages_required || []), ...(job.languages_nice_to_have || [])]} soft={!(job.languages_required?.length)} />
                   </div>
-                  {(job.languages_nice_to_have?.length ?? 0) > 0 && (
-                    <div className="space-y-1 col-span-full">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Nice-to-Have Languages</p>
-                      <TagList tags={job.languages_nice_to_have} soft />
-                    </div>
-                  )}
                   {job.url && (
-                    <div className="space-y-1 col-span-full">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Job URL</p>
+                    <div className="space-y-0.5 col-span-full">
+                      <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Job URL</p>
                       <a href={job.url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1">
                         {job.url} <ExternalLink className="h-3.5 w-3.5" />
                       </a>
