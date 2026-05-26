@@ -1495,11 +1495,6 @@ const JobDetail = () => {
                 <InfoHint label="A tailored CV draft for this role. Generate it, review every section, then download as PDF or Word." />
               </div>
               <p className="text-sm text-muted-foreground">AI-tailored CV components ready to review and download.</p>
-              {cvOutput && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Last generated {format(new Date(cvOutput.updated_at), "MMM d, yyyy 'at' h:mm a")}
-                </p>
-              )}
             </div>
             <div className="flex items-center gap-2">
               {cvOutput && !cvLoading && (
@@ -1531,19 +1526,29 @@ const JobDetail = () => {
                 </DropdownMenu>
                 </>
               )}
-              <Button
-                onClick={() => handleGenerateCv()}
-                disabled={cvLoading}
-                className="gap-1.5 bg-[#950606] hover:bg-[#7a0505] text-white"
-              >
-                {cvLoading ? (
-                  <><RefreshCw className="h-4 w-4 animate-spin" /> Generating...</>
-                ) : cvOutput ? (
-                  <><RefreshCw className="h-4 w-4" /> Regenerate</>
-                ) : (
-                  <><FileText className="h-4 w-4" /> Generate Application Kit</>
-                )}
-              </Button>
+              {cvOutput && !cvLoading ? (
+                <Button
+                  variant="ghost"
+                  onClick={() => handleGenerateCv()}
+                  disabled={cvLoading}
+                  className="gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                  title="Discard all edits and rebuild from scratch"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" /> Regenerate
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => handleGenerateCv()}
+                  disabled={cvLoading}
+                  className="gap-1.5 bg-[#950606] hover:bg-[#7a0505] text-white"
+                >
+                  {cvLoading ? (
+                    <><RefreshCw className="h-4 w-4 animate-spin" /> Generating...</>
+                  ) : (
+                    <><FileText className="h-4 w-4" /> Generate Application Kit</>
+                  )}
+                </Button>
+              )}
             </div>
           </div>
 
