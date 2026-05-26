@@ -1633,7 +1633,7 @@ const JobDetail = () => {
             <Card>
               <CardContent className="p-8 text-center">
                 <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground">Click "Generate Tailored CV" to create an application kit for this position.</p>
+                <p className="text-muted-foreground">Click "Generate Application Kit" to create a tailored CV for this role.</p>
               </CardContent>
             </Card>
           )}
