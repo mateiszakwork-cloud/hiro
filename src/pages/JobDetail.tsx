@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { InfoHint } from "@/components/InfoHint";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Progress } from "@/components/ui/progress";
@@ -1151,13 +1152,22 @@ const JobDetail = () => {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="hiro-tabs-bar h-auto justify-start rounded-none p-0">
-          {["overview", "cv", "outreach", "interview", "notes"].map(tab => (
+          {([
+            { value: "overview",  label: "Overview",        hint: "Role details, required skills, and how your background matches this job." },
+            { value: "cv",        label: "Application Kit", hint: "Generate a CV tailored to this role, then download it as PDF or Word." },
+            { value: "outreach",  label: "Outreach",        hint: "Find relevant contacts at the company and draft personalised messages." },
+            { value: "interview", label: "Interview",       hint: "STAR answer drafts, your pitch, and a 30/60/90 day plan to prepare with." },
+            { value: "notes",     label: "Notes",           hint: "Private scratchpad for anything you want to remember about this role." },
+          ] as const).map(tab => (
             <TabsTrigger
-              key={tab}
-              value={tab}
-              className="hiro-tab-trigger capitalize"
+              key={tab.value}
+              value={tab.value}
+              className="hiro-tab-trigger"
             >
-              {tab}
+              <span className="inline-flex items-center gap-1.5">
+                {tab.label}
+                <InfoHint label={tab.hint} />
+              </span>
             </TabsTrigger>
           ))}
         </TabsList>
@@ -1478,8 +1488,11 @@ const JobDetail = () => {
           {/* Generate / Regenerate button */}
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-semibold text-foreground">Application Kit</h3>
-              <p className="text-sm text-muted-foreground">AI-tailored components ready to copy into your CV.</p>
+              <div className="flex items-center gap-1.5">
+                <h3 className="font-semibold text-foreground">Application Kit</h3>
+                <InfoHint label="A tailored CV draft for this role. Generate it, review every section, then download as PDF or Word." />
+              </div>
+              <p className="text-sm text-muted-foreground">AI-tailored CV components ready to review and download.</p>
               {cvOutput && (
                 <p className="text-xs text-muted-foreground mt-1">
                   Last generated {format(new Date(cvOutput.updated_at), "MMM d, yyyy 'at' h:mm a")}
@@ -1501,7 +1514,7 @@ const JobDetail = () => {
                       {downloadingCv ? (
                         <><Loader2 className="h-4 w-4 animate-spin" /> Preparing...</>
                       ) : (
-                        <><Download className="h-4 w-4" /> Download CV</>
+                        <><Download className="h-4 w-4" /> Download</>
                       )}
                     </Button>
                   </DropdownMenuTrigger>
@@ -1526,7 +1539,7 @@ const JobDetail = () => {
                 ) : cvOutput ? (
                   <><RefreshCw className="h-4 w-4" /> Regenerate</>
                 ) : (
-                  <><FileText className="h-4 w-4" /> Generate Tailored CV</>
+                  <><FileText className="h-4 w-4" /> Generate Application Kit</>
                 )}
               </Button>
             </div>
