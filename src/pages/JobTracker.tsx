@@ -144,15 +144,15 @@ type SortDir = "asc" | "desc";
 // inside other cells or on the job detail page instead of as full columns.
 type ColDef = { label: string; key: SortKey | null; width: number; resizable: boolean; custom?: { id: string } };
 const DEFAULT_COLUMNS: ColDef[] = [
-  { label: "",            key: null,                   width: 28,  resizable: false },
-  { label: "Company / Role", key: "company_name",      width: 240, resizable: true  },
-  { label: "Location",    key: "location",             width: 130, resizable: true  },
-  { label: "Deadline",    key: "application_deadline", width: 100, resizable: true  },
-  { label: "Start",       key: "start_date",           width: 90,  resizable: true  },
-  { label: "Status",      key: "status",               width: 100, resizable: true  },
-  { label: "Match",       key: "match_score",          width: 64,  resizable: false },
-  { label: "Priority",    key: "priority",             width: 84,  resizable: true  },
-  { label: "Outreach",    key: null,                   width: 110, resizable: true  },
+  { label: "",            key: null,                   width: 24,  resizable: false },
+  { label: "Company / Role", key: "company_name",      width: 220, resizable: true  },
+  { label: "Location",    key: "location",             width: 104, resizable: true  },
+  { label: "Deadline",    key: "application_deadline", width: 88,  resizable: true  },
+  { label: "Start",       key: "start_date",           width: 72,  resizable: true  },
+  { label: "Status",      key: "status",               width: 96,  resizable: true  },
+  { label: "Match",       key: "match_score",          width: 56,  resizable: false },
+  { label: "Priority",    key: "priority",             width: 76,  resizable: true  },
+  { label: "Outreach",    key: null,                   width: 100, resizable: true  },
 ];
 const MIN_COL_WIDTH = 60;
 
@@ -1308,7 +1308,7 @@ const JobTracker = () => {
                       <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
                         <Select value={job.status} onValueChange={(v) => handleStatusChange(job.id, v)}>
                           <SelectTrigger
-                            className="h-6 w-auto border-0 gap-1 rounded-full"
+                            className="h-6 w-auto border-0 gap-1 rounded-full [&>span]:line-clamp-1"
                             style={{
                               ...getStatusPillStyle(job.status),
                               fontFamily: "var(--font-body)",
@@ -1317,10 +1317,17 @@ const JobTracker = () => {
                               padding: "3px 8px",
                             }}
                           >
-                            <SelectValue />
+                            <SelectValue>{job.status}</SelectValue>
                           </SelectTrigger>
                           <SelectContent>
-                            {STATUS_OPTIONS.map(s => (<SelectItem key={s.value} value={s.value}><div className="flex flex-col py-0.5"><span className="text-sm font-medium">{s.value}</span><span className="text-[11px] text-muted-foreground leading-snug">{s.description}</span></div></SelectItem>))}
+                            {STATUS_OPTIONS.map(s => (
+                              <SelectItem key={s.value} value={s.value} textValue={s.value}>
+                                <div className="flex flex-col py-0.5">
+                                  <span className="text-sm font-medium">{s.value}</span>
+                                  <span className="text-[11px] text-muted-foreground leading-snug">{s.description}</span>
+                                </div>
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </td>
