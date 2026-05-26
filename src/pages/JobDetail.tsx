@@ -1721,10 +1721,21 @@ const JobDetail = () => {
                                       ? "bg-[#FFF5F5] text-[#950606] border-[#FBD5D5]"
                                       : "bg-gray-50 text-gray-600 border-gray-200";
                                 return (
-                                  <li key={bulletIdx} className="flex items-start gap-2 group">
+                                  <li key={bulletIdx} className="flex items-start gap-2 group rounded-md -mx-1 px-1 py-1 hover:bg-muted/40 transition-colors">
                                     <span className="text-muted-foreground mt-1.5 shrink-0">•</span>
                                     <div className="flex-1 min-w-0">
-                                      <span className={`inline-block text-[10px] font-medium px-1.5 py-0.5 rounded border mb-1 ${originClass}`}>{originLabel}</span>
+                                      <div className="flex items-center gap-1.5 mb-1">
+                                        <span className={`inline-block text-[10px] font-medium px-1.5 py-0.5 rounded border ${originClass}`}>{originLabel}</span>
+                                        {!identical && (
+                                          <button
+                                            onClick={() => toggleBullet(blockIdx, bulletIdx)}
+                                            className="text-[10px] text-muted-foreground hover:text-foreground underline underline-offset-2"
+                                            title={showTailored ? "Switch to original wording" : "Switch to tailored wording"}
+                                          >
+                                            Show {showTailored ? "original" : "tailored"}
+                                          </button>
+                                        )}
+                                      </div>
                                       <span
                                         contentEditable
                                         suppressContentEditableWarning
@@ -1733,20 +1744,14 @@ const JobDetail = () => {
                                         {showTailored ? bullet.tailored : bullet.original}
                                       </span>
                                     </div>
-                                    {!identical && (
-                                      <button
-                                        onClick={() => toggleBullet(blockIdx, bulletIdx)}
-                                        className="shrink-0 mt-0.5 flex items-center gap-1"
-                                        title={showTailored ? "Showing tailored version" : "Showing original version"}
-                                      >
-                                        <div className={`relative inline-flex h-4 w-8 items-center rounded-full transition-colors ${showTailored ? "bg-[#950606]" : "bg-gray-300"}`}>
-                                          <div className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${showTailored ? "translate-x-4" : "translate-x-0.5"}`} />
-                                        </div>
-                                        <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                                          {showTailored ? "Tailored" : "Original"}
-                                        </span>
-                                      </button>
-                                    )}
+                                    <button
+                                      onClick={() => removeBullet(blockIdx, bulletIdx)}
+                                      className="shrink-0 mt-1 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity text-muted-foreground hover:text-destructive p-1 rounded"
+                                      title="Remove this bullet"
+                                      aria-label="Remove bullet"
+                                    >
+                                      <X className="h-3.5 w-3.5" />
+                                    </button>
                                   </li>
                                 );
                               })}
