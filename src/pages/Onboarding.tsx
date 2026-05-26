@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Loader2, AlertTriangle, Check } from "lucide-react";
 import { Fragment } from "react";
@@ -22,6 +23,7 @@ const Onboarding = () => {
   const location = useLocation();
   const { user, isReady } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
+  const [checkingProfile, setCheckingProfile] = useState(true);
 
   const cvData = (location.state as { cvData?: ParsedCVData } | null)?.cvData || null;
 
@@ -34,7 +36,27 @@ const Onboarding = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [currentStep]);
 
-  if (!isReady) {
+  // Guard: if onboarding is already complete, bounce to dashboard
+  useEffect(() => {
+    if (!isReady || !user) { return; }
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("onboarding_complete")
+        .eq("id", user.id)
+        .single();
+      if (cancelled) return;
+      if (!error && data?.onboarding_complete) {
+        navigate("/dashboard", { replace: true });
+        return;
+      }
+      setCheckingProfile(false);
+    })();
+    return () => { cancelled = true; };
+  }, [isReady, user, navigate]);
+
+  if (!isReady || (user && checkingProfile)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

@@ -45,6 +45,11 @@ const StepLanguages = ({ userId, onBack, onNext, initialData }: Props) => {
     const langRows = rows.map(r => ({ user_id: userId, language_name: r.name.trim(), proficiency: r.proficiency }));
     const { error: insertError } = await supabase.from("languages").insert(langRows);
     if (insertError) { setSaving(false); toast.error(insertError.message); return; }
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .update({ onboarding_complete: true })
+      .eq("id", userId);
+    if (profileError) { setSaving(false); toast.error(profileError.message); return; }
     setSaving(false);
     onNext();
   };
