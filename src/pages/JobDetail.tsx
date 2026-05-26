@@ -1171,17 +1171,18 @@ const JobDetail = () => {
         <TabsContent value="overview" className="hiro-tab-content mt-0">
           <Card>
             <CardContent className="p-6">
-              <div className="flex justify-end mb-4">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-sm font-semibold text-foreground">Job Details</h2>
                 {isEditing ? (
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={cancelEdit}>Cancel</Button>
-                    <Button size="sm" onClick={saveEdit} className="gap-1.5" style={{ backgroundColor: '#950606' }}>
-                      <Check className="h-3.5 w-3.5" /> Save
+                    <Button variant="outline" size="sm" onClick={cancelEdit} className="h-8 text-xs">Cancel</Button>
+                    <Button size="sm" onClick={saveEdit} className="h-8 text-xs gap-1" style={{ backgroundColor: '#950606' }}>
+                      <Check className="h-3 w-3" /> Save
                     </Button>
                   </div>
                 ) : (
-                  <Button variant="outline" size="sm" onClick={startEdit} className="gap-1.5">
-                    <Pencil className="h-3.5 w-3.5" /> Edit
+                  <Button variant="ghost" size="sm" onClick={startEdit} className="h-8 text-xs gap-1 text-muted-foreground hover:text-foreground">
+                    <Pencil className="h-3 w-3" /> Edit
                   </Button>
                 )}
               </div>
