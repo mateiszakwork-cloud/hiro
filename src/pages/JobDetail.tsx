@@ -1756,22 +1756,8 @@ const JobDetail = () => {
                                 );
                               })}
                             </ul>
-                            {/* +/- bullet controls */}
+                            {/* Add bullet controls — per-bullet remove handled inline above */}
                             <div className="flex flex-wrap items-center gap-2 mt-3">
-                              <button
-                                disabled={normalizedBullets.length <= 1}
-                                onClick={() => {
-                                  if (!cvOutput || !Array.isArray(cvOutput.selected_bullets)) return;
-                                  const updated = (cvOutput.selected_bullets as BulletBlock[]).map((b, i) =>
-                                    i === blockIdx ? { ...b, bullets: b.bullets.slice(0, -1) } : b
-                                  );
-                                  setCvOutput({ ...cvOutput, selected_bullets: updated });
-                                }}
-                                className="h-7 px-2 rounded border border-border bg-muted text-xs text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed inline-flex items-center gap-1"
-                                title="Remove last bullet"
-                              >
-                                <Minus className="h-3 w-3" /> Remove last
-                              </button>
                               <button
                                 onClick={() => {
                                   if (!cvOutput || !Array.isArray(cvOutput.selected_bullets)) return;
@@ -1795,9 +1781,9 @@ const JobDetail = () => {
                                   setCvOutput({ ...cvOutput, selected_bullets: updated });
                                 }}
                                 className="h-7 px-2 rounded border border-border bg-muted text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
-                                title="Pull an unused bullet from your original CV"
+                                title="Add an unused bullet from your profile for this experience"
                               >
-                                <Plus className="h-3 w-3" /> Add from original CV
+                                <Plus className="h-3 w-3" /> Add from profile
                               </button>
                               <button
                                 onClick={async () => {
@@ -1827,11 +1813,11 @@ const JobDetail = () => {
                                   }
                                 }}
                                 className="h-7 px-2 rounded border border-[#FBD5D5] bg-[#FFF5F5] text-xs text-[#950606] hover:bg-[#FFE5E5] inline-flex items-center gap-1"
-                                title="Generate a new tailored bullet grounded in this experience"
+                                title="Use AI to draft a new bullet grounded in this experience"
                               >
-                                <Sparkles className="h-3 w-3" /> Generate tailored bullet
+                                <Sparkles className="h-3 w-3" /> Suggest new bullet
                               </button>
-                              <span className="text-[10px] text-muted-foreground ml-auto">{normalizedBullets.length} bullets</span>
+                              <span className="text-[10px] text-muted-foreground ml-auto">{normalizedBullets.length} bullet{normalizedBullets.length === 1 ? "" : "s"} · hover to remove</span>
                             </div>
                           </div>
                         );
