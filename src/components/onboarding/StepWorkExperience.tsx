@@ -33,9 +33,9 @@ const emptyBlock = (): WorkBlock => ({
   isCurrent: false, bullets: ["", "", ""],
 });
 
-interface Props { userId: string; onNext: () => void; initialData?: import("@/types/cv").ParsedWorkExperience[]; }
+interface Props { userId: string; onNext: () => void; onBack?: () => void; initialData?: import("@/types/cv").ParsedWorkExperience[]; }
 
-const StepWorkExperience = ({ userId, onNext, initialData }: Props) => {
+const StepWorkExperience = ({ userId, onNext, onBack, initialData }: Props) => {
   const [blocks, setBlocks] = useState<WorkBlock[]>(() => {
     if (initialData && initialData.length > 0) {
       return initialData.map(d => ({
@@ -216,7 +216,10 @@ const StepWorkExperience = ({ userId, onNext, initialData }: Props) => {
 
       {error && <p className="mt-4 flex items-center gap-1.5 text-sm text-destructive"><AlertTriangle className="h-3.5 w-3.5 shrink-0" />{error}</p>}
 
-      <div className="mt-8 flex justify-end">
+      <div className="mt-8 flex justify-between">
+        {onBack ? (
+          <button onClick={onBack} className="text-sm font-medium text-muted-foreground hover:text-foreground">← Back</button>
+        ) : <span />}
         <button onClick={handleNext} disabled={saving} className="rounded-lg bg-primary px-6 py-2 text-sm font-semibold text-primary-foreground hover:bg-accent transition-colors disabled:opacity-50">
           {saving ? "Saving..." : "Next →"}
         </button>
