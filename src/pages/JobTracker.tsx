@@ -151,7 +151,7 @@ const DEFAULT_COLUMNS: ColDef[] = [
   { label: "Deadline",    key: "application_deadline", width: 88,  resizable: true  },
   { label: "Start",       key: "start_date",           width: 72,  resizable: true  },
   { label: "Status",      key: "status",               width: 96,  resizable: true  },
-  { label: "Match",       key: "match_score",          width: 56,  resizable: false },
+  { label: "Kit",         key: null,                   width: 90,  resizable: false },
   { label: "Priority",    key: "priority",             width: 76,  resizable: true  },
   { label: "Outreach",    key: null,                   width: 100, resizable: true  },
 ];
@@ -753,14 +753,14 @@ const JobTracker = () => {
               marginBottom: "14px",
             }}
           >
-            Paste a general job posting URL from LinkedIn, Greenhouse, Workday, Lever, or a company careers page — Hiro will fill every column for you.
+            Paste a job posting URL from a company careers page, Workday, Greenhouse, Lever, or any ATS — Hiro fills every column for you. (LinkedIn job links are not supported — use the original posting instead.)
           </p>
 
           <div style={{ display: "flex", gap: "10px", alignItems: "stretch" }}>
             <Input
               value={url}
               onChange={(e) => { setUrl(e.target.value); if (urlError) setUrlError(""); }}
-              placeholder="Paste a general job posting URL from LinkedIn, Greenhouse, Workday, Lever, or a company careers page..."
+              placeholder="Paste a job posting URL — company careers page, Workday, Greenhouse, Lever..."
               onKeyDown={(e) => e.key === "Enter" && !loading && handleAddJob()}
               disabled={loading}
               style={{
@@ -852,8 +852,9 @@ const JobTracker = () => {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(6, minmax(0, 1fr))",
+              gridTemplateColumns: "repeat(5, minmax(140px, 200px))",
               gap: "12px",
+              justifyContent: "start",
             }}
             className="hiro-metrics-grid"
           >
@@ -883,12 +884,6 @@ const JobTracker = () => {
             >
               <div style={metricNumStyle}>{stats.interviews}</div>
               <div style={metricLabelStyle}>Interviews</div>
-            </div>
-            <div style={metricCardStyle} onMouseEnter={(e) => metricCardHover(e, true)} onMouseLeave={(e) => metricCardHover(e, false)}>
-              <div style={{ ...metricNumStyle, color: stats.avgScore === null ? "var(--color-text-primary)" : stats.avgScore > 70 ? "#15803D" : stats.avgScore >= 40 ? "#92400E" : "#991B1B" }}>
-                {stats.avgScore !== null ? `${stats.avgScore}%` : "–"}
-              </div>
-              <div style={metricLabelStyle}>Avg Match</div>
             </div>
             <div style={metricCardStyle} onMouseEnter={(e) => metricCardHover(e, true)} onMouseLeave={(e) => metricCardHover(e, false)}>
               <div style={metricNumStyle}>{contactsReached}</div>
@@ -1081,7 +1076,7 @@ const JobTracker = () => {
                   marginRight: "auto",
                 }}
               >
-                Paste a general job posting URL (LinkedIn, Greenhouse, Workday, Lever, or a company careers page) at the top — Hiro will fill in every column for you.
+                Paste a job posting URL from a company careers page, Workday, Greenhouse, Lever, or any ATS at the top — Hiro will fill in every column for you.
               </p>
             </div>
           ) : (
@@ -1336,25 +1331,32 @@ const JobTracker = () => {
                           </SelectContent>
                         </Select>
                       </td>
-                      <td className="px-3 py-2 text-center">
-                        {job.match_score !== null ? (
-                          <span
-                            style={{
-                              ...getScoreBadgeStyle(job.match_score),
-                              display: "inline-flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              width: "28px",
-                              height: "28px",
-                              borderRadius: "50%",
-                              fontFamily: "var(--font-data)",
-                              fontSize: "10px",
-                              fontWeight: 700,
-                            }}
-                          >
-                            {job.match_score}
+                      {/* Kit column — discoverable access to the Application Kit */}
+                      <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                        {generatingKit === job.id ? (
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-gray-50 border border-gray-200 text-muted-foreground">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            Building…
                           </span>
-                        ) : <span className="text-muted-foreground">–</span>}
+                        ) : cvMap[job.id] ? (
+                          <button
+                            onClick={(e) => handleKitClick(e, job)}
+                            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-green-50 border border-green-200 text-green-700 hover:bg-green-100 transition-colors"
+                            title="Open Application Kit"
+                          >
+                            <Check className="h-3 w-3" />
+                            Ready
+                          </button>
+                        ) : (
+                          <button
+                            onClick={(e) => handleKitClick(e, job)}
+                            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-background border border-input text-foreground hover:border-primary hover:text-primary transition-colors"
+                            title="Generate Application Kit"
+                          >
+                            <Wand2 className="h-3 w-3" />
+                            Generate
+                          </button>
+                        )}
                       </td>
                       <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
                         <Select value={job.priority} onValueChange={(v) => handlePriorityChange(job.id, v)}>
