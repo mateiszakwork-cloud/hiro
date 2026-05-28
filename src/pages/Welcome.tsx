@@ -27,6 +27,7 @@ const Welcome = () => {
   const [showPasteMode, setShowPasteMode] = useState(false);
   const [pastedText, setPastedText] = useState("");
   const [tourState, setTourState] = useState<"loading" | "show" | "hide">("loading");
+  const [isDragging, setIsDragging] = useState(false);
 
   // Decide whether to show the first-login product tour
   useEffect(() => {
@@ -96,10 +97,7 @@ const Welcome = () => {
     setParseError(true);
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const processFile = async (file: File) => {
     if (file.type !== "application/pdf") {
       handleParseError("Please upload a PDF version of your CV.");
       return;
@@ -137,6 +135,34 @@ const Welcome = () => {
     } finally {
       setUploading(false);
     }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await processFile(file);
+  };
+
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    await processFile(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isDragging) setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
   };
 
   const handlePasteSubmit = async () => {
@@ -231,7 +257,16 @@ const Welcome = () => {
             </p>
           </div>
 
-          <div className="mt-6 rounded-lg border-2 border-dashed border-border p-6 bg-muted/30">
+          <div
+            className={`mt-6 rounded-lg border-2 border-dashed p-6 transition-colors duration-200 ${
+              isDragging
+                ? "border-primary bg-primary/5"
+                : "border-border bg-muted/30"
+            }`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
             <input
               ref={fileInputRef}
               type="file"
