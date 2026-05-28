@@ -41,18 +41,19 @@ export interface CvEducationEntry {
   description?: string | null;
 }
 
-export interface CvFooterData {
-  languages: { name: string; proficiency: string }[];
-  interests: string[];
-  hardSkills: Record<string, string[]> | string[] | null;
+export interface CvLanguageEntry {
+  name: string;
+  proficiency: string;
 }
 
+export type CvHardSkills = Record<string, string[]> | string[] | null;
+
 export type CvSectionData =
-  | { kind: "summary"; text: string }
   | { kind: "education"; entries: CvEducationEntry[] }
   | { kind: "experience"; entries: CvExperienceEntry[] }
-  | { kind: "entrepreneurial"; entries: CvExperienceEntry[] }
-  | { kind: "footer"; data: CvFooterData };
+  | { kind: "languages"; entries: CvLanguageEntry[] }
+  | { kind: "hardSkills"; data: CvHardSkills }
+  | { kind: "softSkills"; items: string[] };
 
 export interface CvSection {
   id: CvSectionId;
@@ -91,18 +92,6 @@ function experienceEntries(
   }));
 }
 
-function volunteeringEntries(vols: any[]): CvExperienceEntry[] {
-  return (vols || []).map((v) => ({
-    jobTitle: v.role || v.organization || "",
-    company: v.role ? v.organization || "" : "",
-    location: null,
-    dateRange: v.start_year
-      ? `${v.start_year} – ${v.is_ongoing ? "Present" : v.end_year || ""}`
-      : "",
-    bullets: v.description ? [v.description] : [],
-  }));
-}
-
 function educationEntries(edus: any[]): CvEducationEntry[] {
   return (edus || []).map((e) => ({
     institution: e.institution || "",
@@ -137,9 +126,9 @@ export function buildCvData(opts: {
     work_experiences: any[];
     education: any[];
     languages: any[];
-    interests: string[];
-    awards: any[];
-    volunteering: any[];
+    interests?: string[];
+    awards?: any[];
+    volunteering?: any[];
   };
   job: { company_name: string | null; location?: string | null };
 }): CvData {
@@ -161,39 +150,34 @@ export function buildCvData(opts: {
   };
 
   const expEntries = experienceEntries(profile.work_experiences, selectedBullets);
-  const volEntries = volunteeringEntries(profile.volunteering);
   const eduEntries = educationEntries(profile.education);
-  const langs = (profile.languages || []).map((l: any) => ({
+  const langEntries: CvLanguageEntry[] = (profile.languages || []).map((l: any) => ({
     name: l.language_name,
     proficiency: l.proficiency,
   }));
+  const hardSkills = cvOutput.selected_hard_skills || null;
+  const softSkills = (cvOutput.selected_soft_skills || []).filter(Boolean);
 
   const config: CvSectionConfig = normalizeSectionConfig(cvOutput.section_config);
 
   const dataById: Record<CvSectionId, CvSectionData> = {
-    summary: { kind: "summary", text: cvOutput.tailored_summary || "" },
     education: { kind: "education", entries: eduEntries },
     experience: { kind: "experience", entries: expEntries },
-    entrepreneurial: { kind: "entrepreneurial", entries: volEntries },
-    footer: {
-      kind: "footer",
-      data: {
-        languages: langs,
-        interests: profile.interests || [],
-        hardSkills: cvOutput.selected_hard_skills || null,
-      },
-    },
+    languages: { kind: "languages", entries: langEntries },
+    hardSkills: { kind: "hardSkills", data: hardSkills },
+    softSkills: { kind: "softSkills", items: softSkills },
   };
 
   const emptyById: Record<CvSectionId, boolean> = {
-    summary: !cvOutput.tailored_summary,
     education: eduEntries.length === 0,
     experience: expEntries.length === 0,
-    entrepreneurial: volEntries.length === 0,
-    footer:
-      langs.length === 0 &&
-      (profile.interests?.length || 0) === 0 &&
-      !cvOutput.selected_hard_skills,
+    languages: langEntries.length === 0,
+    hardSkills:
+      !hardSkills ||
+      (Array.isArray(hardSkills)
+        ? hardSkills.length === 0
+        : Object.values(hardSkills).every((v) => !Array.isArray(v) || v.length === 0)),
+    softSkills: softSkills.length === 0,
   };
 
   const sections: CvSection[] = config.sections.map((s) => ({
