@@ -35,10 +35,7 @@ function renderSection(s: CvSection) {
   return (
     <section key={s.id}>
       <Heading>{s.label}</Heading>
-      {d.kind === "summary" && (
-        <p className="text-[10px] leading-[1.45] text-neutral-900">{d.text}</p>
-      )}
-      {(d.kind === "experience" || d.kind === "entrepreneurial") && d.entries.map((e, i) => (
+      {d.kind === "experience" && d.entries.map((e, i) => (
         <div key={i} className="mb-1">
           <EntryHeader left={e.company ? `${e.jobTitle} | ${e.company}` : e.jobTitle} right={e.dateRange} />
           {e.location && (
@@ -67,28 +64,23 @@ function renderSection(s: CvSection) {
           </div>
         );
       })}
-      {d.kind === "footer" && (
-        <div className="space-y-1 mt-1">
-          {d.data.languages.length > 0 && (
-            <p className="text-[10px]">
-              {d.data.languages.map(l => `${l.name}: ${l.proficiency}`).join(" | ")}
-            </p>
-          )}
-          {d.data.interests?.length > 0 && (
-            <p className="text-[10px]"><span className="font-bold">Personal Interests:</span> {d.data.interests.join(", ")}</p>
-          )}
-          {d.data.hardSkills && (
-            <p className="text-[10px]">
-              <span className="font-bold">Software Skills:</span>{" "}
-              {Array.isArray(d.data.hardSkills)
-                ? d.data.hardSkills.join(", ") + "."
-                : Object.entries(d.data.hardSkills)
-                    .filter(([, v]) => Array.isArray(v) && v.length)
-                    .map(([cat, skills]) => `${cat}: ${(skills as string[]).join(", ")}`)
-                    .join("; ") + "."}
-            </p>
-          )}
-        </div>
+      {d.kind === "languages" && (
+        <p className="text-[10px] mt-1 text-neutral-900">
+          {d.entries.map(l => `${l.name}: ${l.proficiency}`).join(" | ")}
+        </p>
+      )}
+      {d.kind === "hardSkills" && d.data && (
+        <p className="text-[10px] mt-1 text-neutral-900">
+          {Array.isArray(d.data)
+            ? d.data.join(", ") + "."
+            : Object.entries(d.data)
+                .filter(([, v]) => Array.isArray(v) && v.length)
+                .map(([cat, skills]) => `${cat}: ${(skills as string[]).join(", ")}`)
+                .join("; ") + "."}
+        </p>
+      )}
+      {d.kind === "softSkills" && d.items.length > 0 && (
+        <p className="text-[10px] mt-1 text-neutral-900">{d.items.join(", ") + "."}</p>
       )}
     </section>
   );

@@ -3,7 +3,10 @@ import {
   TabStopType, TabStopPosition, BorderStyle, LevelFormat,
 } from "docx";
 import { saveAs } from "file-saver";
-import type { CvData, CvSection, CvExperienceEntry, CvEducationEntry, CvFooterData } from "./buildCvData";
+import type {
+  CvData, CvSection, CvExperienceEntry, CvEducationEntry,
+  CvLanguageEntry, CvHardSkills,
+} from "./buildCvData";
 import { MONTHS } from "./cvLayout";
 
 // ── DXA constants (1 cm ≈ 567 DXA, 1 pt ≈ 20 DXA) ─────────────────────────────
@@ -111,58 +114,53 @@ function educationBlock(e: CvEducationEntry): Paragraph[] {
   return out;
 }
 
-function footerBlock(f: CvFooterData): Paragraph[] {
-  const out: Paragraph[] = [];
-  if (f.languages.length) {
-    out.push(new Paragraph({
-      spacing: { before: 60, after: 60, line: 280 },
-      children: [new TextRun({
-        text: f.languages.map(l => `${l.name}: ${l.proficiency}`).join(" | "),
-        size: SZ_BODY, font: FONT,
-      })],
-    }));
-  }
-  if (f.interests?.length) {
-    out.push(new Paragraph({
-      spacing: { before: 60, after: 60, line: 280 },
-      children: [
-        new TextRun({ text: "Personal Interests: ", bold: true, size: SZ_BODY, font: FONT }),
-        new TextRun({ text: f.interests.join(", "), size: SZ_BODY, font: FONT }),
-      ],
-    }));
-  }
-  if (f.hardSkills) {
-    const children: TextRun[] = [
-      new TextRun({ text: "Software Skills: ", bold: true, size: SZ_BODY, font: FONT }),
-    ];
-    if (Array.isArray(f.hardSkills)) {
-      children.push(new TextRun({ text: f.hardSkills.join(", ") + ".", size: SZ_BODY, font: FONT }));
-    } else {
-      const parts = Object.entries(f.hardSkills)
+function languagesBlock(langs: CvLanguageEntry[]): Paragraph[] {
+  if (!langs.length) return [];
+  return [new Paragraph({
+    spacing: { before: 60, after: 60, line: 280 },
+    children: [new TextRun({
+      text: langs.map(l => `${l.name}: ${l.proficiency}`).join(" | "),
+      size: SZ_BODY, font: FONT,
+    })],
+  })];
+}
+
+function hardSkillsBlock(skills: CvHardSkills): Paragraph[] {
+  if (!skills) return [];
+  const text = Array.isArray(skills)
+    ? skills.join(", ") + "."
+    : Object.entries(skills)
         .filter(([, v]) => Array.isArray(v) && v.length)
-        .map(([cat, skills]) => `${cat}: ${(skills as string[]).join(", ")}`);
-      children.push(new TextRun({ text: parts.join("; ") + ".", size: SZ_BODY, font: FONT }));
-    }
-    out.push(new Paragraph({ spacing: { before: 60, after: 60, line: 280 }, children }));
-  }
-  return out;
+        .map(([cat, list]) => `${cat}: ${(list as string[]).join(", ")}`)
+        .join("; ") + ".";
+  return [new Paragraph({
+    spacing: { before: 60, after: 60, line: 280 },
+    children: [new TextRun({ text, size: SZ_BODY, font: FONT })],
+  })];
+}
+
+function softSkillsBlock(items: string[]): Paragraph[] {
+  if (!items.length) return [];
+  return [new Paragraph({
+    spacing: { before: 60, after: 60, line: 280 },
+    children: [new TextRun({ text: items.join(", ") + ".", size: SZ_BODY, font: FONT })],
+  })];
 }
 
 function renderSection(s: CvSection): Paragraph[] {
   if (!s.visible || s.isEmpty) return [];
   const paras: Paragraph[] = [heading(s.label)];
   const d = s.data;
-  if (d.kind === "summary") {
-    paras.push(new Paragraph({
-      spacing: { after: 60, line: 290 },
-      children: [new TextRun({ text: d.text, size: SZ_BODY, font: FONT })],
-    }));
-  } else if (d.kind === "experience" || d.kind === "entrepreneurial") {
+  if (d.kind === "experience") {
     d.entries.forEach(e => paras.push(...experienceBlock(e)));
   } else if (d.kind === "education") {
     d.entries.forEach(e => paras.push(...educationBlock(e)));
-  } else if (d.kind === "footer") {
-    paras.push(...footerBlock(d.data));
+  } else if (d.kind === "languages") {
+    paras.push(...languagesBlock(d.entries));
+  } else if (d.kind === "hardSkills") {
+    paras.push(...hardSkillsBlock(d.data));
+  } else if (d.kind === "softSkills") {
+    paras.push(...softSkillsBlock(d.items));
   }
   return paras;
 }

@@ -2,11 +2,11 @@
 // Used by buildCvData, generateCvDocx, generateCvPdf, CvPreview, CvSectionControls.
 
 export type CvSectionId =
-  | "summary"
   | "education"
   | "experience"
-  | "entrepreneurial"
-  | "footer";
+  | "languages"
+  | "hardSkills"
+  | "softSkills";
 
 export interface CvSectionMeta {
   id: CvSectionId;
@@ -19,18 +19,21 @@ export interface CvSectionConfig {
 }
 
 export const DEFAULT_SECTION_LABELS: Record<CvSectionId, string> = {
-  summary: "Summary",
   education: "Education",
   experience: "Professional Experience",
-  entrepreneurial: "Entrepreneurial Experience",
-  footer: "Languages, Interests & Software Skills",
+  languages: "Languages",
+  hardSkills: "Hard Skills",
+  softSkills: "Soft Skills",
 };
+
+/** Sections that ship hidden by default (user can opt in). */
+const OPTIONAL_HIDDEN_BY_DEFAULT: CvSectionId[] = ["softSkills"];
 
 export const DEFAULT_SECTION_CONFIG: CvSectionConfig = {
   sections: (Object.keys(DEFAULT_SECTION_LABELS) as CvSectionId[]).map((id) => ({
     id,
     label: DEFAULT_SECTION_LABELS[id],
-    visible: true,
+    visible: !OPTIONAL_HIDDEN_BY_DEFAULT.includes(id),
   })),
 };
 
@@ -58,7 +61,11 @@ export function normalizeSectionConfig(raw: unknown): CvSectionConfig {
   // Append any missing default sections at the end (visible by default).
   for (const id of Object.keys(DEFAULT_SECTION_LABELS) as CvSectionId[]) {
     if (!known.has(id)) {
-      out.push({ id, label: DEFAULT_SECTION_LABELS[id], visible: true });
+      out.push({
+        id,
+        label: DEFAULT_SECTION_LABELS[id],
+        visible: !OPTIONAL_HIDDEN_BY_DEFAULT.includes(id),
+      });
     }
   }
   return { sections: out };
