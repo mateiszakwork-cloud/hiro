@@ -113,6 +113,7 @@ const Profile = () => {
   const [baseCvText, setBaseCvText] = useState<string | null>(null);
   const [baseCvUploadedAt, setBaseCvUploadedAt] = useState<string | null>(null);
   const [showExtractedText, setShowExtractedText] = useState(false);
+  const [baseCvLoaded, setBaseCvLoaded] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -131,6 +132,7 @@ const Profile = () => {
         setBaseCvText((profile as any).base_cv_text || null);
         setBaseCvUploadedAt((profile as any).base_cv_uploaded_at || null);
       }
+      setBaseCvLoaded(true);
       fetchAll(uid);
     };
     init();
