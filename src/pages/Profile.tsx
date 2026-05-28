@@ -571,7 +571,7 @@ const Profile = () => {
                   </div>
                   {showExtractedText && (
                     <div className="rounded-lg border border-border bg-muted/30 p-4 max-h-[400px] overflow-y-auto">
-                      <pre className="text-xs text-foreground whitespace-pre-wrap font-mono">{baseCvText}</pre>
+                      <pre className="text-xs text-foreground whitespace-pre-wrap font-sans leading-relaxed">{normalizeExtractedText(baseCvText)}</pre>
                     </div>
                   )}
                 </div>
