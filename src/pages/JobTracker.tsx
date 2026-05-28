@@ -753,14 +753,14 @@ const JobTracker = () => {
               marginBottom: "14px",
             }}
           >
-            Paste a general job posting URL from LinkedIn, Greenhouse, Workday, Lever, or a company careers page — Hiro will fill every column for you.
+            Paste a job posting URL from a company careers page, Workday, Greenhouse, Lever, or any ATS — Hiro fills every column for you. (LinkedIn job links are not supported — use the original posting instead.)
           </p>
 
           <div style={{ display: "flex", gap: "10px", alignItems: "stretch" }}>
             <Input
               value={url}
               onChange={(e) => { setUrl(e.target.value); if (urlError) setUrlError(""); }}
-              placeholder="Paste a general job posting URL from LinkedIn, Greenhouse, Workday, Lever, or a company careers page..."
+              placeholder="Paste a job posting URL — company careers page, Workday, Greenhouse, Lever..."
               onKeyDown={(e) => e.key === "Enter" && !loading && handleAddJob()}
               disabled={loading}
               style={{
