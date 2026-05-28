@@ -145,8 +145,8 @@ type SortDir = "asc" | "desc";
 // inside other cells or on the job detail page instead of as full columns.
 type ColDef = { label: string; key: SortKey | null; width: number; resizable: boolean; custom?: { id: string } };
 const DEFAULT_COLUMNS: ColDef[] = [
-  { label: "",            key: null,                   width: 24,  resizable: false },
-  { label: "Company / Role", key: "company_name",      width: 220, resizable: true  },
+  { label: "Company",     key: "company_name",         width: 160, resizable: true  },
+  { label: "Role",        key: "job_title",            width: 200, resizable: true  },
   { label: "Location",    key: "location",             width: 104, resizable: true  },
   { label: "Deadline",    key: "application_deadline", width: 88,  resizable: true  },
   { label: "Start",       key: "start_date",           width: 72,  resizable: true  },
@@ -154,6 +154,7 @@ const DEFAULT_COLUMNS: ColDef[] = [
   { label: "Kit",         key: null,                   width: 90,  resizable: false },
   { label: "Priority",    key: "priority",             width: 76,  resizable: true  },
   { label: "Outreach",    key: null,                   width: 100, resizable: true  },
+  { label: "Actions",     key: null,                   width: 116, resizable: false },
 ];
 const MIN_COL_WIDTH = 60;
 
