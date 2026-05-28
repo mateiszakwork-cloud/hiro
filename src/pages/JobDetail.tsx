@@ -484,22 +484,6 @@ const JobDetail = () => {
         });
       }
 
-      if (jobData.match_score === null) {
-        setMatchLoading(true);
-        const pollInterval = setInterval(async () => {
-          const { data: updated } = await supabase
-            .from("jobs")
-            .select("match_score, match_details")
-            .eq("id", jobId!)
-            .single();
-          if (updated?.match_score !== null) {
-            setJob(prev => prev ? { ...prev, match_score: updated.match_score, match_details: updated.match_details as any } : prev);
-            setMatchLoading(false);
-            clearInterval(pollInterval);
-          }
-        }, 3000);
-        setTimeout(() => { clearInterval(pollInterval); setMatchLoading(false); }, 60000);
-      }
 
       const { data: contactData } = await supabase
         .from("contacts")
