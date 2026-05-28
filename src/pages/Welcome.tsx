@@ -27,6 +27,7 @@ const Welcome = () => {
   const [showPasteMode, setShowPasteMode] = useState(false);
   const [pastedText, setPastedText] = useState("");
   const [tourState, setTourState] = useState<"loading" | "show" | "hide">("loading");
+  const [isDragging, setIsDragging] = useState(false);
 
   // Decide whether to show the first-login product tour
   useEffect(() => {
