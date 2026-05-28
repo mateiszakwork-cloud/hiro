@@ -115,6 +115,40 @@ const Profile = () => {
   const [showExtractedText, setShowExtractedText] = useState(false);
   const [baseCvLoaded, setBaseCvLoaded] = useState(false);
 
+  // Normalize PDF-extracted text for display: collapse accidental single line
+  // breaks inside paragraphs while preserving real paragraph breaks and bullets.
+  const normalizeExtractedText = (raw: string): string => {
+    if (!raw) return "";
+    // Standardize newlines and trim trailing spaces on each line
+    const text = raw.replace(/\r\n?/g, "\n").replace(/[ \t]+\n/g, "\n");
+    // Split into paragraphs on blank lines
+    return text
+      .split(/\n{2,}/)
+      .map((para) => {
+        const lines = para.split("\n");
+        const out: string[] = [];
+        let buf = "";
+        const isBullet = (s: string) => /^\s*([-•·*–—]|\d+[.)])\s+/.test(s);
+        const flush = () => { if (buf) { out.push(buf); buf = ""; } };
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (!line) { flush(); continue; }
+          if (isBullet(line)) { flush(); out.push(line); continue; }
+          if (!buf) { buf = line; continue; }
+          // Heuristic: if previous chunk ended with sentence terminator or
+          // current line starts with a capital after a heading-like short prev,
+          // keep as separate line; otherwise join with a space (de-hyphenate).
+          const prevEnds = /[.!?:;]$/.test(buf);
+          if (prevEnds) { flush(); buf = line; }
+          else if (/-$/.test(buf)) { buf = buf.replace(/-$/, "") + line; }
+          else { buf = buf + " " + line; }
+        }
+        flush();
+        return out.join("\n");
+      })
+      .join("\n\n");
+  };
+
   useEffect(() => {
     const init = async () => {
       const { data: { session } } = await supabase.auth.getSession();
