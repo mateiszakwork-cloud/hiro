@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Briefcase, MapPin, Trash2, ExternalLink, Loader2, CalendarIcon, ArrowUp, ArrowDown, ArrowUpDown, Wand2, Check, Copy, ArrowRight, Pencil, Users, AlertCircle, X } from "lucide-react";
+import { Briefcase, MapPin, Trash2, ExternalLink, Loader2, CalendarIcon, ArrowUp, ArrowDown, ArrowUpDown, Wand2, Check, Copy, ArrowRight, Pencil, Users, AlertCircle, X, MessageSquare } from "lucide-react";
 import { Plus } from "lucide-react";
 import { computeDeadlineState, DeadlineBadge } from "@/lib/deadlineUtils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -145,8 +145,8 @@ type SortDir = "asc" | "desc";
 // inside other cells or on the job detail page instead of as full columns.
 type ColDef = { label: string; key: SortKey | null; width: number; resizable: boolean; custom?: { id: string } };
 const DEFAULT_COLUMNS: ColDef[] = [
-  { label: "",            key: null,                   width: 24,  resizable: false },
-  { label: "Company / Role", key: "company_name",      width: 220, resizable: true  },
+  { label: "Company",     key: "company_name",         width: 160, resizable: true  },
+  { label: "Role",        key: "job_title",            width: 200, resizable: true  },
   { label: "Location",    key: "location",             width: 104, resizable: true  },
   { label: "Deadline",    key: "application_deadline", width: 88,  resizable: true  },
   { label: "Start",       key: "start_date",           width: 72,  resizable: true  },
@@ -155,6 +155,7 @@ const DEFAULT_COLUMNS: ColDef[] = [
   { label: "Priority",    key: "priority",             width: 76,  resizable: true  },
   { label: "Outreach",    key: null,                   width: 100, resizable: true  },
 ];
+const ACTIONS_COLUMN: ColDef = { label: "Actions", key: null, width: 116, resizable: false };
 const MIN_COL_WIDTH = 60;
 
 const FUNCTION_VALUES = ["Strategy", "Finance", "Marketing", "Product", "Operations", "HR", "Consulting", "Other"];
@@ -209,6 +210,7 @@ const JobTracker = () => {
     ...customColumns.map((c) => ({
       label: c.name, key: null as SortKey | null, width: 140, resizable: true, custom: { id: c.id },
     })),
+    ACTIONS_COLUMN,
   ], [customColumns]);
 
   // Compute urgent deadline jobs (within 7 days, status Saved or Applied)
@@ -1182,50 +1184,43 @@ const JobTracker = () => {
                         minHeight: "44px",
                       }}
                     >
-                      {/* Open Full Page arrow - first column */}
-                      <td className="pl-3 pr-1 py-2" onClick={(e) => { e.stopPropagation(); navigate(`/jobs/${job.id}`); }}>
-                        <TooltipProvider delayDuration={200}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button className="text-muted-foreground hover:text-primary transition-colors">
-                                <ArrowRight className="h-3.5 w-3.5 stroke-[2.5]" />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent>Open full page</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                      {/* Company column */}
+                      <td className="pl-3 pr-2 py-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="h-7 w-7 rounded bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground shrink-0">
+                            {safeText(job.company_name)[0].toUpperCase()}
+                          </div>
+                          <span className="font-semibold text-foreground truncate text-[13px]">
+                            {safeText(job.company_name)}
+                          </span>
+                        </div>
                       </td>
-                      {/* Combined Company / Role cell — company primary, title secondary */}
+                      {/* Role column — link-styled for obvious clickability */}
                       <td className="px-3 py-2">
                         <TooltipProvider delayDuration={300}>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <div className="flex items-center gap-2 min-w-0">
-                                <div className="h-7 w-7 rounded bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground shrink-0">
-                                  {safeText(job.company_name)[0].toUpperCase()}
-                                </div>
-                                <div className="min-w-0 flex-1 leading-tight">
-                                  <div className="font-semibold text-foreground truncate text-[13px]">
-                                    {safeText(job.company_name)}
-                                  </div>
-                                  <div className="truncate text-[12px] text-muted-foreground">
-                                    {!isBlank(job.job_title)
-                                      ? safeText(job.job_title)
-                                      : (job.url ? <span className="italic">Parsing...</span> : "–")}
-                                    {!isBlank(job.function) && (
-                                      <span className="ml-1 text-muted-foreground/70">· {job.function}</span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); navigate(`/jobs/${job.id}`); }}
+                                className="group/role inline-flex items-center gap-1 min-w-0 max-w-full text-left text-[13px] font-medium text-primary hover:underline underline-offset-2"
+                              >
+                                <span className="truncate">
+                                  {!isBlank(job.job_title)
+                                    ? safeText(job.job_title)
+                                    : (job.url ? <span className="italic text-muted-foreground">Parsing...</span> : <span className="text-muted-foreground">–</span>)}
+                                </span>
+                                {!isBlank(job.function) && (
+                                  <span className="text-[11px] text-muted-foreground/80 shrink-0">· {job.function}</span>
+                                )}
+                              </button>
                             </TooltipTrigger>
                             <TooltipContent>
                               <div className="text-xs">
-                                <div className="font-semibold">{safeText(job.company_name)}</div>
-                                <div>{safeText(job.job_title)}</div>
+                                <div className="font-semibold">{safeText(job.job_title)}</div>
                                 {!isBlank(job.function) && <div className="text-muted-foreground">{job.function}</div>}
                                 {!isBlank(job.duration) && <div className="text-muted-foreground">Duration: {job.duration}</div>}
                                 {job.applied_date && <div className="text-muted-foreground">Applied: {format(new Date(job.applied_date), "MMM d, yyyy")}</div>}
+                                <div className="text-muted-foreground mt-1">Click to open full page</div>
                               </div>
                             </TooltipContent>
                           </Tooltip>
@@ -1429,6 +1424,61 @@ const JobTracker = () => {
                           </td>
                         );
                       })}
+                      {/* Actions column — primary Open + compact workspace shortcuts */}
+                      <td className="px-2 py-2" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-1 justify-end">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); navigate(`/jobs/${job.id}`); }}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                            title="Open application workspace"
+                          >
+                            Open
+                            <ArrowRight className="h-3 w-3" />
+                          </button>
+                          <TooltipProvider delayDuration={200}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); navigate(`/jobs/${job.id}?tab=cv`); }}
+                                  className="h-6 w-6 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-primary hover:bg-muted transition-colors"
+                                  aria-label="Application Kit"
+                                >
+                                  <Wand2 className="h-3.5 w-3.5" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>Application Kit</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <TooltipProvider delayDuration={200}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); navigate(`/jobs/${job.id}?tab=outreach`); }}
+                                  className="h-6 w-6 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-primary hover:bg-muted transition-colors"
+                                  aria-label="Outreach"
+                                >
+                                  <Users className="h-3.5 w-3.5" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>Outreach</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <TooltipProvider delayDuration={200}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); navigate(`/jobs/${job.id}?tab=interview`); }}
+                                  className="h-6 w-6 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-primary hover:bg-muted transition-colors"
+                                  aria-label="Interview prep"
+                                >
+                                  <MessageSquare className="h-3.5 w-3.5" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>Interview prep</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
