@@ -1183,50 +1183,43 @@ const JobTracker = () => {
                         minHeight: "44px",
                       }}
                     >
-                      {/* Open Full Page arrow - first column */}
-                      <td className="pl-3 pr-1 py-2" onClick={(e) => { e.stopPropagation(); navigate(`/jobs/${job.id}`); }}>
-                        <TooltipProvider delayDuration={200}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button className="text-muted-foreground hover:text-primary transition-colors">
-                                <ArrowRight className="h-3.5 w-3.5 stroke-[2.5]" />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent>Open full page</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                      {/* Company column */}
+                      <td className="pl-3 pr-2 py-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="h-7 w-7 rounded bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground shrink-0">
+                            {safeText(job.company_name)[0].toUpperCase()}
+                          </div>
+                          <span className="font-semibold text-foreground truncate text-[13px]">
+                            {safeText(job.company_name)}
+                          </span>
+                        </div>
                       </td>
-                      {/* Combined Company / Role cell — company primary, title secondary */}
+                      {/* Role column — link-styled for obvious clickability */}
                       <td className="px-3 py-2">
                         <TooltipProvider delayDuration={300}>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <div className="flex items-center gap-2 min-w-0">
-                                <div className="h-7 w-7 rounded bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground shrink-0">
-                                  {safeText(job.company_name)[0].toUpperCase()}
-                                </div>
-                                <div className="min-w-0 flex-1 leading-tight">
-                                  <div className="font-semibold text-foreground truncate text-[13px]">
-                                    {safeText(job.company_name)}
-                                  </div>
-                                  <div className="truncate text-[12px] text-muted-foreground">
-                                    {!isBlank(job.job_title)
-                                      ? safeText(job.job_title)
-                                      : (job.url ? <span className="italic">Parsing...</span> : "–")}
-                                    {!isBlank(job.function) && (
-                                      <span className="ml-1 text-muted-foreground/70">· {job.function}</span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); navigate(`/jobs/${job.id}`); }}
+                                className="group/role inline-flex items-center gap-1 min-w-0 max-w-full text-left text-[13px] font-medium text-primary hover:underline underline-offset-2"
+                              >
+                                <span className="truncate">
+                                  {!isBlank(job.job_title)
+                                    ? safeText(job.job_title)
+                                    : (job.url ? <span className="italic text-muted-foreground">Parsing...</span> : <span className="text-muted-foreground">–</span>)}
+                                </span>
+                                {!isBlank(job.function) && (
+                                  <span className="text-[11px] text-muted-foreground/80 shrink-0">· {job.function}</span>
+                                )}
+                              </button>
                             </TooltipTrigger>
                             <TooltipContent>
                               <div className="text-xs">
-                                <div className="font-semibold">{safeText(job.company_name)}</div>
-                                <div>{safeText(job.job_title)}</div>
+                                <div className="font-semibold">{safeText(job.job_title)}</div>
                                 {!isBlank(job.function) && <div className="text-muted-foreground">{job.function}</div>}
                                 {!isBlank(job.duration) && <div className="text-muted-foreground">Duration: {job.duration}</div>}
                                 {job.applied_date && <div className="text-muted-foreground">Applied: {format(new Date(job.applied_date), "MMM d, yyyy")}</div>}
+                                <div className="text-muted-foreground mt-1">Click to open full page</div>
                               </div>
                             </TooltipContent>
                           </Tooltip>
