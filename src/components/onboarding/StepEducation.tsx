@@ -3,13 +3,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-// 1990 → 2035 so future expected graduation years are selectable
-const YEARS = Array.from({ length: 46 }, (_, i) => 2035 - i);
+// 1970 → 2035 so future expected graduation years are selectable; dropdown opens at 2026
+const CURRENT_YEAR = 2026;
+const YEARS_MAIN = Array.from({ length: CURRENT_YEAR - 1970 + 1 }, (_, i) => CURRENT_YEAR - i);
+const YEARS_FUTURE = Array.from({ length: 2035 - CURRENT_YEAR }, (_, i) => 2035 - i);
 const LEVELS = ["High school", "Bachelor's", "Master's", "MBA", "PhD", "Exchange", "Certificate", "Other"];
 
 interface EduBlock {
@@ -126,7 +128,14 @@ const StepEducation = ({ userId, onNext, onBack, initialData }: Props) => {
                 </Select>
                 <Select value={block.startYear} onValueChange={(v) => updateBlock(idx, { startYear: v })}>
                   <SelectTrigger className="rounded-lg"><SelectValue placeholder="Year" /></SelectTrigger>
-                  <SelectContent>{YEARS.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent>
+                  <SelectContent>
+                    {YEARS_MAIN.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
+                    <SelectSeparator />
+                    <SelectGroup>
+                      <SelectLabel>Future</SelectLabel>
+                      {YEARS_FUTURE.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
+                    </SelectGroup>
+                  </SelectContent>
                 </Select>
               </div>
             </div>
@@ -147,7 +156,14 @@ const StepEducation = ({ userId, onNext, onBack, initialData }: Props) => {
                   </Select>
                   <Select value={block.endYear} onValueChange={(v) => updateBlock(idx, { endYear: v })}>
                     <SelectTrigger className="rounded-lg"><SelectValue placeholder="Year" /></SelectTrigger>
-                    <SelectContent>{YEARS.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent>
+                    <SelectContent>
+                      {YEARS_MAIN.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
+                      <SelectSeparator />
+                      <SelectGroup>
+                        <SelectLabel>Future</SelectLabel>
+                        {YEARS_FUTURE.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
+                      </SelectGroup>
+                    </SelectContent>
                   </Select>
                 </div>
               )}

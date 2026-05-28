@@ -3,11 +3,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Trash2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
-const YEARS = Array.from({ length: 37 }, (_, i) => 1990 + i);
+// 1970 → 2035; dropdown opens at 2026
+const CURRENT_YEAR = 2026;
+const YEARS_MAIN = Array.from({ length: CURRENT_YEAR - 1970 + 1 }, (_, i) => CURRENT_YEAR - i);
+const YEARS_FUTURE = Array.from({ length: 2035 - CURRENT_YEAR }, (_, i) => 2035 - i);
 
 interface AwardBlock { awardName: string; issuingOrg: string; year: string; description: string; }
 const emptyBlock = (): AwardBlock => ({ awardName: "", issuingOrg: "", year: "", description: "" });
@@ -64,7 +67,14 @@ const StepAwards = ({ userId, onNext, onBack }: Props) => {
                 <Label>Year</Label>
                 <Select value={block.year} onValueChange={v => updateBlock(idx, { year: v })}>
                   <SelectTrigger className="rounded-lg"><SelectValue placeholder="Year" /></SelectTrigger>
-                  <SelectContent>{YEARS.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent>
+                  <SelectContent>
+                    {YEARS_MAIN.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
+                    <SelectSeparator />
+                    <SelectGroup>
+                      <SelectLabel>Future</SelectLabel>
+                      {YEARS_FUTURE.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
+                    </SelectGroup>
+                  </SelectContent>
                 </Select>
               </div>
             </div>
