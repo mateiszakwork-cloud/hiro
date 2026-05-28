@@ -9,13 +9,15 @@ import StepWorkExperience from "@/components/onboarding/StepWorkExperience";
 import StepEducation from "@/components/onboarding/StepEducation";
 import StepSkills from "@/components/onboarding/StepSkills";
 import StepLanguages from "@/components/onboarding/StepLanguages";
+import StepHeader from "@/components/onboarding/StepHeader";
 import type { ParsedCVData } from "@/types/cv";
 
 const STEPS = [
-  { n: 1, label: "Experience" },
-  { n: 2, label: "Education" },
-  { n: 3, label: "Skills" },
-  { n: 4, label: "Languages" },
+  { n: 1, label: "Header" },
+  { n: 2, label: "Experience" },
+  { n: 3, label: "Education" },
+  { n: 4, label: "Skills" },
+  { n: 5, label: "Languages" },
 ];
 
 const Onboarding = () => {
@@ -85,9 +87,9 @@ const Onboarding = () => {
         {/* Intro framing */}
         <div className="mb-6 rounded-lg border border-border bg-card px-5 py-4">
           <p className="text-sm text-foreground">
-            <span className="font-semibold">Set up your experience bank — once.</span>{" "}
+            <span className="font-semibold">Build your base profile once.</span>{" "}
             <span className="text-muted-foreground">
-              We know you've done this a million times for applications. On Hiro, you only do it once. Hiro stores your structured background and reuses it to tailor every future application.
+              Hiro saves your CV header, experience, education, skills, and languages, then reuses them to tailor every future application. Edit anything later in your profile.
             </span>
           </p>
         </div>
@@ -115,13 +117,21 @@ const Onboarding = () => {
         </div>
 
         {currentStep === 1 && (
-          <StepWorkExperience
+          <StepHeader
             userId={userId}
+            email={user.email || ""}
             onNext={handleNext}
-            initialData={cvData?.work_experiences}
           />
         )}
         {currentStep === 2 && (
+          <StepWorkExperience
+            userId={userId}
+            onNext={handleNext}
+            onBack={handleBack}
+            initialData={cvData?.work_experiences}
+          />
+        )}
+        {currentStep === 3 && (
           <StepEducation
             userId={userId}
             onBack={handleBack}
@@ -129,7 +139,7 @@ const Onboarding = () => {
             initialData={cvData?.education}
           />
         )}
-        {currentStep === 3 && (
+        {currentStep === 4 && (
           <StepSkills
             userId={userId}
             onBack={handleBack}
@@ -140,7 +150,7 @@ const Onboarding = () => {
             cvSuggestedSoftSkills={cvData?.soft_skills}
           />
         )}
-        {currentStep === 4 && (
+        {currentStep === 5 && (
           <StepLanguages
             userId={userId}
             onBack={handleBack}
