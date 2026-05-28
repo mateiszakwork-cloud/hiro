@@ -1331,25 +1331,32 @@ const JobTracker = () => {
                           </SelectContent>
                         </Select>
                       </td>
-                      <td className="px-3 py-2 text-center">
-                        {job.match_score !== null ? (
-                          <span
-                            style={{
-                              ...getScoreBadgeStyle(job.match_score),
-                              display: "inline-flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              width: "28px",
-                              height: "28px",
-                              borderRadius: "50%",
-                              fontFamily: "var(--font-data)",
-                              fontSize: "10px",
-                              fontWeight: 700,
-                            }}
-                          >
-                            {job.match_score}
+                      {/* Kit column — discoverable access to the Application Kit */}
+                      <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                        {generatingKit === job.id ? (
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-gray-50 border border-gray-200 text-muted-foreground">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            Building…
                           </span>
-                        ) : <span className="text-muted-foreground">–</span>}
+                        ) : cvMap[job.id] ? (
+                          <button
+                            onClick={(e) => handleKitClick(e, job)}
+                            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-green-50 border border-green-200 text-green-700 hover:bg-green-100 transition-colors"
+                            title="Open Application Kit"
+                          >
+                            <Check className="h-3 w-3" />
+                            Ready
+                          </button>
+                        ) : (
+                          <button
+                            onClick={(e) => handleKitClick(e, job)}
+                            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-background border border-input text-foreground hover:border-primary hover:text-primary transition-colors"
+                            title="Generate Application Kit"
+                          >
+                            <Wand2 className="h-3 w-3" />
+                            Generate
+                          </button>
+                        )}
                       </td>
                       <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
                         <Select value={job.priority} onValueChange={(v) => handlePriorityChange(job.id, v)}>
