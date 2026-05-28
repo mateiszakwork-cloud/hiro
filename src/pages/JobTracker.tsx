@@ -151,7 +151,7 @@ const DEFAULT_COLUMNS: ColDef[] = [
   { label: "Deadline",    key: "application_deadline", width: 88,  resizable: true  },
   { label: "Start",       key: "start_date",           width: 72,  resizable: true  },
   { label: "Status",      key: "status",               width: 96,  resizable: true  },
-  { label: "Match",       key: "match_score",          width: 56,  resizable: false },
+  { label: "Kit",         key: null,                   width: 90,  resizable: false },
   { label: "Priority",    key: "priority",             width: 76,  resizable: true  },
   { label: "Outreach",    key: null,                   width: 100, resizable: true  },
 ];
