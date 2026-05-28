@@ -127,6 +127,7 @@ const Onboarding = () => {
           <StepWorkExperience
             userId={userId}
             onNext={handleNext}
+            onBack={handleBack}
             initialData={cvData?.work_experiences}
           />
         )}
