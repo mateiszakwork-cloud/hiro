@@ -500,7 +500,13 @@ const Profile = () => {
           )}
 
           {/* Default states */}
-          {!cvUploading && !parsedCvData && !cvError && (
+          {!cvUploading && !parsedCvData && !cvError && !baseCvLoaded && (
+            <div className="flex flex-col items-center justify-center py-8 gap-3">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          )}
+
+          {!cvUploading && !parsedCvData && !cvError && baseCvLoaded && (
             <>
               {baseCvText ? (
                 /* State 2: CV uploaded */
