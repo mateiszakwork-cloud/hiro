@@ -113,6 +113,41 @@ const Profile = () => {
   const [baseCvText, setBaseCvText] = useState<string | null>(null);
   const [baseCvUploadedAt, setBaseCvUploadedAt] = useState<string | null>(null);
   const [showExtractedText, setShowExtractedText] = useState(false);
+  const [baseCvLoaded, setBaseCvLoaded] = useState(false);
+
+  // Normalize PDF-extracted text for display: collapse accidental single line
+  // breaks inside paragraphs while preserving real paragraph breaks and bullets.
+  const normalizeExtractedText = (raw: string): string => {
+    if (!raw) return "";
+    // Standardize newlines and trim trailing spaces on each line
+    const text = raw.replace(/\r\n?/g, "\n").replace(/[ \t]+\n/g, "\n");
+    // Split into paragraphs on blank lines
+    return text
+      .split(/\n{2,}/)
+      .map((para) => {
+        const lines = para.split("\n");
+        const out: string[] = [];
+        let buf = "";
+        const isBullet = (s: string) => /^\s*([-•·*–—]|\d+[.)])\s+/.test(s);
+        const flush = () => { if (buf) { out.push(buf); buf = ""; } };
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (!line) { flush(); continue; }
+          if (isBullet(line)) { flush(); out.push(line); continue; }
+          if (!buf) { buf = line; continue; }
+          // Heuristic: if previous chunk ended with sentence terminator or
+          // current line starts with a capital after a heading-like short prev,
+          // keep as separate line; otherwise join with a space (de-hyphenate).
+          const prevEnds = /[.!?:;]$/.test(buf);
+          if (prevEnds) { flush(); buf = line; }
+          else if (/-$/.test(buf)) { buf = buf.replace(/-$/, "") + line; }
+          else { buf = buf + " " + line; }
+        }
+        flush();
+        return out.join("\n");
+      })
+      .join("\n\n");
+  };
 
   useEffect(() => {
     const init = async () => {
@@ -131,6 +166,7 @@ const Profile = () => {
         setBaseCvText((profile as any).base_cv_text || null);
         setBaseCvUploadedAt((profile as any).base_cv_uploaded_at || null);
       }
+      setBaseCvLoaded(true);
       fetchAll(uid);
     };
     init();
@@ -498,7 +534,13 @@ const Profile = () => {
           )}
 
           {/* Default states */}
-          {!cvUploading && !parsedCvData && !cvError && (
+          {!cvUploading && !parsedCvData && !cvError && !baseCvLoaded && (
+            <div className="flex flex-col items-center justify-center py-8 gap-3">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          )}
+
+          {!cvUploading && !parsedCvData && !cvError && baseCvLoaded && (
             <>
               {baseCvText ? (
                 /* State 2: CV uploaded */
@@ -529,7 +571,7 @@ const Profile = () => {
                   </div>
                   {showExtractedText && (
                     <div className="rounded-lg border border-border bg-muted/30 p-4 max-h-[400px] overflow-y-auto">
-                      <pre className="text-xs text-foreground whitespace-pre-wrap font-mono">{baseCvText}</pre>
+                      <pre className="text-xs text-foreground whitespace-pre-wrap font-sans leading-relaxed">{normalizeExtractedText(baseCvText)}</pre>
                     </div>
                   )}
                 </div>
