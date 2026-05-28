@@ -146,7 +146,7 @@ const TagList = ({ tags, className = "", soft = false }: { tags: string[] | null
   return (
     <div className="flex flex-wrap gap-1.5">
       {tags.map((t, i) => (
-        <span key={i} className={`${base} ${className}`}>{t}</span>
+        <span key={i} className={`${base} ${className}`}>{formatSkillName(t)}</span>
       ))}
     </div>
   );
@@ -1721,7 +1721,7 @@ const JobDetail = () => {
                                     recentlyAdded.has(skill) && "animate-in fade-in-0 zoom-in-95 duration-300 ring-1 ring-green-400"
                                   )}
                                 >
-                                  {skill}
+                                  {formatSkillName(skill)}
                                 </span>
                               ))}
                             </div>
@@ -1748,7 +1748,7 @@ const JobDetail = () => {
                                       onClick={() => addHardSkill(skill)}
                                       className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-[#FFF5F5] text-[#950606] border border-[#FBD5D5] hover:bg-[#FFE5E5] hover:border-[#F5B5B5] transition-all cursor-pointer"
                                     >
-                                      <Plus className="h-3 w-3" /> {skill}
+                                      <Plus className="h-3 w-3" /> {formatSkillName(skill)}
                                     </button>
                                   ))}
                                 </div>
@@ -1764,7 +1764,7 @@ const JobDetail = () => {
                                       onClick={() => addHardSkill(skill)}
                                       className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-muted text-foreground border border-border hover:bg-accent transition-all cursor-pointer"
                                     >
-                                      <Plus className="h-3 w-3" /> {skill}
+                                      <Plus className="h-3 w-3" /> {formatSkillName(skill)}
                                     </button>
                                   ))}
                                 </div>
@@ -1798,7 +1798,7 @@ const JobDetail = () => {
                               recentlyAdded.has(skill) && "animate-in fade-in-0 zoom-in-95 duration-300 ring-1 ring-green-400"
                             )}
                           >
-                            {skill}
+                            {formatSkillName(skill)}
                           </span>
                         ))}
                       </div>
@@ -1822,7 +1822,7 @@ const JobDetail = () => {
                                       onClick={() => addSoftSkill(skill)}
                                       className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-[#FFF5F5] text-[#950606] border border-[#FBD5D5] hover:bg-[#FFE5E5] hover:border-[#F5B5B5] transition-all cursor-pointer"
                                     >
-                                      <Plus className="h-3 w-3" /> {skill}
+                                      <Plus className="h-3 w-3" /> {formatSkillName(skill)}
                                     </button>
                                   ))}
                                 </div>
@@ -1838,7 +1838,7 @@ const JobDetail = () => {
                                       onClick={() => addSoftSkill(skill)}
                                       className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-muted text-foreground border border-border hover:bg-accent transition-all cursor-pointer"
                                     >
-                                      <Plus className="h-3 w-3" /> {skill}
+                                      <Plus className="h-3 w-3" /> {formatSkillName(skill)}
                                     </button>
                                   ))}
                                 </div>
@@ -1958,7 +1958,7 @@ const JobDetail = () => {
                   {previewVersion.snapshot.selected_soft_skills?.length > 0 && (
                     <div>
                       <h4 className="font-bold text-xs uppercase tracking-widest border-b pb-1 mb-2">Soft Skills</h4>
-                      <p>{previewVersion.snapshot.selected_soft_skills.join(", ")}</p>
+                      <p>{previewVersion.snapshot.selected_soft_skills.map(formatSkillName).join(", ")}</p>
                     </div>
                   )}
                 </div>
