@@ -1,7 +1,10 @@
 import React from "react";
 import { Document, Page, Text, View, StyleSheet, pdf } from "@react-pdf/renderer";
 import { saveAs } from "file-saver";
-import type { CvData, CvSection, CvExperienceEntry, CvEducationEntry, CvFooterData } from "./buildCvData";
+import type {
+  CvData, CvSection, CvExperienceEntry, CvEducationEntry,
+  CvLanguageEntry, CvHardSkills,
+} from "./buildCvData";
 import { MONTHS } from "./cvLayout";
 
 const MUTED = "#555555";
@@ -71,9 +74,7 @@ function estimateHeight(data: CvData, S: number, padY: number): number {
     if (!s.visible || s.isEmpty) continue;
     h += 10 * S + 10 * S * 1.2 + 3 * S + 2; // heading marginTop + line + marginBottom + border
     const d = s.data;
-    if (d.kind === "summary") {
-      h += wrap(d.text, contentW) * lineH;
-    } else if (d.kind === "experience" || d.kind === "entrepreneurial") {
+    if (d.kind === "experience") {
       for (const e of d.entries) {
         h += 6 * S + lineH; // header
         if (e.location) h += lineH + 1 * S;
@@ -90,22 +91,23 @@ function estimateHeight(data: CvData, S: number, padY: number): number {
           h += 1 * S + wrap(x, contentW - 18) * lineH;
         }
       }
-    } else if (d.kind === "footer") {
-      const f = d.data;
-      if (f.languages?.length) {
-        h += 3 * S + wrap(f.languages.map(l => `${l.name}: ${l.proficiency}`).join(" | "), contentW) * lineH;
+    } else if (d.kind === "languages") {
+      if (d.entries.length) {
+        h += 3 * S + wrap(d.entries.map(l => `${l.name}: ${l.proficiency}`).join(" | "), contentW) * lineH;
       }
-      if (f.interests?.length) {
-        h += 3 * S + wrap("Personal Interests: " + f.interests.join(", "), contentW) * lineH;
-      }
-      if (f.hardSkills) {
-        const txt = Array.isArray(f.hardSkills)
-          ? f.hardSkills.join(", ")
-          : Object.entries(f.hardSkills)
+    } else if (d.kind === "hardSkills") {
+      if (d.data) {
+        const txt = Array.isArray(d.data)
+          ? d.data.join(", ")
+          : Object.entries(d.data)
               .filter(([, v]) => Array.isArray(v) && v.length)
               .map(([cat, skills]) => `${cat}: ${(skills as string[]).join(", ")}`)
               .join("; ");
-        h += 3 * S + wrap("Software Skills: " + txt, contentW) * lineH;
+        h += 3 * S + wrap(txt, contentW) * lineH;
+      }
+    } else if (d.kind === "softSkills") {
+      if (d.items.length) {
+        h += 3 * S + wrap(d.items.join(", "), contentW) * lineH;
       }
     }
   }
@@ -181,32 +183,27 @@ function education(e: CvEducationEntry, idx: string, styles: ReturnType<typeof b
   return [head, ...extras];
 }
 
-function footer(f: CvFooterData, idx: string, styles: ReturnType<typeof buildStyles>) {
-  const out: any[] = [];
-  if (f.languages.length) {
-    out.push(React.createElement(T, { key: `${idx}l`, style: styles.footerLine },
-      f.languages.map(l => `${l.name}: ${l.proficiency}`).join(" | "),
-    ));
-  }
-  if (f.interests?.length) {
-    out.push(React.createElement(T, { key: `${idx}i`, style: styles.footerLine },
-      React.createElement(T, { style: styles.bold }, "Personal Interests: "),
-      f.interests.join(", "),
-    ));
-  }
-  if (f.hardSkills) {
-    const txt = Array.isArray(f.hardSkills)
-      ? f.hardSkills.join(", ") + "."
-      : Object.entries(f.hardSkills)
-          .filter(([, v]) => Array.isArray(v) && v.length)
-          .map(([cat, skills]) => `${cat}: ${(skills as string[]).join(", ")}`)
-          .join("; ") + ".";
-    out.push(React.createElement(T, { key: `${idx}s`, style: styles.footerLine },
-      React.createElement(T, { style: styles.bold }, "Software Skills: "),
-      txt,
-    ));
-  }
-  return out;
+function languagesNode(entries: CvLanguageEntry[], idx: string, styles: ReturnType<typeof buildStyles>) {
+  if (!entries.length) return [];
+  return [React.createElement(T, { key: `${idx}l`, style: styles.footerLine },
+    entries.map(l => `${l.name}: ${l.proficiency}`).join(" | "),
+  )];
+}
+
+function hardSkillsNode(skills: CvHardSkills, idx: string, styles: ReturnType<typeof buildStyles>) {
+  if (!skills) return [];
+  const txt = Array.isArray(skills)
+    ? skills.join(", ") + "."
+    : Object.entries(skills)
+        .filter(([, v]) => Array.isArray(v) && v.length)
+        .map(([cat, list]) => `${cat}: ${(list as string[]).join(", ")}`)
+        .join("; ") + ".";
+  return [React.createElement(T, { key: `${idx}h`, style: styles.footerLine }, txt)];
+}
+
+function softSkillsNode(items: string[], idx: string, styles: ReturnType<typeof buildStyles>) {
+  if (!items.length) return [];
+  return [React.createElement(T, { key: `${idx}s`, style: styles.footerLine }, items.join(", ") + ".")];
 }
 
 function renderSection(s: CvSection, idx: number, styles: ReturnType<typeof buildStyles>): any[] {
@@ -215,14 +212,16 @@ function renderSection(s: CvSection, idx: number, styles: ReturnType<typeof buil
     React.createElement(T, { key: `s${idx}h`, style: styles.heading }, s.label),
   ];
   const d = s.data;
-  if (d.kind === "summary") {
-    items.push(React.createElement(T, { key: `s${idx}t`, style: styles.body }, d.text));
-  } else if (d.kind === "experience" || d.kind === "entrepreneurial") {
+  if (d.kind === "experience") {
     d.entries.forEach((e, i) => items.push(...experience(e, `s${idx}e${i}`, styles)));
   } else if (d.kind === "education") {
     d.entries.forEach((e, i) => items.push(...education(e, `s${idx}e${i}`, styles)));
-  } else if (d.kind === "footer") {
-    items.push(...footer(d.data, `s${idx}f`, styles));
+  } else if (d.kind === "languages") {
+    items.push(...languagesNode(d.entries, `s${idx}l`, styles));
+  } else if (d.kind === "hardSkills") {
+    items.push(...hardSkillsNode(d.data, `s${idx}h`, styles));
+  } else if (d.kind === "softSkills") {
+    items.push(...softSkillsNode(d.items, `s${idx}sk`, styles));
   }
   return items;
 }
