@@ -852,8 +852,9 @@ const JobTracker = () => {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(6, minmax(0, 1fr))",
+              gridTemplateColumns: "repeat(5, minmax(140px, 200px))",
               gap: "12px",
+              justifyContent: "start",
             }}
             className="hiro-metrics-grid"
           >
@@ -883,12 +884,6 @@ const JobTracker = () => {
             >
               <div style={metricNumStyle}>{stats.interviews}</div>
               <div style={metricLabelStyle}>Interviews</div>
-            </div>
-            <div style={metricCardStyle} onMouseEnter={(e) => metricCardHover(e, true)} onMouseLeave={(e) => metricCardHover(e, false)}>
-              <div style={{ ...metricNumStyle, color: stats.avgScore === null ? "var(--color-text-primary)" : stats.avgScore > 70 ? "#15803D" : stats.avgScore >= 40 ? "#92400E" : "#991B1B" }}>
-                {stats.avgScore !== null ? `${stats.avgScore}%` : "–"}
-              </div>
-              <div style={metricLabelStyle}>Avg Match</div>
             </div>
             <div style={metricCardStyle} onMouseEnter={(e) => metricCardHover(e, true)} onMouseLeave={(e) => metricCardHover(e, false)}>
               <div style={metricNumStyle}>{contactsReached}</div>
