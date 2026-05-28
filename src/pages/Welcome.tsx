@@ -257,7 +257,16 @@ const Welcome = () => {
             </p>
           </div>
 
-          <div className="mt-6 rounded-lg border-2 border-dashed border-border p-6 bg-muted/30">
+          <div
+            className={`mt-6 rounded-lg border-2 border-dashed p-6 transition-colors duration-200 ${
+              isDragging
+                ? "border-primary bg-primary/5"
+                : "border-border bg-muted/30"
+            }`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
             <input
               ref={fileInputRef}
               type="file"
