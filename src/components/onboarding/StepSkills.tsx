@@ -140,7 +140,7 @@ const StepSkills = ({ userId, onNext, onBack, initialHardSkills, initialSoftSkil
     <div className="rounded-lg bg-card p-8 shadow-sm">
       <h1 className="text-2xl font-bold text-foreground">Your skill bank</h1>
       <p className="mt-1 text-muted-foreground">
-        Add more than you think you need. This is the pool Hiro draws from when matching you to each role — tools, software, methods, and professional strengths all count.
+        Add more than you think you need. This is the pool Hiro draws from when tailoring your CV for each role — tools, software, methods, and professional strengths all count.
       </p>
 
       <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">

@@ -97,19 +97,6 @@ const getStatusPillStyle = (status: string): React.CSSProperties => {
 const getStatusColor = (status: string) =>
   STATUS_OPTIONS.find((s) => s.value === status)?.color || "bg-muted text-muted-foreground";
 
-const getScoreColor = (score: number | null) => {
-  if (score === null) return "";
-  if (score >= 70) return "text-green-600 border-green-300 bg-green-50";
-  if (score >= 40) return "text-amber-600 border-amber-300 bg-amber-50";
-  return "text-red-600 border-red-300 bg-red-50";
-};
-
-const getScoreBadgeStyle = (score: number | null): React.CSSProperties => {
-  if (score === null) return { background: "#F3F4F6", color: "#9CA3AF", border: "2px solid #E5E7EB" };
-  if (score >= 70) return { background: "#F0FDF4", color: "#15803D", border: "2px solid #BBF7D0" };
-  if (score >= 40) return { background: "#FFFBEB", color: "#92400E", border: "2px solid #FDE68A" };
-  return { background: "#FEF2F2", color: "#991B1B", border: "2px solid #FECACA" };
-};
 
 const PRIORITY_OPTIONS = [
   { value: "High", color: "bg-primary/15 text-primary" },
@@ -136,7 +123,7 @@ const isValidUrl = (str: string): boolean => {
   }
 };
 
-type SortKey = "company_name" | "job_title" | "function" | "location" | "duration" | "status" | "match_score" | "priority" | "created_at" | "applied_date" | "application_deadline" | "start_date";
+type SortKey = "company_name" | "job_title" | "function" | "location" | "duration" | "status" | "priority" | "created_at" | "applied_date" | "application_deadline" | "start_date";
 type SortDir = "asc" | "desc";
 
 // Default column widths in pixels — tightened so the table fits a ~1280px
@@ -230,26 +217,14 @@ const JobTracker = () => {
     const applied = jobs.filter(j => appliedStatuses.has(j.status)).length;
     const inProgress = jobs.filter(j => inProgressStatuses.has(j.status)).length;
     const interviews = jobs.filter(j => j.status === "Interview").length;
-    const scored = jobs.filter(j => j.match_score !== null);
-    const avgScore = scored.length
-      ? Math.round(scored.reduce((s, j) => s + (j.match_score || 0), 0) / scored.length)
-      : null;
-
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     const appliedThisWeek = jobs.filter(j =>
       appliedStatuses.has(j.status) && new Date(j.created_at) >= sevenDaysAgo
     ).length;
 
-    return { total, applied, inProgress, interviews, avgScore, appliedThisWeek };
+    return { total, applied, inProgress, interviews, appliedThisWeek };
   }, [jobs]);
-
-  const getAvgScoreColor = (score: number | null) => {
-    if (score === null) return "text-foreground";
-    if (score > 70) return "text-green-600";
-    if (score >= 40) return "text-amber-600";
-    return "text-red-600";
-  };
 
   // Sort & filter state
   const [sortKey, setSortKey] = useState<SortKey>("created_at");
@@ -298,7 +273,7 @@ const JobTracker = () => {
       setSortDir(prev => prev === "asc" ? "desc" : "asc");
     } else {
       setSortKey(key);
-      setSortDir(key === "match_score" || key === "created_at" || key === "applied_date" || key === "application_deadline" ? "desc" : "asc");
+      setSortDir(key === "created_at" || key === "applied_date" || key === "application_deadline" ? "desc" : "asc");
     }
   };
 
@@ -321,11 +296,6 @@ const JobTracker = () => {
     }
 
     result.sort((a, b) => {
-      if (sortKey === "match_score") {
-        const av = a.match_score ?? -1;
-        const bv = b.match_score ?? -1;
-        return sortDir === "desc" ? bv - av : av - bv;
-      }
       if (sortKey === "created_at") {
         return sortDir === "desc"
           ? new Date(b.created_at).getTime() - new Date(a.created_at).getTime()

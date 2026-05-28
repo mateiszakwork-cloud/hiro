@@ -253,7 +253,7 @@ const ManualJobModal = ({ open, onOpenChange, prefillUrl = "", onSave }: ManualJ
             <Textarea
               value={form.job_description}
               onChange={(e) => setForm(p => ({ ...p, job_description: e.target.value }))}
-              placeholder="Paste the full job description here for better CV tailoring and match scoring"
+              placeholder="Paste the full job description here for better CV tailoring"
               rows={5}
               className="resize-none"
             />

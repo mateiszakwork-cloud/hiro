@@ -101,8 +101,8 @@ const ProductTour = ({ onComplete, onSkip }: Props) => {
                 </div>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Paste any job posting URL. Hiro reads the description and fills in the role details,
-                required skills, and generates a match score against your profile.
+                Paste any job posting URL. Hiro reads the description and fills in the role details
+                and required skills so you can build a tailored application faster.
               </p>
             </div>
           )}
@@ -200,7 +200,7 @@ const ProductTour = ({ onComplete, onSkip }: Props) => {
                 Now let's set up your profile.
               </h2>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                This is the most important step. Your CV rewrites, match scores, and outreach messages
+                This is the most important step. Your tailored CVs, outreach messages, and interview prep
                 all depend on what you put in here. Take 10 minutes to do it properly.
               </p>
               <div
