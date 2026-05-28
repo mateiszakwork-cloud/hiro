@@ -145,7 +145,7 @@ const StepEducation = ({ userId, onNext, onBack, initialData }: Props) => {
                 <Label>End Date</Label>
                 <label className="ml-auto flex items-center gap-1.5 text-sm text-muted-foreground cursor-pointer select-none">
                   <input type="checkbox" checked={block.isExpected} onChange={(e) => updateBlock(idx, { isExpected: e.target.checked })} />
-                  Ongoing / expected
+                  Ongoing
                 </label>
               </div>
               {!block.isExpected && (

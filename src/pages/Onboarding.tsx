@@ -136,6 +136,8 @@ const Onboarding = () => {
             onNext={handleNext}
             initialHardSkills={cvData?.hard_skills}
             initialSoftSkills={cvData?.soft_skills}
+            cvSuggestedHardSkills={cvData?.hard_skills}
+            cvSuggestedSoftSkills={cvData?.soft_skills}
           />
         )}
         {currentStep === 4 && (

@@ -18,7 +18,14 @@ const MONTHS = ["January","February","March","April","May","June","July","August
 const CURRENT_YEAR = 2026;
 const YEARS_MAIN = Array.from({ length: CURRENT_YEAR - 1970 + 1 }, (_, i) => CURRENT_YEAR - i);
 const YEARS_FUTURE = Array.from({ length: 2035 - CURRENT_YEAR }, (_, i) => 2035 - i);
-const PROFICIENCIES = ["Basic","Conversational","Professional Working","Fluent","Native"];
+// LinkedIn proficiency terminology
+const PROFICIENCIES = [
+  "Elementary proficiency",
+  "Limited working proficiency",
+  "Professional working proficiency",
+  "Full professional proficiency",
+  "Native or bilingual proficiency",
+];
 
 const YearSelectItems = () => (
   <>
