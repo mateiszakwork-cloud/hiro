@@ -154,8 +154,8 @@ const DEFAULT_COLUMNS: ColDef[] = [
   { label: "Kit",         key: null,                   width: 90,  resizable: false },
   { label: "Priority",    key: "priority",             width: 76,  resizable: true  },
   { label: "Outreach",    key: null,                   width: 100, resizable: true  },
-  { label: "Actions",     key: null,                   width: 116, resizable: false },
 ];
+const ACTIONS_COLUMN: ColDef = { label: "Actions", key: null, width: 116, resizable: false };
 const MIN_COL_WIDTH = 60;
 
 const FUNCTION_VALUES = ["Strategy", "Finance", "Marketing", "Product", "Operations", "HR", "Consulting", "Other"];
@@ -210,6 +210,7 @@ const JobTracker = () => {
     ...customColumns.map((c) => ({
       label: c.name, key: null as SortKey | null, width: 140, resizable: true, custom: { id: c.id },
     })),
+    ACTIONS_COLUMN,
   ], [customColumns]);
 
   // Compute urgent deadline jobs (within 7 days, status Saved or Applied)
