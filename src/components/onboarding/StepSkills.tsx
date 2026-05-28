@@ -24,7 +24,15 @@ const SOFT_SUGGESTIONS = [
   "Client management", "Presentation skills", "Storytelling with data",
 ];
 
-interface Props { userId: string; onNext: () => void; onBack: () => void; initialHardSkills?: string[]; initialSoftSkills?: string[]; }
+interface Props {
+  userId: string;
+  onNext: () => void;
+  onBack: () => void;
+  initialHardSkills?: string[];
+  initialSoftSkills?: string[];
+  cvSuggestedHardSkills?: string[];
+  cvSuggestedSoftSkills?: string[];
+}
 
 const SkillTagInput = ({
   tags, onAdd, onRemove, placeholder, pillClass, suggestions,
@@ -92,9 +100,24 @@ const SkillTagInput = ({
   );
 };
 
-const StepSkills = ({ userId, onNext, onBack, initialHardSkills, initialSoftSkills }: Props) => {
+const StepSkills = ({ userId, onNext, onBack, initialHardSkills, initialSoftSkills, cvSuggestedHardSkills, cvSuggestedSoftSkills }: Props) => {
   const [hardSkills, setHardSkills] = useState<string[]>(initialHardSkills || []);
   const [softSkills, setSoftSkills] = useState<string[]>(initialSoftSkills || []);
+
+  // Merge CV-extracted tools first (more relevant), then the static fallback list, deduped case-insensitively.
+  const mergeSuggestions = (cv: string[] | undefined, fallback: string[]) => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const s of [...(cv || []), ...fallback]) {
+      const k = s.trim().toLowerCase();
+      if (!k || seen.has(k)) continue;
+      seen.add(k);
+      out.push(s.trim());
+    }
+    return out;
+  };
+  const hardSuggestions = mergeSuggestions(cvSuggestedHardSkills, HARD_SUGGESTIONS);
+  const softSuggestions = mergeSuggestions(cvSuggestedSoftSkills, SOFT_SUGGESTIONS);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -130,7 +153,7 @@ const StepSkills = ({ userId, onNext, onBack, initialHardSkills, initialSoftSkil
             onRemove={(i) => setHardSkills(prev => prev.filter((_, idx) => idx !== i))}
             placeholder="Type a skill and press Enter..."
             pillClass="bg-primary text-primary-foreground"
-            suggestions={HARD_SUGGESTIONS}
+            suggestions={hardSuggestions}
           />
         </div>
 
@@ -143,7 +166,7 @@ const StepSkills = ({ userId, onNext, onBack, initialHardSkills, initialSoftSkil
             onRemove={(i) => setSoftSkills(prev => prev.filter((_, idx) => idx !== i))}
             placeholder="Type a skill and press Enter..."
             pillClass="bg-muted text-muted-foreground"
-            suggestions={SOFT_SUGGESTIONS}
+            suggestions={softSuggestions}
           />
         </div>
       </div>

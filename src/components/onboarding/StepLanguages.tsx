@@ -6,7 +6,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Trash2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
-const PROFICIENCIES = ["Basic", "Conversational", "Professional Working", "Fluent", "Native"];
+// LinkedIn proficiency terminology
+const PROFICIENCIES = [
+  "Elementary proficiency",
+  "Limited working proficiency",
+  "Professional working proficiency",
+  "Full professional proficiency",
+  "Native or bilingual proficiency",
+];
 
 interface LangRow { name: string; proficiency: string; }
 const emptyRow = (): LangRow => ({ name: "", proficiency: "" });
