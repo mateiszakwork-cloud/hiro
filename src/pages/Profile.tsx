@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Pencil, Trash2, X, Upload, Loader2, CheckCircle, AlertTriangle, RotateCcw, FileText, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
@@ -15,11 +15,33 @@ import { format } from "date-fns";
 import type { ParsedCVData } from "@/types/cv";
 
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-const WORK_YEARS = Array.from({ length: 37 }, (_, i) => 2026 - i);
-const EDU_START_YEARS = Array.from({ length: 37 }, (_, i) => 2026 - i);
-const EDU_END_YEARS = Array.from({ length: 37 }, (_, i) => 2026 - i);
+const CURRENT_YEAR = 2026;
+const YEARS_MAIN = Array.from({ length: CURRENT_YEAR - 1970 + 1 }, (_, i) => CURRENT_YEAR - i);
+const YEARS_FUTURE = Array.from({ length: 2035 - CURRENT_YEAR }, (_, i) => 2035 - i);
 const PROFICIENCIES = ["Basic","Conversational","Professional Working","Fluent","Native"];
-const AWARD_YEARS = Array.from({ length: 37 }, (_, i) => 2026 - i);
+
+const YearSelectItems = () => (
+  <>
+    {YEARS_MAIN.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
+    <SelectSeparator />
+    <SelectGroup>
+      <SelectLabel>Future</SelectLabel>
+      {YEARS_FUTURE.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
+    </SelectGroup>
+  </>
+);
+
+const YearSelectItemsWithExpected = () => (
+  <>
+    {YEARS_MAIN.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
+    <SelectSeparator />
+    <SelectGroup>
+      <SelectLabel>Future</SelectLabel>
+      {YEARS_FUTURE.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
+    </SelectGroup>
+    <SelectItem value="expected">Expected</SelectItem>
+  </>
+);
 
 const HARD_SUGGESTIONS = ["Excel","PowerPoint","SQL","Python","Salesforce","Tableau","Google Analytics","Jira","Figma","SAP"];
 const SOFT_SUGGESTIONS = ["Stakeholder management","Analytical thinking","Cross-functional collaboration","Project management","Communication","Problem solving","Leadership","Attention to detail"];
@@ -611,7 +633,7 @@ const Profile = () => {
                       </Select>
                       <Select value={String(block.start_year)} onValueChange={v => updateWorkBlock(idx, { start_year: parseInt(v) })}>
                         <SelectTrigger className="rounded-lg"><SelectValue placeholder="Year" /></SelectTrigger>
-                        <SelectContent>{WORK_YEARS.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent>
+<SelectContent><YearSelectItems /></SelectContent>
                       </Select>
                     </div>
                   </div>
@@ -631,7 +653,7 @@ const Profile = () => {
                         </Select>
                         <Select value={block.end_year ? String(block.end_year) : ""} onValueChange={v => updateWorkBlock(idx, { end_year: parseInt(v) })}>
                           <SelectTrigger className="rounded-lg"><SelectValue placeholder="Year" /></SelectTrigger>
-                          <SelectContent>{WORK_YEARS.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent>
+                          <SelectContent><YearSelectItems /></SelectContent>
                         </Select>
                       </div>
                     )}
@@ -685,13 +707,13 @@ const Profile = () => {
                     <div className="space-y-1.5"><Label>Start Year</Label>
                       <Select value={String(block.start_year)} onValueChange={v => updateEduBlock(idx, { start_year: parseInt(v) })}>
                         <SelectTrigger className="rounded-lg"><SelectValue placeholder="Year" /></SelectTrigger>
-                        <SelectContent>{EDU_START_YEARS.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent>
+                        <SelectContent><YearSelectItems /></SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-1.5"><Label>End Year</Label>
                       <Select value={block.is_expected ? "expected" : block.end_year ? String(block.end_year) : ""} onValueChange={v => { if (v === "expected") updateEduBlock(idx, { is_expected: true, end_year: null }); else updateEduBlock(idx, { is_expected: false, end_year: parseInt(v) }); }}>
                         <SelectTrigger className="rounded-lg"><SelectValue placeholder="Year" /></SelectTrigger>
-                        <SelectContent>{EDU_END_YEARS.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}<SelectItem value="expected">Expected</SelectItem></SelectContent>
+                        <SelectContent><YearSelectItemsWithExpected /></SelectContent>
                       </Select>
                     </div>
                   </div>
@@ -813,7 +835,7 @@ const Profile = () => {
                   <div className="space-y-1.5"><Label>Year</Label>
                     <Select value={block.year ? String(block.year) : ""} onValueChange={v => setEditAwards(p => p.map((a, i) => i === idx ? { ...a, year: parseInt(v) } : a))}>
                       <SelectTrigger className="rounded-lg"><SelectValue placeholder="Year" /></SelectTrigger>
-                      <SelectContent>{AWARD_YEARS.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent>
+<SelectContent><YearSelectItems /></SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-1.5"><Label>Description</Label><Textarea value={block.description || ""} onChange={e => setEditAwards(p => p.map((a, i) => i === idx ? { ...a, description: e.target.value } : a))} className="rounded-lg" rows={2} /></div>
@@ -862,12 +884,12 @@ const Profile = () => {
                     <div className="grid grid-cols-2 gap-3">
                       <Select value={block.start_year ? String(block.start_year) : ""} onValueChange={v => setEditVols(p => p.map((vol, i) => i === idx ? { ...vol, start_year: parseInt(v) } : vol))}>
                         <SelectTrigger className="rounded-lg"><SelectValue placeholder="Start Year" /></SelectTrigger>
-                        <SelectContent>{AWARD_YEARS.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent>
+<SelectContent><YearSelectItems /></SelectContent>
                       </Select>
                       {!block.is_ongoing && (
                         <Select value={block.end_year ? String(block.end_year) : ""} onValueChange={v => setEditVols(p => p.map((vol, i) => i === idx ? { ...vol, end_year: parseInt(v) } : vol))}>
                           <SelectTrigger className="rounded-lg"><SelectValue placeholder="End Year" /></SelectTrigger>
-                          <SelectContent>{AWARD_YEARS.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent>
+                          <SelectContent><YearSelectItems /></SelectContent>
                         </Select>
                       )}
                     </div>
