@@ -1321,12 +1321,6 @@ const JobDetail = () => {
                       </PopoverContent>
                     </Popover>
                   </div>
-                  <div className="space-y-0.5">
-                    <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Match</p>
-                    <span className={`inline-flex items-center justify-center h-9 w-9 rounded-full border-2 text-sm font-bold ${getScoreColor(job.match_score)}`}>
-                      {job.match_score ?? "–"}
-                    </span>
-                  </div>
                   <div className="space-y-1.5 col-span-full">
                     <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Required Skills</p>
                     <TagList tags={[...(job.hard_skills || []), ...(job.soft_skills || [])]} />
@@ -1354,99 +1348,6 @@ const JobDetail = () => {
             </CardContent>
           </Card>
 
-          {/* Match Analysis */}
-          <Card className="mt-5">
-            <CardContent className="p-5">
-              <h3 className="text-sm font-semibold text-foreground mb-3">Match Analysis</h3>
-              {matchLoading ? (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-4">
-                    <Skeleton className="h-16 w-16 rounded-full" />
-                    <div className="space-y-2 flex-1">
-                      <Skeleton className="h-4 w-48" />
-                      <Skeleton className="h-4 w-64" />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    {[1,2,3,4].map(i => (
-                      <div key={i} className="space-y-2">
-                        <Skeleton className="h-3 w-20" />
-                        <Skeleton className="h-3 w-full rounded-full" />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : job.match_score !== null && job.match_details ? (
-                <div className="space-y-5">
-                  <div className="flex items-center gap-4">
-                    <span className={`inline-flex items-center justify-center h-14 w-14 rounded-full border-2 text-xl font-bold shrink-0 ${getScoreColor(job.match_score)}`}>
-                      {job.match_score}
-                    </span>
-                    {job.match_details.match_summary && (
-                      <p className="text-sm text-muted-foreground italic leading-relaxed">{job.match_details.match_summary}</p>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {[
-                      { label: "Hard Skills", value: job.match_details.hard_skills_match },
-                      { label: "Soft Skills", value: job.match_details.soft_skills_match },
-                      { label: "Experience", value: job.match_details.experience_match },
-                    ].map(({ label, value }) => (
-                      <div key={label} className="space-y-1">
-                        <div className="flex justify-between text-xs">
-                          <span className="font-medium text-muted-foreground">{label}</span>
-                          <span className="font-semibold text-foreground">{value ?? "–"}</span>
-                        </div>
-                        <Progress value={value ?? 0} className="h-2 hiro-match-progress" />
-                      </div>
-                    ))}
-                    {job.match_details.language_requirement && job.match_details.language_requirement !== "none" && (
-                      <div className="space-y-1 sm:col-span-2">
-                        <div className="flex justify-between text-xs">
-                          <span className="font-medium text-muted-foreground">Language requirement</span>
-                          <span className={`font-semibold ${job.match_details.language_requirement === "met" ? "text-emerald-700" : "text-amber-700"}`}>
-                            {job.match_details.language_requirement === "met"
-                              ? "Met"
-                              : `Missing: ${(job.match_details.missing_languages || []).join(", ") || "see job"}`}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {job.match_details.strengths?.length > 0 && (
-                      <div>
-                        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-1.5">Strengths</p>
-                        <ul className="space-y-1">
-                          {job.match_details.strengths.map((s, i) => (
-                            <li key={i} className="flex items-start gap-2 text-sm text-foreground">
-                              <CheckCircle2 className="h-3.5 w-3.5 text-[#22C55E] shrink-0 mt-0.5" />
-                              {s}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    {job.match_details.missing_skills?.length > 0 && (
-                      <div>
-                        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-1.5">Missing Skills</p>
-                        <ul className="space-y-1">
-                          {job.match_details.missing_skills.map((s, i) => (
-                            <li key={i} className="flex items-start gap-2 text-sm text-foreground">
-                              <XCircle className="h-3.5 w-3.5 text-[var(--color-primary)] shrink-0 mt-0.5" />
-                              {s}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">No match analysis available yet. Complete your profile to enable scoring.</p>
-              )}
-            </CardContent>
-          </Card>
         </TabsContent>
 
         {/* Outreach Tab */}
