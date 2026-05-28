@@ -10,9 +10,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { InfoHint } from "@/components/InfoHint";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Progress } from "@/components/ui/progress";
+
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, ExternalLink, MapPin, Copy, Check, Trash2, ChevronDown, ChevronUp, FileText, CheckCircle2, XCircle, CalendarIcon, RefreshCw, Lightbulb, History, RotateCcw, Pencil, X as XIcon, AlertTriangle, Loader2, Minus, Plus, AlertCircle, Download, Eye, Sparkles } from "lucide-react";
+import { ArrowLeft, ExternalLink, MapPin, Copy, Check, Trash2, ChevronDown, ChevronUp, FileText, CalendarIcon, RefreshCw, Lightbulb, History, RotateCcw, Pencil, X as XIcon, AlertTriangle, Loader2, Minus, Plus, AlertCircle, Download, Eye, Sparkles } from "lucide-react";
 import { computeDeadlineState, DeadlineBadge } from "@/lib/deadlineUtils";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -46,17 +46,6 @@ type CvOutput = {
   section_config?: any;
 };
 
-type MatchDetails = {
-  hard_skills_match: number | null;
-  soft_skills_match: number | null;
-  experience_match: number | null;
-  language_match?: number | null; // deprecated, no longer in score
-  match_summary: string | null;
-  missing_skills: string[];
-  strengths: string[];
-  language_requirement?: "none" | "met" | "missing";
-  missing_languages?: string[];
-};
 
 type Job = {
   id: string; url: string | null; company_name: string | null; job_title: string | null;
@@ -64,8 +53,7 @@ type Job = {
   duration: string | null; hard_skills: string[] | null; soft_skills: string[] | null;
   skills_nice_to_have: string[] | null; languages_required: string[] | null;
   languages_nice_to_have: string[] | null; application_deadline: string | null;
-  status: string; match_score: number | null; match_details: MatchDetails | null;
-  notes: string | null; created_at: string; priority: string; applied_date: string | null;
+  status: string; notes: string | null; created_at: string; priority: string; applied_date: string | null;
   interview_rounds?: InterviewRound[] | null;
 };
 
@@ -92,13 +80,6 @@ const OUTREACH_STATUSES = ["Not sent", "Request sent", "Connected", "Replied", "
 const getStatusColor = (status: string) =>
   STATUS_OPTIONS.find((s) => s.value === status)?.color || "bg-muted text-muted-foreground";
 
-const getScoreColor = (score: number | null) => {
-  // Border always uses brand primary; text/bg shifts by score band
-  if (score === null) return "text-muted-foreground bg-muted/30 border-[var(--color-primary)]";
-  if (score >= 70) return "text-green-700 bg-green-50 border-[var(--color-primary)]";
-  if (score >= 40) return "text-amber-700 bg-amber-50 border-[var(--color-primary)]";
-  return "text-[var(--color-primary)] bg-[#FFF5F5] border-[var(--color-primary)]";
-};
 
 const FUNCTION_VALUES = ["Strategy", "Finance", "Marketing", "Product", "Operations", "HR", "Consulting", "Other"];
 const WORK_MODE_VALUES = ["Onsite", "Hybrid", "Remote"];
@@ -372,7 +353,7 @@ const JobDetail = () => {
   const [notesSaved, setNotesSaved] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout>>();
-  const [matchLoading, setMatchLoading] = useState(false);
+  
   const [jobLoading, setJobLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [cvOutput, setCvOutput] = useState<CvOutput | null>(null);
