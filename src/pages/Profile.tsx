@@ -474,9 +474,11 @@ const Profile = () => {
               className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
           </div>
           <div>
-            <label className="text-xs font-medium text-muted-foreground">Email</label>
-            <input value={email} disabled
-              className="mt-1 w-full rounded-md border border-input bg-muted/30 px-3 py-2 text-sm text-muted-foreground" />
+            <label className="text-xs font-medium text-muted-foreground">CV email</label>
+            <input value={contactEmail} onChange={e => { setContactEmail(e.target.value); setContactSaved(false); }}
+              placeholder={email}
+              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+            <p className="text-[11px] text-muted-foreground mt-1">Shown on exported CVs. Defaults to your login email ({email}) if blank.</p>
           </div>
           <div>
             <label className="text-xs font-medium text-muted-foreground">LinkedIn</label>
@@ -499,6 +501,7 @@ const Profile = () => {
               setContactSaving(true);
               const { error } = await supabase.from("profiles").update({
                 full_name: fullName || null,
+                contact_email: contactEmail || null,
                 phone: phone || null,
                 linkedin_url: linkedinUrl || null,
                 default_location: defaultLocation || null,
