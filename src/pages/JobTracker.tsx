@@ -1179,9 +1179,6 @@ const JobTracker = () => {
                                     ? safeText(job.job_title)
                                     : (job.url ? <span className="italic text-muted-foreground">Parsing...</span> : <span className="text-muted-foreground">–</span>)}
                                 </span>
-                                {!isBlank(job.function) && (
-                                  <span className="text-[11px] text-muted-foreground/80 shrink-0">· {job.function}</span>
-                                )}
                               </button>
                             </TooltipTrigger>
                             <TooltipContent>
@@ -1201,7 +1198,7 @@ const JobTracker = () => {
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <span className="flex items-center gap-1 text-foreground truncate text-[13px]">
-                                {!isBlank(job.location) ? <><MapPin className="h-3 w-3 text-muted-foreground shrink-0" /><span className="truncate">{safeText(job.location)}</span></> : <span className="text-muted-foreground">–</span>}
+                                {!isBlank(job.location) ? <span className="truncate">{safeText(job.location)}</span> : <span className="text-muted-foreground">–</span>}
                               </span>
                             </TooltipTrigger>
                             {!isBlank(job.location) && safeText(job.location).length > 12 && <TooltipContent>{safeText(job.location)}</TooltipContent>}
@@ -1445,6 +1442,20 @@ const JobTracker = () => {
                                 </button>
                               </TooltipTrigger>
                               <TooltipContent>Interview prep</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <TooltipProvider delayDuration={200}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setDeleteJobId(job.id); }}
+                                  className="h-6 w-6 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                                  aria-label="Delete job"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>Delete</TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
                         </div>
