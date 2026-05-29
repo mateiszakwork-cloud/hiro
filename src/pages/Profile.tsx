@@ -101,6 +101,7 @@ const InterestTagInput = ({ tags, onAdd, onRemove, suggestions }: { tags: string
 const Profile = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [email, setEmail] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [linkedinUrl, setLinkedinUrl] = useState("");
@@ -185,10 +186,11 @@ const Profile = () => {
       const uid = session.user.id;
       setUserId(uid);
       setEmail(session.user.email || "");
-      const { data: profile } = await supabase.from("profiles").select("created_at, full_name, phone, linkedin_url, default_location, base_cv_text, base_cv_uploaded_at").eq("id", uid).single();
+      const { data: profile } = await supabase.from("profiles").select("created_at, full_name, contact_email, phone, linkedin_url, default_location, base_cv_text, base_cv_uploaded_at").eq("id", uid).single();
       if (profile) {
         
         setFullName(profile.full_name || "");
+        setContactEmail((profile as any).contact_email || "");
         setPhone((profile as any).phone || "");
         setLinkedinUrl((profile as any).linkedin_url || "");
         setDefaultLocation((profile as any).default_location || "");
