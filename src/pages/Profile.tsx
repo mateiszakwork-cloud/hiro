@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Pencil, Trash2, X, Upload, Loader2, CheckCircle, AlertTriangle, RotateCcw, FileText, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
@@ -16,8 +16,8 @@ import type { ParsedCVData } from "@/types/cv";
 
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const CURRENT_YEAR = 2026;
-const YEARS_MAIN = Array.from({ length: CURRENT_YEAR - 1970 + 1 }, (_, i) => CURRENT_YEAR - i);
-const YEARS_FUTURE = Array.from({ length: 2035 - CURRENT_YEAR }, (_, i) => 2035 - i);
+const MAX_YEAR = 2030;
+const YEARS = Array.from({ length: MAX_YEAR - 1970 + 1 }, (_, i) => MAX_YEAR - i);
 // LinkedIn proficiency terminology
 const PROFICIENCIES = [
   "Elementary proficiency",
@@ -29,23 +29,14 @@ const PROFICIENCIES = [
 
 const YearSelectItems = () => (
   <>
-    {YEARS_MAIN.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
-    <SelectSeparator />
-    <SelectGroup>
-      <SelectLabel>Future</SelectLabel>
-      {YEARS_FUTURE.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
-    </SelectGroup>
+    {YEARS.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
   </>
 );
 
 const YearSelectItemsWithExpected = () => (
   <>
-    {YEARS_MAIN.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
+    {YEARS.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
     <SelectSeparator />
-    <SelectGroup>
-      <SelectLabel>Future</SelectLabel>
-      {YEARS_FUTURE.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
-    </SelectGroup>
     <SelectItem value="expected">Expected</SelectItem>
   </>
 );

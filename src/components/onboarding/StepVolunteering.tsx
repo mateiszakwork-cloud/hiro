@@ -4,14 +4,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 // 1970 → 2035; dropdown opens at 2026
 const CURRENT_YEAR = 2026;
-const YEARS_MAIN = Array.from({ length: CURRENT_YEAR - 1970 + 1 }, (_, i) => CURRENT_YEAR - i);
-const YEARS_FUTURE = Array.from({ length: 2035 - CURRENT_YEAR }, (_, i) => 2035 - i);
+const MAX_YEAR = 2030;
+const YEARS = Array.from({ length: MAX_YEAR - 1970 + 1 }, (_, i) => MAX_YEAR - i);
 
 interface VolBlock { organization: string; role: string; startYear: string; endYear: string; isOngoing: boolean; description: string; }
 const emptyBlock = (): VolBlock => ({ organization: "", role: "", startYear: "", endYear: "", isOngoing: false, description: "" });
@@ -77,24 +77,14 @@ const StepVolunteering = ({ userId, onNext, onBack }: Props) => {
                 <Select value={block.startYear} onValueChange={v => updateBlock(idx, { startYear: v })}>
                   <SelectTrigger className="rounded-lg"><SelectValue placeholder="Start Year" /></SelectTrigger>
                   <SelectContent>
-                    {YEARS_MAIN.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
-                    <SelectSeparator />
-                    <SelectGroup>
-                      <SelectLabel>Future</SelectLabel>
-                      {YEARS_FUTURE.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
-                    </SelectGroup>
+                    {YEARS.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 {!block.isOngoing && (
                   <Select value={block.endYear} onValueChange={v => updateBlock(idx, { endYear: v })}>
                     <SelectTrigger className="rounded-lg"><SelectValue placeholder="End Year" /></SelectTrigger>
                     <SelectContent>
-                      {YEARS_MAIN.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
-                      <SelectSeparator />
-                      <SelectGroup>
-                        <SelectLabel>Future</SelectLabel>
-                        {YEARS_FUTURE.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
-                      </SelectGroup>
+                      {YEARS.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 )}
