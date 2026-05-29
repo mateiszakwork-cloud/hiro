@@ -13,6 +13,7 @@ interface Props {
 
 const StepHeader = ({ userId, email, onNext }: Props) => {
   const [fullName, setFullName] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [linkedinUrl, setLinkedinUrl] = useState("");
   const [defaultLocation, setDefaultLocation] = useState("");
@@ -25,12 +26,13 @@ const StepHeader = ({ userId, email, onNext }: Props) => {
     (async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("full_name, phone, linkedin_url, default_location")
+        .select("full_name, contact_email, phone, linkedin_url, default_location")
         .eq("id", userId)
         .single();
       if (cancelled) return;
       if (data) {
         setFullName(data.full_name || "");
+        setContactEmail((data as any).contact_email || "");
         setPhone((data as any).phone || "");
         setLinkedinUrl((data as any).linkedin_url || "");
         setDefaultLocation((data as any).default_location || "");
@@ -48,6 +50,7 @@ const StepHeader = ({ userId, email, onNext }: Props) => {
       .from("profiles")
       .update({
         full_name: fullName.trim(),
+        contact_email: contactEmail.trim() || null,
         phone: phone.trim() || null,
         linkedin_url: linkedinUrl.trim() || null,
         default_location: defaultLocation.trim() || null,
@@ -74,8 +77,14 @@ const StepHeader = ({ userId, email, onNext }: Props) => {
             <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Jane Doe" className="rounded-lg" />
           </div>
           <div className="space-y-1.5">
-            <Label>Email</Label>
-            <Input value={email} disabled className="rounded-lg bg-muted/40 text-muted-foreground" />
+            <Label>CV email</Label>
+            <Input
+              value={contactEmail}
+              onChange={(e) => setContactEmail(e.target.value)}
+              placeholder={email}
+              className="rounded-lg"
+            />
+            <p className="text-xs text-muted-foreground">Shown on every exported CV. Defaults to your login email ({email}) if left blank.</p>
           </div>
           <div className="space-y-1.5">
             <Label>Phone</Label>
