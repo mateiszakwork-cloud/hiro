@@ -361,11 +361,11 @@ const JobDetail = () => {
   const [cvFetched, setCvFetched] = useState(false);
   const [cvError, setCvError] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<{
-    full_name: string | null; email: string | null;
+    full_name: string | null; email: string | null; contact_email: string | null;
     phone: string | null; linkedin_url: string | null; default_location: string | null;
     work_experiences: any[]; education: any[]; languages: any[];
     interests: string[]; awards: any[]; volunteering: any[];
-  }>({ full_name: null, email: null, phone: null, linkedin_url: null, default_location: null, work_experiences: [], education: [], languages: [], interests: [], awards: [], volunteering: [] });
+  }>({ full_name: null, email: null, contact_email: null, phone: null, linkedin_url: null, default_location: null, work_experiences: [], education: [], languages: [], interests: [], awards: [], volunteering: [] });
   const [cvHistory, setCvHistory] = useState<any[]>([]);
   const [regenConfirmOpen, setRegenConfirmOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
