@@ -142,7 +142,7 @@ const DEFAULT_COLUMNS: ColDef[] = [
   { label: "Priority",    key: "priority",             width: 76,  resizable: true  },
   { label: "Outreach",    key: null,                   width: 100, resizable: true  },
 ];
-const ACTIONS_COLUMN: ColDef = { label: "Actions", key: null, width: 116, resizable: false };
+const ACTIONS_COLUMN: ColDef = { label: "Actions", key: null, width: 144, resizable: false };
 const MIN_COL_WIDTH = 60;
 
 const FUNCTION_VALUES = ["Strategy", "Finance", "Marketing", "Product", "Operations", "HR", "Consulting", "Other"];
