@@ -522,7 +522,7 @@ const JobDetail = () => {
 
       const uid = session.user.id;
       const [profileRes, workRes, eduRes, langRes, interestsRes, awardsRes, volRes, skillsRes] = await Promise.all([
-        supabase.from("profiles").select("full_name, email, phone, linkedin_url, default_location").eq("id", uid).single(),
+        supabase.from("profiles").select("full_name, email, contact_email, phone, linkedin_url, default_location").eq("id", uid).single(),
         supabase.from("work_experiences").select("*").eq("user_id", uid).order("start_year", { ascending: false }),
         supabase.from("education").select("*").eq("user_id", uid).order("start_year", { ascending: false }),
         supabase.from("languages").select("*").eq("user_id", uid),
@@ -534,6 +534,7 @@ const JobDetail = () => {
       setUserProfile({
         full_name: profileRes.data?.full_name || null,
         email: profileRes.data?.email || null,
+        contact_email: (profileRes.data as any)?.contact_email || null,
         phone: (profileRes.data as any)?.phone || null,
         linkedin_url: (profileRes.data as any)?.linkedin_url || null,
         default_location: (profileRes.data as any)?.default_location || null,
