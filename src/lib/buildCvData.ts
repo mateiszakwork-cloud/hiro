@@ -120,6 +120,7 @@ export function buildCvData(opts: {
   profile: {
     full_name: string | null;
     email: string | null;
+    contact_email?: string | null;
     phone?: string | null;
     linkedin_url?: string | null;
     default_location?: string | null;
@@ -144,7 +145,7 @@ export function buildCvData(opts: {
   const header: CvHeader = {
     fullName: profile.full_name || "Your Name",
     phone: profile.phone || null,
-    email: profile.email || null,
+    email: profile.contact_email || profile.email || null,
     linkedin: profile.linkedin_url || null,
     location: profile.default_location || null,
   };
