@@ -634,6 +634,7 @@ export type Database = {
         Row: {
           base_cv_text: string | null
           base_cv_uploaded_at: string | null
+          contact_email: string | null
           created_at: string
           default_location: string | null
           email: string | null
@@ -650,6 +651,7 @@ export type Database = {
         Insert: {
           base_cv_text?: string | null
           base_cv_uploaded_at?: string | null
+          contact_email?: string | null
           created_at?: string
           default_location?: string | null
           email?: string | null
@@ -666,6 +668,7 @@ export type Database = {
         Update: {
           base_cv_text?: string | null
           base_cv_uploaded_at?: string | null
+          contact_email?: string | null
           created_at?: string
           default_location?: string | null
           email?: string | null

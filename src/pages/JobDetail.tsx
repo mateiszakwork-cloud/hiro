@@ -361,11 +361,11 @@ const JobDetail = () => {
   const [cvFetched, setCvFetched] = useState(false);
   const [cvError, setCvError] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<{
-    full_name: string | null; email: string | null;
+    full_name: string | null; email: string | null; contact_email: string | null;
     phone: string | null; linkedin_url: string | null; default_location: string | null;
     work_experiences: any[]; education: any[]; languages: any[];
     interests: string[]; awards: any[]; volunteering: any[];
-  }>({ full_name: null, email: null, phone: null, linkedin_url: null, default_location: null, work_experiences: [], education: [], languages: [], interests: [], awards: [], volunteering: [] });
+  }>({ full_name: null, email: null, contact_email: null, phone: null, linkedin_url: null, default_location: null, work_experiences: [], education: [], languages: [], interests: [], awards: [], volunteering: [] });
   const [cvHistory, setCvHistory] = useState<any[]>([]);
   const [regenConfirmOpen, setRegenConfirmOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -522,7 +522,7 @@ const JobDetail = () => {
 
       const uid = session.user.id;
       const [profileRes, workRes, eduRes, langRes, interestsRes, awardsRes, volRes, skillsRes] = await Promise.all([
-        supabase.from("profiles").select("full_name, email, phone, linkedin_url, default_location").eq("id", uid).single(),
+        supabase.from("profiles").select("full_name, email, contact_email, phone, linkedin_url, default_location").eq("id", uid).single(),
         supabase.from("work_experiences").select("*").eq("user_id", uid).order("start_year", { ascending: false }),
         supabase.from("education").select("*").eq("user_id", uid).order("start_year", { ascending: false }),
         supabase.from("languages").select("*").eq("user_id", uid),
@@ -534,6 +534,7 @@ const JobDetail = () => {
       setUserProfile({
         full_name: profileRes.data?.full_name || null,
         email: profileRes.data?.email || null,
+        contact_email: (profileRes.data as any)?.contact_email || null,
         phone: (profileRes.data as any)?.phone || null,
         linkedin_url: (profileRes.data as any)?.linkedin_url || null,
         default_location: (profileRes.data as any)?.default_location || null,
