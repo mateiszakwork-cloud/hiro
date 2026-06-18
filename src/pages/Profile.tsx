@@ -192,12 +192,11 @@ const Profile = () => {
   }, []);
 
   const fetchAll = async (uid: string) => {
-    const [w, e, s, l, a, v, int] = await Promise.all([
+    const [w, e, s, l, v, int] = await Promise.all([
       supabase.from("work_experiences").select("*").eq("user_id", uid).order("start_year", { ascending: false }),
       supabase.from("education").select("*").eq("user_id", uid).order("start_year", { ascending: false }),
       supabase.from("skills").select("*").eq("user_id", uid).single(),
       supabase.from("languages").select("*").eq("user_id", uid),
-      supabase.from("awards").select("*").eq("user_id", uid).order("year", { ascending: false }),
       supabase.from("volunteering").select("*").eq("user_id", uid).order("start_year", { ascending: false }),
       supabase.from("interests").select("*").eq("user_id", uid).single(),
     ]);
@@ -205,7 +204,6 @@ const Profile = () => {
     if (e.data) setEdus(e.data as any);
     if (s.data) setSkills({ hard_skills: s.data.hard_skills, soft_skills: s.data.soft_skills });
     if (l.data) setLangs(l.data);
-    if (a.data) setAwards(a.data as any);
     if (v.data) setVols(v.data as any);
     if (int.data) setInterests((int.data as any).interests || []);
   };
@@ -322,7 +320,6 @@ const Profile = () => {
     if (section === "edu") setEditEdu(edus.map(e => ({ ...e })));
     if (section === "skills") setEditSkills({ hard_skills: [...skills.hard_skills], soft_skills: [...skills.soft_skills] });
     if (section === "langs") setEditLangs(langs.map(l => ({ ...l })));
-    if (section === "awards") setEditAwards(awards.map(a => ({ ...a })));
     if (section === "vols") setEditVols(vols.map(v => ({ ...v })));
     if (section === "interests") setEditInterests([...interests]);
   };
@@ -362,14 +359,6 @@ const Profile = () => {
     const { error } = await supabase.from("languages").insert(rows);
     setSaving(false); if (error) { toast.error(error.message); return; }
     await fetchAll(userId); setEditSection(null);
-  };
-
-  const saveAwards = async () => {
-    if (!userId) return; setSaving(true);
-    await supabase.from("awards").delete().eq("user_id", userId);
-    const rows = editAwards.filter(a => a.award_name.trim()).map(a => ({ user_id: userId, award_name: a.award_name.trim(), issuing_organization: a.issuing_organization || null, year: a.year, description: a.description || null }));
-    if (rows.length > 0) { const { error } = await supabase.from("awards").insert(rows); if (error) { setSaving(false); toast.error(error.message); return; } }
-    setSaving(false); await fetchAll(userId); setEditSection(null);
   };
 
   const saveVols = async () => {
