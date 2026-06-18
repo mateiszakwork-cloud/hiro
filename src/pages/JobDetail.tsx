@@ -364,8 +364,8 @@ const JobDetail = () => {
     full_name: string | null; email: string | null; contact_email: string | null;
     phone: string | null; linkedin_url: string | null; default_location: string | null;
     work_experiences: any[]; education: any[]; languages: any[];
-    interests: string[]; awards: any[]; volunteering: any[];
-  }>({ full_name: null, email: null, contact_email: null, phone: null, linkedin_url: null, default_location: null, work_experiences: [], education: [], languages: [], interests: [], awards: [], volunteering: [] });
+    interests: string[]; volunteering: any[];
+  }>({ full_name: null, email: null, contact_email: null, phone: null, linkedin_url: null, default_location: null, work_experiences: [], education: [], languages: [], interests: [], volunteering: [] });
   const [cvHistory, setCvHistory] = useState<any[]>([]);
   const [regenConfirmOpen, setRegenConfirmOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -521,13 +521,12 @@ const JobDetail = () => {
       setInterviewFetched(true);
 
       const uid = session.user.id;
-      const [profileRes, workRes, eduRes, langRes, interestsRes, awardsRes, volRes, skillsRes] = await Promise.all([
+      const [profileRes, workRes, eduRes, langRes, interestsRes, volRes, skillsRes] = await Promise.all([
         supabase.from("profiles").select("full_name, email, contact_email, phone, linkedin_url, default_location").eq("id", uid).single(),
         supabase.from("work_experiences").select("*").eq("user_id", uid).order("start_year", { ascending: false }),
         supabase.from("education").select("*").eq("user_id", uid).order("start_year", { ascending: false }),
         supabase.from("languages").select("*").eq("user_id", uid),
         supabase.from("interests").select("*").eq("user_id", uid).maybeSingle(),
-        supabase.from("awards").select("*").eq("user_id", uid),
         supabase.from("volunteering").select("*").eq("user_id", uid).order("start_year", { ascending: false }),
         supabase.from("skills").select("*").eq("user_id", uid).maybeSingle(),
       ]);
@@ -542,7 +541,6 @@ const JobDetail = () => {
         education: eduRes.data || [],
         languages: langRes.data || [],
         interests: (interestsRes.data as any)?.interests || [],
-        awards: awardsRes.data || [],
         volunteering: volRes.data || [],
       });
       setMasterHardSkills((skillsRes.data as any)?.hard_skills || []);
