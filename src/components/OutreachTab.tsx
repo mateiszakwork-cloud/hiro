@@ -17,7 +17,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Plus, Trash2, Linkedin, ExternalLink, Users } from "lucide-react";
+import { Plus, Trash2, Linkedin, ExternalLink, Users, Sparkles } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 /* ── Types ── */
 type OutreachRow = {
@@ -414,7 +415,7 @@ const OutreachTab = ({
                   <th className="text-left font-medium px-4 py-3">Connection</th>
                   <th className="text-left font-medium px-4 py-3">Status</th>
                   <th className="text-left font-medium px-4 py-3">Date added</th>
-                  <th className="text-right font-medium px-4 py-3 w-12">Actions</th>
+                  <th className="text-right font-medium px-4 py-3">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -499,7 +500,28 @@ const OutreachTab = ({
                         {formatDate(r.date_added)}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <AlertDialog>
+                        <div className="flex items-center justify-end gap-1">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span tabIndex={0}>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  disabled
+                                  aria-disabled="true"
+                                  className="h-8 gap-1.5 text-xs pointer-events-none opacity-60"
+                                >
+                                  <Sparkles className="h-3.5 w-3.5" />
+                                  Draft message
+                                </Button>
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-xs text-xs">
+                              Coming soon — we'll draft a personalized message based on their role and your target company.
+                            </TooltipContent>
+                          </Tooltip>
+                          <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <button
                               className="text-muted-foreground hover:text-destructive transition-colors"
@@ -525,7 +547,8 @@ const OutreachTab = ({
                               </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
-                        </AlertDialog>
+                          </AlertDialog>
+                        </div>
                       </td>
                     </tr>
                   );
