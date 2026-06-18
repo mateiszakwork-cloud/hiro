@@ -2015,6 +2015,7 @@ const JobDetail = () => {
                 jobDescription={jdParts.join("\n")}
                 cvSummary={cvSummaryParts.join("\n")}
                 questionBank={questionBank}
+                initialRounds={(Array.isArray((job as any).interview_rounds) ? (job as any).interview_rounds : []) as InterviewRound[]}
               />
             );
           })()}
