@@ -515,7 +515,7 @@ const Profile = () => {
 
           <div className="mb-4">
             <h3 className="text-base font-semibold text-foreground">Your CV</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">Used to auto-fill your profile and as the reference for all tailored application kits</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Used to auto-fill your profile and as the reference for all tailored CVs</p>
           </div>
 
           {/* Loading state */}

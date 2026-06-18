@@ -54,7 +54,7 @@ const Landing = () => {
               One URL. Everything you need.
             </span>
             <h1 className="hiro-hero-headline">Become the obvious hire.</h1>
-            <p className="hiro-hero-sub">One link. Full application kit.</p>
+            <p className="hiro-hero-sub">One link. Full CV builder.</p>
             <p className="hiro-hero-body">
               Paste any job URL and Hiro fills your tracker, tailors your CV, drafts outreach, and
               prepares your interview — all in one workspace built around the actual application
@@ -141,7 +141,7 @@ const Landing = () => {
             <div className="hiro-how-card">
               <div className="hiro-how-num">03</div>
               <div className="hiro-how-icon-wrap"><FileCheck2 className="h-6 w-6" /></div>
-              <h3 className="hiro-how-h">Build your application kit</h3>
+              <h3 className="hiro-how-h">Build your CV</h3>
               <p className="hiro-how-body">
                 Tailor your CV to the role, see a fit score with real strengths and gaps, surface the
                 right people on LinkedIn, and draft connection notes and InMail you can actually send.
@@ -191,7 +191,7 @@ const Landing = () => {
             <div className="hiro-demo-proof-cell">
               <FileCheck2 className="h-5 w-5" />
               <div>
-                <div className="hiro-demo-proof-h">Tailored application kit</div>
+                <div className="hiro-demo-proof-h">Tailored CV</div>
                 <div className="hiro-demo-proof-body">CV rewritten for the role, with a fit score and gap list.</div>
               </div>
             </div>
