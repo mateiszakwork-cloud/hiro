@@ -392,6 +392,10 @@ const JobDetail = () => {
   // Bullet toggle state: map of "blockIdx-bulletIdx" -> boolean (true = show tailored)
   const [bulletToggles, setBulletToggles] = useState<Record<string, boolean>>({});
 
+  // Per-block state for the "Suggest new bullet" AI draft (loading/error are kept inline so
+  // a transient edge function failure cannot break the tailoring flow).
+  const [suggestState, setSuggestState] = useState<Record<number, { loading: boolean; error: string | null }>>({});
+
   // CV download state
   const [downloadingCv, setDownloadingCv] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
