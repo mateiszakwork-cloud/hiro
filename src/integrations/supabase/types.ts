@@ -364,6 +364,7 @@ export type Database = {
           created_at: string
           id: string
           job_id: string
+          question_round_assignments: Json
           role_specific: Json
           section1_extra: Json
           updated_at: string
@@ -374,6 +375,7 @@ export type Database = {
           created_at?: string
           id?: string
           job_id: string
+          question_round_assignments?: Json
           role_specific?: Json
           section1_extra?: Json
           updated_at?: string
@@ -384,6 +386,7 @@ export type Database = {
           created_at?: string
           id?: string
           job_id?: string
+          question_round_assignments?: Json
           role_specific?: Json
           section1_extra?: Json
           updated_at?: string
