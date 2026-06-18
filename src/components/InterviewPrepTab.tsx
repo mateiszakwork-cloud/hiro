@@ -116,6 +116,10 @@ function QuestionBlock({
   isCustom,
   draggable,
   dragId,
+  showAssignment,
+  assignment,
+  rounds,
+  onAssignmentChange,
 }: {
   number: string;
   title: string;
@@ -131,6 +135,10 @@ function QuestionBlock({
   isCustom?: boolean;
   draggable?: boolean;
   dragId?: string;
+  showAssignment?: boolean;
+  assignment?: string[];
+  rounds?: InterviewRound[];
+  onAssignmentChange?: (next: string[]) => void;
 }) {
   const sortable = useSortable({ id: dragId ?? "static", disabled: !draggable || !dragId });
   const style = dragId
