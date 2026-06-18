@@ -334,7 +334,7 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
 
       // Walk new order to derive new section1_extra (preserving order, updating insertAfter).
       const fixedIds = new Set(FIXED_QUESTIONS.map((q) => `fixed-${q.id}`));
-      let anchor = FIXED_QUESTIONS[0].id;
+      let anchor: string = FIXED_QUESTIONS[0].id;
       const newExtras: ExtraQ[] = [];
       const extrasById = new Map(prev.section1_extra.map((e2) => [e2.id, e2]));
       reordered.forEach((id) => {
