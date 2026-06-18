@@ -1546,17 +1546,18 @@ const JobDetail = () => {
                 </CardContent>
               </Card>
 
-              {/* Card 2: Experience Bullet Points */}
+              {/* Card 2: Experience Bullet Points — relevance-ranked, not rewritten */}
               {Array.isArray(cvOutput.selected_bullets) && cvOutput.selected_bullets.length > 0 && (
                 <Card>
                   <CardContent className="p-5">
-                    <h4 className="font-semibold text-foreground mb-1">Selected Bullet Points</h4>
+                    <h4 className="font-semibold text-foreground mb-1">Best bullets for this role</h4>
                     <p className="text-xs text-muted-foreground mb-4">
-                      Tailored wording sharpens your original point for this role. Switch any bullet back to the original, edit freely, or generate a new variation grounded in your existing experience.
+                      Hiro ranks your existing bullets by how directly they support this job. Edit any line, remove what doesn't fit, or pull more from your profile. Wording stays yours — nothing is silently rewritten.
                     </p>
                     <div className="space-y-5">
                       {(cvOutput.selected_bullets as BulletBlock[]).map((block, blockIdx) => {
                         const normalizedBullets = (block.bullets || []).map(normalizeBullet);
+                        const blockSuggest = suggestState[blockIdx] || { loading: false, error: null };
                         return (
                           <div key={blockIdx}>
                             <div className="flex items-center justify-between mb-2">
@@ -1567,8 +1568,10 @@ const JobDetail = () => {
                               <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => {
                                 const text = normalizedBullets
                                   .map((b, bulletIdx) => {
+                                    // Legacy outputs may still hold a rewritten "tailored" variant; respect the toggle if so.
                                     const showTailored = isBulletTailored(blockIdx, bulletIdx);
-                                    return `• ${showTailored ? b.tailored : b.original}`;
+                                    const value = (!bulletsAreIdentical(b) && showTailored) ? b.tailored : b.original;
+                                    return `• ${value}`;
                                   })
                                   .join("\n");
                                 copyToClipboard(text, `${block.company} bullets`);
@@ -1580,29 +1583,42 @@ const JobDetail = () => {
                               {normalizedBullets.map((bullet, bulletIdx) => {
                                 const identical = bulletsAreIdentical(bullet);
                                 const showTailored = isBulletTailored(blockIdx, bulletIdx);
-                                const originLabel =
-                                  bullet.origin === "generated" ? "AI variation"
-                                  : (showTailored && !identical) ? "Tailored"
-                                  : "Original";
-                                const originClass =
-                                  bullet.origin === "generated"
-                                    ? "bg-purple-50 text-purple-700 border-purple-200"
-                                    : (showTailored && !identical)
-                                      ? "bg-[#FFF5F5] text-[#950606] border-[#FBD5D5]"
-                                      : "bg-gray-50 text-gray-600 border-gray-200";
+                                const isGenerated = bullet.origin === "generated";
+                                // Relevance badge (from new tailoring flow). Falls back gracefully on legacy data.
+                                const relevance = bullet.relevance;
+                                const relevanceLabel = relevance === "high" ? "Strong match"
+                                  : relevance === "medium" ? "Good match"
+                                  : relevance === "low" ? "Light match"
+                                  : null;
+                                const relevanceClass = relevance === "high"
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                  : relevance === "medium"
+                                    ? "bg-amber-50 text-amber-700 border-amber-200"
+                                    : "bg-gray-50 text-gray-600 border-gray-200";
                                 return (
                                   <li key={bulletIdx} className="flex items-start gap-2 group rounded-md -mx-1 px-1 py-1 hover:bg-muted/40 transition-colors">
                                     <span className="text-muted-foreground mt-1.5 shrink-0">•</span>
                                     <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-1.5 mb-1">
-                                        <span className={`inline-block text-[10px] font-medium px-1.5 py-0.5 rounded border ${originClass}`}>{originLabel}</span>
-                                        {!identical && (
+                                      <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                                        {isGenerated && (
+                                          <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded border bg-purple-50 text-purple-700 border-purple-200">
+                                            <Sparkles className="h-2.5 w-2.5" /> Draft — review before keeping
+                                          </span>
+                                        )}
+                                        {!isGenerated && relevanceLabel && (
+                                          <span className={`inline-block text-[10px] font-medium px-1.5 py-0.5 rounded border ${relevanceClass}`}>{relevanceLabel}</span>
+                                        )}
+                                        {bullet.why && !isGenerated && (
+                                          <span className="text-[10px] text-muted-foreground italic">{bullet.why}</span>
+                                        )}
+                                        {/* Legacy data: surface the old original/tailored toggle only when they differ */}
+                                        {!identical && !isGenerated && (
                                           <button
                                             onClick={() => toggleBullet(blockIdx, bulletIdx)}
                                             className="text-[10px] text-muted-foreground hover:text-foreground underline underline-offset-2"
-                                            title={showTailored ? "Switch to original wording" : "Switch to tailored wording"}
+                                            title={showTailored ? "Switch to original wording" : "Switch to previous tailored wording"}
                                           >
-                                            Show {showTailored ? "original" : "tailored"}
+                                            Show {showTailored ? "original" : "previous variant"}
                                           </button>
                                         )}
                                       </div>
@@ -1611,7 +1627,7 @@ const JobDetail = () => {
                                         suppressContentEditableWarning
                                         className="text-sm text-foreground outline-none focus:ring-1 focus:ring-ring rounded px-0.5 block"
                                       >
-                                        {showTailored ? bullet.tailored : bullet.original}
+                                        {(!identical && showTailored) ? bullet.tailored : bullet.original}
                                       </span>
                                     </div>
                                     <button
@@ -1636,12 +1652,12 @@ const JobDetail = () => {
                                     w.company_name === block.company && w.job_title === block.job_title
                                   );
                                   if (!matchExp || !Array.isArray(matchExp.bullet_points)) {
-                                    toast.error("No more original bullets", { description: "This experience has no unused original bullets." });
+                                    setSuggestState(s => ({ ...s, [blockIdx]: { loading: false, error: "No unused bullets in your profile for this role." } }));
                                     return;
                                   }
                                   const unused = matchExp.bullet_points.filter((bp: string) => !currentTexts.has(bp));
                                   if (unused.length === 0) {
-                                    toast("All originals used", { description: "Every original bullet for this role is already shown." });
+                                    setSuggestState(s => ({ ...s, [blockIdx]: { loading: false, error: "Every bullet from this role is already shown." } }));
                                     return;
                                   }
                                   const newBullet: BulletItem = { original: unused[0], tailored: unused[0], use_tailored: false, origin: "original" };
@@ -1649,6 +1665,7 @@ const JobDetail = () => {
                                     i === blockIdx ? { ...b, bullets: [...b.bullets, newBullet] as BulletItem[] } : b
                                   );
                                   setCvOutput({ ...cvOutput, selected_bullets: updated });
+                                  setSuggestState(s => ({ ...s, [blockIdx]: { loading: false, error: null } }));
                                 }}
                                 className="h-7 px-2 rounded border border-border bg-muted text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
                                 title="Add an unused bullet from your profile for this experience"
@@ -1656,43 +1673,131 @@ const JobDetail = () => {
                                 <Plus className="h-3 w-3" /> Add from profile
                               </button>
                               <button
+                                disabled={blockSuggest.loading}
                                 onClick={async () => {
                                   if (!cvOutput || !Array.isArray(cvOutput.selected_bullets)) return;
+                                  setSuggestState(s => ({ ...s, [blockIdx]: { loading: true, error: null } }));
                                   try {
                                     const { data, error } = await supabase.functions.invoke("generate-bullet", {
                                       body: {
                                         job_id: job.id,
                                         company: block.company,
                                         job_title: block.job_title,
-                                        existing_bullets: normalizedBullets.map(b => b.use_tailored !== false ? b.tailored : b.original),
+                                        existing_bullets: normalizedBullets.map(b => b.original),
                                       },
                                     });
-                                    if (error || !data?.success) {
-                                      toast.error("Couldn't generate bullet", { description: data?.error || error?.message || "Try again." });
+                                    if (error || !data?.success || !data?.bullet) {
+                                      const msg = data?.error || error?.message || "Hiro couldn't draft a new bullet right now. Try again in a moment.";
+                                      setSuggestState(s => ({ ...s, [blockIdx]: { loading: false, error: msg } }));
                                       return;
                                     }
                                     const text = data.bullet as string;
-                                    const newBullet: BulletItem = { original: text, tailored: text, use_tailored: true, origin: "generated" };
+                                    const newBullet: BulletItem = { original: text, tailored: text, use_tailored: false, origin: "generated" };
                                     const updated = (cvOutput.selected_bullets as BulletBlock[]).map((b, i) =>
                                       i === blockIdx ? { ...b, bullets: [...b.bullets, newBullet] as BulletItem[] } : b
                                     );
                                     setCvOutput({ ...cvOutput, selected_bullets: updated });
-                                    toast.success("Tailored bullet added", { description: "Review and edit it inline to keep it true to you." });
+                                    setSuggestState(s => ({ ...s, [blockIdx]: { loading: false, error: null } }));
                                   } catch (e: any) {
-                                    toast.error("Generation failed", { description: String(e?.message || e) });
+                                    setSuggestState(s => ({ ...s, [blockIdx]: { loading: false, error: "Suggestion service is unavailable. Your other bullets are unchanged." } }));
                                   }
                                 }}
-                                className="h-7 px-2 rounded border border-[#FBD5D5] bg-[#FFF5F5] text-xs text-[#950606] hover:bg-[#FFE5E5] inline-flex items-center gap-1"
-                                title="Use AI to draft a new bullet grounded in this experience"
+                                className="h-7 px-2 rounded border border-[#FBD5D5] bg-[#FFF5F5] text-xs text-[#950606] hover:bg-[#FFE5E5] inline-flex items-center gap-1 disabled:opacity-60 disabled:cursor-not-allowed"
+                                title="Draft a new bullet grounded in this experience — you review before keeping it"
                               >
-                                <Sparkles className="h-3 w-3" /> Suggest new bullet
+                                {blockSuggest.loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                                {blockSuggest.loading ? "Drafting…" : "Suggest draft bullet"}
                               </button>
                               <span className="text-[10px] text-muted-foreground ml-auto">{normalizedBullets.length} bullet{normalizedBullets.length === 1 ? "" : "s"} · hover to remove</span>
                             </div>
+                            {blockSuggest.error && (
+                              <div className="mt-2 flex items-start gap-1.5 text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
+                                <AlertCircle className="h-3 w-3 mt-0.5 shrink-0" />
+                                <span className="flex-1">{blockSuggest.error}</span>
+                                <button
+                                  onClick={() => setSuggestState(s => ({ ...s, [blockIdx]: { loading: false, error: null } }))}
+                                  className="text-amber-700 hover:text-amber-900"
+                                  aria-label="Dismiss"
+                                >
+                                  <XIcon className="h-3 w-3" />
+                                </button>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
                     </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Card 2b: Keyword coverage — JD-vs-profile gap analysis */}
+              {Array.isArray(cvOutput.keyword_coverage) && cvOutput.keyword_coverage.length > 0 && (
+                <Card>
+                  <CardContent className="p-5">
+                    <div className="flex items-center justify-between mb-1">
+                      <h4 className="font-semibold text-foreground">Keyword coverage</h4>
+                      <span className="text-[10px] text-muted-foreground">JD vs your profile</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Concepts the job description leans on, and how clearly your current profile language reflects each one. Use the gaps as a checklist — add wording only when it's truly part of your experience.
+                    </p>
+                    {(() => {
+                      const items = (cvOutput.keyword_coverage || []) as KeywordCoverageItem[];
+                      const groups = {
+                        covered: items.filter(i => i.status === "covered"),
+                        partial: items.filter(i => i.status === "partial"),
+                        missing: items.filter(i => i.status === "missing"),
+                      };
+                      const Section = ({ title, list, dotClass, chipClass, hint }: { title: string; list: KeywordCoverageItem[]; dotClass: string; chipClass: string; hint: string }) => {
+                        if (list.length === 0) return null;
+                        return (
+                          <div className="mt-3">
+                            <div className="flex items-center gap-2 mb-1.5">
+                              <span className={`inline-block h-1.5 w-1.5 rounded-full ${dotClass}`} />
+                              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{title}</p>
+                              <span className="text-[10px] text-muted-foreground/80">— {hint}</span>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {list.map((it, i) => (
+                                <span
+                                  key={`${title}-${i}`}
+                                  className={`inline-flex items-center text-xs px-2 py-0.5 rounded-full border ${chipClass}`}
+                                  title={it.evidence || undefined}
+                                >
+                                  {it.keyword}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      };
+                      return (
+                        <>
+                          <Section
+                            title="Covered"
+                            list={groups.covered}
+                            dotClass="bg-emerald-500"
+                            chipClass="bg-emerald-50 text-emerald-800 border-emerald-200"
+                            hint="already supported by your selected experience"
+                          />
+                          <Section
+                            title="Partial"
+                            list={groups.partial}
+                            dotClass="bg-amber-500"
+                            chipClass="bg-amber-50 text-amber-800 border-amber-200"
+                            hint="adjacent experience exists but isn't said in these words"
+                          />
+                          <Section
+                            title="Missing"
+                            list={groups.missing}
+                            dotClass="bg-rose-500"
+                            chipClass="bg-rose-50 text-rose-800 border-rose-200"
+                            hint="no clear evidence yet — only add if truly part of your experience"
+                          />
+                        </>
+                      );
+                    })()}
                   </CardContent>
                 </Card>
               )}
