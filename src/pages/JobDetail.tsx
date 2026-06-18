@@ -225,8 +225,6 @@ const JobDetail = () => {
     total: number; not_contacted: number; messaged: number; replied: number; meeting_booked: number;
   }>({ total: 0, not_contacted: 0, messaged: 0, replied: 0, meeting_booked: 0 });
   const [job, setJob] = useState<Job | null>(null);
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [linkedinUrl, setLinkedinUrl] = useState("");
   const [notes, setNotes] = useState("");
   const [notesSaved, setNotesSaved] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
@@ -356,14 +354,6 @@ const JobDetail = () => {
         });
       }
 
-
-      const { data: contactData } = await supabase
-        .from("contacts")
-        .select("*")
-        .eq("job_id", jobId!)
-        .eq("user_id", session.user.id)
-        .order("created_at", { ascending: true });
-      if (contactData) setContacts(contactData as any);
 
       const { data: cvData } = await supabase
         .from("cv_outputs")
@@ -555,30 +545,6 @@ const JobDetail = () => {
       return next;
     });
   }, [jobId]);
-
-  const addContact = async () => {
-    if (!userId || !jobId) return;
-    const url = linkedinUrl.trim();
-    const { data, error } = await supabase
-      .from("contacts")
-      .insert({ job_id: jobId, user_id: userId, linkedin_url: url || null, name: url ? "Loading..." : "New Contact" })
-      .select("*")
-      .single();
-    if (!error && data) {
-      setContacts(prev => [...prev, data as any]);
-      setLinkedinUrl("");
-    }
-  };
-
-  const updateContact = async (id: string, patch: Partial<Contact>) => {
-    await supabase.from("contacts").update(patch as any).eq("id", id);
-    setContacts(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c));
-  };
-
-  const deleteContact = async (id: string) => {
-    await supabase.from("contacts").delete().eq("id", id);
-    setContacts(prev => prev.filter(c => c.id !== id));
-  };
 
   const handleGenerateCv = async (skipConfirm = false) => {
     if (!jobId || !userId) return;
