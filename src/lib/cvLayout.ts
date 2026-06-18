@@ -1,12 +1,13 @@
-// Shared CV layout constants, types, and section-config helpers.
-// Used by buildCvData, generateCvDocx, generateCvPdf, CvPreview, CvSectionControls.
+// Shared CV layout constants and types.
+// The CV layout is FIXED: header → education → experience → languages → soft skills → hard skills.
+// Used by buildCvData, generateCvDocx, generateCvPdf, CvPreview.
 
 export type CvSectionId =
   | "education"
   | "experience"
   | "languages"
-  | "hardSkills"
-  | "softSkills";
+  | "softSkills"
+  | "hardSkills";
 
 export interface CvSectionMeta {
   id: CvSectionId;
@@ -18,57 +19,36 @@ export interface CvSectionConfig {
   sections: CvSectionMeta[];
 }
 
+/** Fixed section labels. Casing here is the user-visible source of truth. */
 export const DEFAULT_SECTION_LABELS: Record<CvSectionId, string> = {
   education: "Education",
-  experience: "Professional Experience",
+  experience: "Work experience",
   languages: "Languages",
-  hardSkills: "Hard Skills",
-  softSkills: "Soft Skills",
+  softSkills: "Soft skills",
+  hardSkills: "Hard skills",
 };
 
-/** Sections that ship hidden by default (user can opt in). */
-const OPTIONAL_HIDDEN_BY_DEFAULT: CvSectionId[] = ["softSkills"];
+/** Canonical, non-configurable CV layout. */
+export const FIXED_SECTION_ORDER: CvSectionId[] = [
+  "education",
+  "experience",
+  "languages",
+  "softSkills",
+  "hardSkills",
+];
 
 export const DEFAULT_SECTION_CONFIG: CvSectionConfig = {
-  sections: (Object.keys(DEFAULT_SECTION_LABELS) as CvSectionId[]).map((id) => ({
+  sections: FIXED_SECTION_ORDER.map((id) => ({
     id,
     label: DEFAULT_SECTION_LABELS[id],
-    visible: !OPTIONAL_HIDDEN_BY_DEFAULT.includes(id),
+    visible: true,
   })),
 };
 
-/** Merge a stored section_config (possibly empty or partial) with defaults so the order
- *  is stable and any missing section id is appended. */
-export function normalizeSectionConfig(raw: unknown): CvSectionConfig {
-  const stored = (raw && typeof raw === "object" && (raw as any).sections) as
-    | CvSectionMeta[]
-    | undefined;
-  if (!Array.isArray(stored) || stored.length === 0) return DEFAULT_SECTION_CONFIG;
-
-  const known = new Set<CvSectionId>();
-  const out: CvSectionMeta[] = [];
-  for (const s of stored) {
-    if (!s || typeof s !== "object") continue;
-    const id = s.id as CvSectionId;
-    if (!DEFAULT_SECTION_LABELS[id] || known.has(id)) continue;
-    known.add(id);
-    out.push({
-      id,
-      label: (s.label && String(s.label).trim()) || DEFAULT_SECTION_LABELS[id],
-      visible: s.visible !== false,
-    });
-  }
-  // Append any missing default sections at the end (visible by default).
-  for (const id of Object.keys(DEFAULT_SECTION_LABELS) as CvSectionId[]) {
-    if (!known.has(id)) {
-      out.push({
-        id,
-        label: DEFAULT_SECTION_LABELS[id],
-        visible: !OPTIONAL_HIDDEN_BY_DEFAULT.includes(id),
-      });
-    }
-  }
-  return { sections: out };
+/** Always returns the fixed config. Stored section_config is intentionally ignored —
+ *  the CV layout is no longer user-configurable. */
+export function normalizeSectionConfig(_raw?: unknown): CvSectionConfig {
+  return DEFAULT_SECTION_CONFIG;
 }
 
 // ── Shared visual constants ──────────────────────────────────────────────────
