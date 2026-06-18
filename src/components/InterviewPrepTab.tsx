@@ -314,7 +314,7 @@ const CAT_COLORS: Record<string, string> = {
   Situational: "bg-orange-100 text-orange-700",
 };
 
-export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDescription, cvSummary, questionBank = [] }: Props) {
+export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDescription, cvSummary, questionBank = [], initialRounds = [] }: Props) {
   const [answers, setAnswers] = useState<Answers | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -323,7 +323,66 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
   const saveTimer = useRef<number | null>(null);
   const userIdRef = useRef<string | null>(null);
 
+  /* ── Rounds + per-question round assignments ── */
+  const [rounds, setRounds] = useState<InterviewRound[]>(initialRounds);
+  const [activeRoundId, setActiveRoundId] = useState<string>("all");
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [assignments, setAssignments] = useState<Record<string, string[]>>({});
+
+  const persistRounds = async (next: InterviewRound[]) => {
+    setRounds(next);
+    await supabase.from("jobs").update({ interview_rounds: next as any } as any).eq("id", jobId);
+  };
+
+  const addRound = (preset?: string) => {
+    const name = preset || `Round ${rounds.length + 1}`;
+    const created = newRound(name);
+    const next = [...rounds, created];
+    setActiveRoundId(created.id);
+    setDetailsOpen(true);
+    persistRounds(next);
+  };
+
+  const updateRound = (id: string, patch: Partial<InterviewRound>) => {
+    persistRounds(rounds.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+  };
+
+  const deleteRound = (id: string) => {
+    const next = rounds.filter((r) => r.id !== id);
+    if (activeRoundId === id) setActiveRoundId("all");
+    persistRounds(next);
+    // Strip the deleted round from any per-question assignments
+    setAssignments((prev) => {
+      const cleaned: Record<string, string[]> = {};
+      for (const [qid, list] of Object.entries(prev)) {
+        const filtered = list.filter((x) => x !== id);
+        cleaned[qid] = filtered.length === 0 ? ["all"] : filtered;
+      }
+      void persistAssignments(cleaned);
+      return cleaned;
+    });
+  };
+
   const hasGenerated = !!answers;
+
+  const getAssignment = (qid: string): string[] => assignments[qid] ?? ["all"];
+
+  const isVisibleInActiveRound = (qid: string): boolean => {
+    if (activeRoundId === "all") return true;
+    const a = getAssignment(qid);
+    return a.includes("all") || a.includes(activeRoundId);
+  };
+
+  const setAssignment = (qid: string, list: string[]) => {
+    setAssignments((prev) => {
+      const next = { ...prev, [qid]: list };
+      void persistAssignments(next);
+      return next;
+    });
+  };
+
+  const defaultAssignmentForNew = (): string[] =>
+    activeRoundId === "all" ? ["all"] : [activeRoundId];
 
   /* ── Load saved answers on mount / jobId change ── */
   useEffect(() => {
@@ -338,7 +397,7 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
       userIdRef.current = uid;
       const { data, error: loadErr } = await supabase
         .from("interview_prep_answers")
-        .select("answers, section1_extra, role_specific")
+        .select("answers, section1_extra, role_specific, question_round_assignments")
         .eq("user_id", uid)
         .eq("job_id", jobId)
         .maybeSingle();
@@ -352,6 +411,9 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
           section1_extra: (data.section1_extra as ExtraQ[]) || [],
           role_specific: (data.role_specific as RoleQ[]) || [],
         });
+      }
+      if (!loadErr && data?.question_round_assignments) {
+        setAssignments((data.question_round_assignments as Record<string, string[]>) || {});
       }
       setHydrated(true);
     })();
@@ -377,6 +439,21 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
       );
   };
 
+  const persistAssignments = async (next: Record<string, string[]>) => {
+    const uid = userIdRef.current;
+    if (!uid || !jobId) return;
+    await supabase
+      .from("interview_prep_answers")
+      .upsert(
+        {
+          user_id: uid,
+          job_id: jobId,
+          question_round_assignments: next as any,
+        } as any,
+        { onConflict: "user_id,job_id" }
+      );
+  };
+
   /* ── Custom question helpers ── */
   const ensureAnswers = (): Answers =>
     answers || {
@@ -391,6 +468,7 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
     const lastFixedId = FIXED_QUESTIONS[FIXED_QUESTIONS.length - 1].id;
     const newExtra: ExtraQ = { id, question: "", answer: "", insertAfter: lastFixedId };
     setAnswers({ ...base, section1_extra: [...base.section1_extra, newExtra] });
+    setAssignment(id, defaultAssignmentForNew());
   };
 
   /* ── Drag-and-drop sensors ── */
