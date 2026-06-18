@@ -851,6 +851,91 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
         </div>
       </div>
 
+      {/* Round tab strip + collapsible round details */}
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setActiveRoundId("all")}
+            className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+              activeRoundId === "all"
+                ? "bg-[#950606] text-white border-[#950606]"
+                : "bg-muted text-muted-foreground border-border hover:text-foreground"
+            }`}
+          >
+            All rounds
+          </button>
+          {rounds.map((r) => (
+            <button
+              key={r.id}
+              type="button"
+              onClick={() => setActiveRoundId(r.id)}
+              className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                activeRoundId === r.id
+                  ? "bg-[#950606] text-white border-[#950606]"
+                  : "bg-muted text-muted-foreground border-border hover:text-foreground"
+              }`}
+            >
+              {r.name}
+              {r.outcome && r.outcome !== "Pending" && (
+                <span className="ml-1.5 opacity-80">· {r.outcome}</span>
+              )}
+            </button>
+          ))}
+          {rounds.length === 0 ? (
+            DEFAULT_ROUND_PRESETS.map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => addRound(p)}
+                className="px-3 py-1 rounded-full text-xs font-medium border border-dashed border-border text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Plus className="inline h-3 w-3 mr-1" />{p}
+              </button>
+            ))
+          ) : (
+            <button
+              type="button"
+              onClick={() => addRound()}
+              className="px-3 py-1 rounded-full text-xs font-medium border border-dashed border-border text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Plus className="inline h-3 w-3 mr-1" />Add round
+            </button>
+          )}
+        </div>
+
+        {activeRoundId !== "all" && rounds.find((r) => r.id === activeRoundId) && (
+          <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen} className="rounded-md border border-border">
+            <CollapsibleTrigger asChild>
+              <button
+                type="button"
+                className="flex w-full items-center justify-between px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/40 transition-colors"
+              >
+                <span className="flex items-center gap-2">
+                  {detailsOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                  Round details
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {rounds.find((r) => r.id === activeRoundId)?.name}
+                </span>
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="px-4 pb-4 pt-2 border-t border-border">
+              {(() => {
+                const r = rounds.find((x) => x.id === activeRoundId)!;
+                return (
+                  <RoundDetailsPanel
+                    round={r}
+                    onChange={(patch) => updateRound(r.id, patch)}
+                    onDelete={() => deleteRound(r.id)}
+                  />
+                );
+              })()}
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+      </div>
+
       {/* Section 1 */}
       <section>
         <div className="flex items-end justify-between gap-3 border-b border-border pb-3 mb-6">
@@ -871,6 +956,7 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
                 qNum++;
                 if (item.kind === "fixed") {
                   const fq = item.q;
+                  if (!isVisibleInActiveRound(fq.id)) return null;
                   const val = (answers as any)?.[fq.id] || "";
                   return (
                     <QuestionBlock
@@ -885,9 +971,14 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
                       regenerating={regenerating === fq.id}
                       newsDisclaimer={fq.newsDisclaimer}
                       hasGenerated={hasGenerated}
+                      showAssignment={activeRoundId !== "all"}
+                      assignment={getAssignment(fq.id)}
+                      rounds={rounds}
+                      onAssignmentChange={(next) => setAssignment(fq.id, next)}
                     />
                   );
                 }
+                if (!isVisibleInActiveRound(item.q.id)) return null;
                 return (
                   <QuestionBlock
                     key={item.q.id}
@@ -904,6 +995,10 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
                     onTitleChange={(v) => updateCustomTitle(item.q.id, v)}
                     onDelete={() => deleteCustomQuestion(item.q.id)}
                     isCustom
+                    showAssignment={activeRoundId !== "all"}
+                    assignment={getAssignment(item.q.id)}
+                    rounds={rounds}
+                    onAssignmentChange={(next) => setAssignment(item.q.id, next)}
                   />
                 );
               });
@@ -933,7 +1028,10 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
             items={(answers?.role_specific || []).map((r) => r.id)}
             strategy={verticalListSortingStrategy}
           >
-            {(answers?.role_specific || []).map((r, i) => (
+            {(answers?.role_specific || [])
+              .map((r, i) => ({ r, i }))
+              .filter(({ r }) => isVisibleInActiveRound(r.id))
+              .map(({ r, i }) => (
               <QuestionBlock
                 key={r.id}
                 dragId={r.id}
@@ -949,6 +1047,10 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
                 onTitleChange={r.id.startsWith("rs-custom") ? (v) => updateCustomTitle(r.id, v) : undefined}
                 onDelete={r.id.startsWith("rs-custom") ? () => deleteCustomQuestion(r.id) : undefined}
                 isCustom={r.id.startsWith("rs-custom")}
+                showAssignment={activeRoundId !== "all"}
+                assignment={getAssignment(r.id)}
+                rounds={rounds}
+                onAssignmentChange={(next) => setAssignment(r.id, next)}
               />
             ))}
           </SortableContext>
