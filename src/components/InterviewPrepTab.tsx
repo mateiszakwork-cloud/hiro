@@ -339,7 +339,7 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
       const extrasById = new Map(prev.section1_extra.map((e2) => [e2.id, e2]));
       reordered.forEach((id) => {
         if (fixedIds.has(id)) {
-          anchor = id.replace(/^fixed-/, "") as ExtraQ["insertAfter"];
+          anchor = id.replace(/^fixed-/, "");
         } else {
           const ex = extrasById.get(id);
           if (ex) newExtras.push({ ...ex, insertAfter: anchor });
