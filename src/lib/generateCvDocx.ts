@@ -41,7 +41,7 @@ function experienceBlock(e: CvExperienceEntry): Paragraph[] {
   const out: Paragraph[] = [];
 
   // Line 1: ROLE | Company   ............   dates
-  const titleText = e.company ? `${e.jobTitle} | ${e.company}` : e.jobTitle;
+  const titleText = [e.jobTitle, e.company].filter(Boolean).join(" | ");
   out.push(new Paragraph({
     keepNext: true, keepLines: true,
     spacing: { before: 140, after: 0 },
@@ -83,27 +83,30 @@ function experienceBlock(e: CvExperienceEntry): Paragraph[] {
 
 function educationBlock(e: CvEducationEntry): Paragraph[] {
   const out: Paragraph[] = [];
+  const titleText = [e.degree, e.institution].filter(Boolean).join(" at ");
   out.push(new Paragraph({
     keepNext: true, keepLines: true,
     spacing: { before: 140, after: 0 },
     tabStops: tabRight,
     children: [
-      new TextRun({ text: `${e.degree}${e.institution ? " at " + e.institution : ""}`, bold: true, size: SZ_BODY, font: FONT }),
+      new TextRun({ text: titleText, bold: true, size: SZ_BODY, font: FONT }),
       ...(e.dateRange ? [new TextRun({ text: `\t${e.dateRange}`, size: SZ_META, font: FONT })] : []),
     ],
   }));
   const line2Parts: string[] = [];
   if (e.fieldOfStudy) line2Parts.push(e.fieldOfStudy);
   if (e.grade) line2Parts.push(`GPA: ${e.grade}`);
-  out.push(new Paragraph({
-    keepLines: true,
-    spacing: { before: 0, after: 40 },
-    tabStops: tabRight,
-    children: [
-      new TextRun({ text: line2Parts.join(" | "), size: SZ_BODY, font: FONT }),
-      ...(e.location ? [new TextRun({ text: `\t${e.location.toUpperCase()}`, size: SZ_META, font: FONT, color: MUTED })] : []),
-    ],
-  }));
+  if (line2Parts.length || e.location) {
+    out.push(new Paragraph({
+      keepLines: true,
+      spacing: { before: 0, after: 40 },
+      tabStops: tabRight,
+      children: [
+        new TextRun({ text: line2Parts.join(" | "), size: SZ_BODY, font: FONT }),
+        ...(e.location ? [new TextRun({ text: `\t${e.location.toUpperCase()}`, size: SZ_META, font: FONT, color: MUTED })] : []),
+      ],
+    }));
+  }
   for (const extra of [e.activities, e.description].filter(Boolean) as string[]) {
     out.push(new Paragraph({
       numbering: { reference: "bullets", level: 0 },
@@ -126,16 +129,10 @@ function languagesBlock(langs: CvLanguageEntry[]): Paragraph[] {
 }
 
 function hardSkillsBlock(skills: CvHardSkills): Paragraph[] {
-  if (!skills) return [];
-  const text = Array.isArray(skills)
-    ? skills.join(", ") + "."
-    : Object.entries(skills)
-        .filter(([, v]) => Array.isArray(v) && v.length)
-        .map(([cat, list]) => `${cat}: ${(list as string[]).join(", ")}`)
-        .join("; ") + ".";
+  if (!skills.length) return [];
   return [new Paragraph({
     spacing: { before: 60, after: 60, line: 280 },
-    children: [new TextRun({ text, size: SZ_BODY, font: FONT })],
+    children: [new TextRun({ text: skills.join(", ") + ".", size: SZ_BODY, font: FONT })],
   })];
 }
 
@@ -176,13 +173,16 @@ export async function generateCvDocx(data: CvData) {
     children: [new TextRun({ text: header.fullName, bold: true, size: SZ_NAME, font: FONT })],
   }));
 
-  // Single contact line: phone | email | LinkedIn
-  const contactBits = [header.phone, header.email, header.linkedin].filter(Boolean) as string[];
+  // Canonical contact line: location · phone · email · linkedin.
+  // Falsy values collapse cleanly so the line stays stable on sparse profiles.
+  const contactBits = [header.location, header.phone, header.email, header.linkedin]
+    .map((v) => (typeof v === "string" ? v.trim() : ""))
+    .filter(Boolean);
   if (contactBits.length) {
     children.push(new Paragraph({
       alignment: AlignmentType.CENTER,
       spacing: { after: 120 },
-      children: [new TextRun({ text: contactBits.join("  |  "), size: SZ_CONTACT, font: FONT, color: MUTED })],
+      children: [new TextRun({ text: contactBits.join("  ·  "), size: SZ_CONTACT, font: FONT, color: MUTED })],
     }));
   }
 

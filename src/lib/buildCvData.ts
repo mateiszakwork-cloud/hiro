@@ -45,7 +45,11 @@ export interface CvLanguageEntry {
   proficiency: string;
 }
 
-export type CvHardSkills = Record<string, string[]> | string[] | null;
+/** Hard skills are always rendered as a single flat, ordered list — the canonical
+ * CV structure has one "Hard skills" section, never per-category sub-headings.
+ * Legacy CV outputs that stored a Record<category, string[]> are flattened here
+ * so renderers never have to branch on shape. */
+export type CvHardSkills = string[];
 
 export type CvSectionData =
   | { kind: "education"; entries: CvEducationEntry[] }
@@ -73,37 +77,89 @@ export interface CvData {
 
 function bulletText(b: BulletItem | string): string {
   if (typeof b === "string") return b;
-  return b.use_tailored !== false ? (b.tailored || b.original) : (b.original || b.tailored);
+  // Tailoring no longer rewrites bullets — we always render the user's original
+  // wording. We still fall back to `tailored` only if `original` is unexpectedly empty
+  // (e.g. legacy data where only one field was populated).
+  return b.original || b.tailored || "";
 }
 
 import { dateRange as fmtRange } from "./cvLayout";
+
+function cleanString(s: unknown): string | null {
+  if (typeof s !== "string") return null;
+  const t = s.trim();
+  return t.length ? t : null;
+}
+
+function flattenHardSkills(
+  raw: Record<string, string[]> | string[] | null | undefined,
+): string[] {
+  if (!raw) return [];
+  const list = Array.isArray(raw) ? raw : Object.values(raw).flat();
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const item of list) {
+    if (typeof item !== "string") continue;
+    const t = item.trim();
+    if (!t) continue;
+    const key = t.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(t);
+  }
+  return out;
+}
 
 function experienceEntries(
   work: any[],
   selectedBullets: Record<string, string[]>,
 ): CvExperienceEntry[] {
-  return (work || []).map((exp) => ({
-    jobTitle: exp.job_title || "",
-    company: exp.company_name || "",
-    location: exp.location || null,
-    dateRange: fmtRange(exp.start_month, exp.start_year, exp.end_month, exp.end_year, !!exp.is_current),
-    bullets: selectedBullets[exp.company_name] || exp.bullet_points || [],
-  }));
+  return (work || [])
+    .map((exp) => {
+      const company = cleanString(exp.company_name) || "";
+      const bullets = (selectedBullets[company] || exp.bullet_points || [])
+        .map((b: unknown) => (typeof b === "string" ? b.trim() : ""))
+        .filter((b: string) => b.length > 0);
+      return {
+        jobTitle: cleanString(exp.job_title) || "",
+        company,
+        location: cleanString(exp.location),
+        dateRange: fmtRange(
+          exp.start_month,
+          exp.start_year,
+          exp.end_month,
+          exp.end_year,
+          !!exp.is_current,
+        ),
+        bullets,
+      };
+    })
+    // Skip experiences with no usable content — keeps export clean for sparse profiles.
+    .filter((e) => e.jobTitle || e.company || e.bullets.length > 0);
 }
 
 function educationEntries(edus: any[]): CvEducationEntry[] {
-  return (edus || []).map((e) => ({
-    institution: e.institution || "",
-    degree: e.degree || "",
-    fieldOfStudy: e.field_of_study || "",
-    location: e.location || null,
-    dateRange: e.start_year
-      ? `${e.start_year} – ${e.is_expected ? "Expected" : e.end_year || ""}`
-      : "",
-    grade: e.grade,
-    activities: e.activities,
-    description: e.description,
-  }));
+  return (edus || [])
+    .map((e) => {
+      const start = e.start_year ? String(e.start_year) : "";
+      const end = e.is_expected ? "Expected" : e.end_year ? String(e.end_year) : "";
+      const dateRange = start
+        ? end
+          ? `${start} – ${end}`
+          : start
+        : end;
+      return {
+        institution: cleanString(e.institution) || "",
+        degree: cleanString(e.degree) || "",
+        fieldOfStudy: cleanString(e.field_of_study) || "",
+        location: cleanString(e.location),
+        dateRange,
+        grade: cleanString(e.grade),
+        activities: cleanString(e.activities),
+        description: cleanString(e.description),
+      };
+    })
+    .filter((e) => e.institution || e.degree || e.fieldOfStudy);
 }
 
 // ─── main builder ────────────────────────────────────────────────────────────
@@ -139,21 +195,25 @@ export function buildCvData(opts: {
   }
 
   const header: CvHeader = {
-    fullName: profile.full_name || "Your Name",
-    phone: profile.phone || null,
-    email: profile.contact_email || profile.email || null,
-    linkedin: profile.linkedin_url || null,
-    location: profile.default_location || null,
+    fullName: cleanString(profile.full_name) || "Your Name",
+    phone: cleanString(profile.phone),
+    email: cleanString(profile.contact_email) || cleanString(profile.email),
+    linkedin: cleanString(profile.linkedin_url),
+    location: cleanString(profile.default_location),
   };
 
   const expEntries = experienceEntries(profile.work_experiences, selectedBullets);
   const eduEntries = educationEntries(profile.education);
-  const langEntries: CvLanguageEntry[] = (profile.languages || []).map((l: any) => ({
-    name: l.language_name,
-    proficiency: l.proficiency,
-  }));
-  const hardSkills = cvOutput.selected_hard_skills || null;
-  const softSkills = (cvOutput.selected_soft_skills || []).filter(Boolean);
+  const langEntries: CvLanguageEntry[] = (profile.languages || [])
+    .map((l: any) => ({
+      name: cleanString(l.language_name) || "",
+      proficiency: cleanString(l.proficiency) || "",
+    }))
+    .filter((l) => l.name);
+  const hardSkills: CvHardSkills = flattenHardSkills(cvOutput.selected_hard_skills);
+  const softSkills = (cvOutput.selected_soft_skills || [])
+    .map((s) => (typeof s === "string" ? s.trim() : ""))
+    .filter(Boolean);
 
   // Layout is fixed — no per-job reordering.
   const config: CvSectionConfig = DEFAULT_SECTION_CONFIG;
@@ -170,11 +230,7 @@ export function buildCvData(opts: {
     education: eduEntries.length === 0,
     experience: expEntries.length === 0,
     languages: langEntries.length === 0,
-    hardSkills:
-      !hardSkills ||
-      (Array.isArray(hardSkills)
-        ? hardSkills.length === 0
-        : Object.values(hardSkills).every((v) => !Array.isArray(v) || v.length === 0)),
+    hardSkills: hardSkills.length === 0,
     softSkills: softSkills.length === 0,
   };
 

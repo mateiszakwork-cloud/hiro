@@ -67,7 +67,9 @@ function estimateHeight(data: CvData, S: number, padY: number): number {
   let h = padY * 2;
   // name + contact
   h += 22 * S * 1.15 + 2 * S;
-  const hasContact = !!(data.header.phone || data.header.email || data.header.linkedin);
+  const hasContact = !!(
+    data.header.location || data.header.phone || data.header.email || data.header.linkedin
+  );
   if (hasContact) h += 9.5 * S * 1.2 + 12 * S;
 
   for (const s of data.sections) {
@@ -96,14 +98,8 @@ function estimateHeight(data: CvData, S: number, padY: number): number {
         h += 3 * S + wrap(d.entries.map(l => `${l.name}: ${l.proficiency}`).join(" | "), contentW) * lineH;
       }
     } else if (d.kind === "hardSkills") {
-      if (d.data) {
-        const txt = Array.isArray(d.data)
-          ? d.data.join(", ")
-          : Object.entries(d.data)
-              .filter(([, v]) => Array.isArray(v) && v.length)
-              .map(([cat, skills]) => `${cat}: ${(skills as string[]).join(", ")}`)
-              .join("; ");
-        h += 3 * S + wrap(txt, contentW) * lineH;
+      if (d.data.length) {
+        h += 3 * S + wrap(d.data.join(", "), contentW) * lineH;
       }
     } else if (d.kind === "softSkills") {
       if (d.items.length) {
@@ -146,7 +142,7 @@ function bullet(text: string, key: string, styles: ReturnType<typeof buildStyles
 }
 
 function experience(e: CvExperienceEntry, idx: string, styles: ReturnType<typeof buildStyles>) {
-  const titleText = e.company ? `${e.jobTitle} | ${e.company}` : e.jobTitle;
+  const titleText = [e.jobTitle, e.company].filter(Boolean).join(" | ");
   const headerNode = React.createElement(V, { key: `${idx}h`, wrap: false },
     React.createElement(V, { style: styles.entryHeader },
       React.createElement(T, { style: styles.entryHeaderText }, titleText),
@@ -165,10 +161,10 @@ function experience(e: CvExperienceEntry, idx: string, styles: ReturnType<typeof
 
 function education(e: CvEducationEntry, idx: string, styles: ReturnType<typeof buildStyles>) {
   const line2 = [e.fieldOfStudy, e.grade ? `GPA: ${e.grade}` : null].filter(Boolean).join(" | ");
+  const titleText = [e.degree, e.institution].filter(Boolean).join(" at ");
   const head = React.createElement(V, { key: `${idx}h`, wrap: false },
     React.createElement(V, { style: styles.entryHeader },
-      React.createElement(T, { style: styles.entryHeaderText },
-        `${e.degree}${e.institution ? " at " + e.institution : ""}`),
+      React.createElement(T, { style: styles.entryHeaderText }, titleText),
       e.dateRange ? React.createElement(T, { style: styles.entryDate }, e.dateRange) : null,
     ),
     (line2 || e.location) ? React.createElement(V, { style: styles.entryMeta },
@@ -191,14 +187,8 @@ function languagesNode(entries: CvLanguageEntry[], idx: string, styles: ReturnTy
 }
 
 function hardSkillsNode(skills: CvHardSkills, idx: string, styles: ReturnType<typeof buildStyles>) {
-  if (!skills) return [];
-  const txt = Array.isArray(skills)
-    ? skills.join(", ") + "."
-    : Object.entries(skills)
-        .filter(([, v]) => Array.isArray(v) && v.length)
-        .map(([cat, list]) => `${cat}: ${(list as string[]).join(", ")}`)
-        .join("; ") + ".";
-  return [React.createElement(T, { key: `${idx}h`, style: styles.footerLine }, txt)];
+  if (!skills.length) return [];
+  return [React.createElement(T, { key: `${idx}h`, style: styles.footerLine }, skills.join(", ") + ".")];
 }
 
 function softSkillsNode(items: string[], idx: string, styles: ReturnType<typeof buildStyles>) {
@@ -230,12 +220,15 @@ function CvDoc({ data }: { data: CvData }) {
   const { S, padY } = computeFit(data);
   const styles = buildStyles(S, padY);
   const { header, sections } = data;
-  const contactBits = [header.phone, header.email, header.linkedin].filter(Boolean) as string[];
+  // Canonical header line — keep location first so the geo anchor reads naturally.
+  const contactBits = [header.location, header.phone, header.email, header.linkedin]
+    .map((v) => (typeof v === "string" ? v.trim() : ""))
+    .filter(Boolean);
   const children: any[] = [
     React.createElement(T, { key: "n", style: styles.name }, header.fullName),
   ];
   if (contactBits.length) {
-    children.push(React.createElement(T, { key: "c", style: styles.contact }, contactBits.join("  |  ")));
+    children.push(React.createElement(T, { key: "c", style: styles.contact }, contactBits.join("  ·  ")));
   }
   sections.forEach((s, i) => children.push(...renderSection(s, i, styles)));
   // Wrap all content in a non-wrapping View so it cannot overflow to a second page.
