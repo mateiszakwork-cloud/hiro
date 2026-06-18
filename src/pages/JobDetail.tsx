@@ -400,6 +400,10 @@ const JobDetail = () => {
   // Skill add animation
   const [recentlyAdded, setRecentlyAdded] = useState<Set<string>>(new Set());
 
+  // Inline add inputs for hard / soft skills in the CV builder
+  const [hardSkillInput, setHardSkillInput] = useState("");
+  const [softSkillInput, setSoftSkillInput] = useState("");
+
   // Interview prep state
   const [interviewPrep, setInterviewPrep] = useState<any | null>(null);
   const [interviewLoading, setInterviewLoading] = useState(false);
