@@ -133,7 +133,7 @@ function QuestionBlock({
     <div
       ref={dragId ? sortable.setNodeRef : undefined}
       style={style}
-      className="space-y-2 group/qb relative"
+      className="group/qb relative border-t border-border/40 py-6 first:border-t-0"
     >
       <div className="flex items-start justify-between gap-3">
         {draggable && dragId ? (
@@ -142,7 +142,7 @@ function QuestionBlock({
             ref={sortable.setActivatorNodeRef}
             {...sortable.attributes}
             {...sortable.listeners}
-            className="absolute -left-6 top-1 text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover/qb:opacity-100 cursor-grab active:cursor-grabbing"
+            className="absolute -left-6 top-7 text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover/qb:opacity-100 cursor-grab active:cursor-grabbing"
             title="Drag to reorder"
             aria-label="Drag to reorder"
           >
@@ -155,12 +155,12 @@ function QuestionBlock({
               value={title}
               onChange={(e) => onTitleChange(e.target.value)}
               placeholder="Type your question..."
-              className="font-semibold text-[15px] h-9"
+              className="font-semibold text-base h-9 border-transparent focus-visible:border-border/50 px-0"
             />
           </div>
         ) : (
-          <h3 className="font-semibold text-foreground text-[15px] flex-1">
-            <span className="text-muted-foreground font-medium mr-2">{number}</span>
+          <h3 className="font-semibold text-foreground text-base flex-1">
+            <span className="text-muted-foreground font-normal mr-2">{number}</span>
             {title}
           </h3>
         )}
@@ -174,20 +174,18 @@ function QuestionBlock({
           </button>
         )}
       </div>
-      <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
-        <Pencil className="h-3 w-3" />
-        Editable draft answer
-      </div>
-      <AutoTextarea
+      <div className="mt-3">
+        <AutoTextarea
         value={value}
         onChange={onChange}
         placeholder={hasGenerated ? "Write or paste your answer..." : "Click Generate All to create a draft answer you can then edit"}
-      />
-      <p className="text-[11px] text-muted-foreground italic">
+        />
+      </div>
+      <p className="mt-2 text-[11px] text-muted-foreground italic">
         Edit this to match your real wording, examples, and speaking style.
       </p>
       {newsDisclaimer && (
-        <div className="flex items-start gap-2 p-3 rounded-md bg-amber-50 border border-amber-200 text-amber-900 text-xs">
+        <div className="mt-3 flex items-start gap-2 p-3 rounded-md bg-amber-50 border border-amber-200 text-amber-900 text-xs">
           <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
           <span>
             <strong>AI knowledge may be outdated.</strong> Verify these before your interview and replace with current news you find.
@@ -198,7 +196,7 @@ function QuestionBlock({
         <button
           onClick={onRegenerate}
           disabled={regenerating}
-          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-[#950606] transition-colors disabled:opacity-50"
+          className="mt-3 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-[#950606] transition-colors disabled:opacity-50"
         >
           {regenerating ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />}
           {regenerating ? "Regenerating..." : "Regenerate"}
@@ -208,15 +206,15 @@ function QuestionBlock({
   );
 }
 
-/* ── Full-width dashed "Add a question" button ── */
+/* ── Compact "Add question" button (sits flush right in section header) ── */
 function AddQuestionButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="w-full flex items-center justify-center gap-2 py-3 rounded-lg border-2 border-dashed border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-foreground/40 transition-colors"
+      className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-md border border-input bg-background text-foreground hover:bg-muted transition-colors"
     >
-      <Plus className="h-4 w-4" /> Add a question
+      <Plus className="h-3.5 w-3.5" /> Add question
     </button>
   );
 }
