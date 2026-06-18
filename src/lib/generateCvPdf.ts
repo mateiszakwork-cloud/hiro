@@ -67,7 +67,9 @@ function estimateHeight(data: CvData, S: number, padY: number): number {
   let h = padY * 2;
   // name + contact
   h += 22 * S * 1.15 + 2 * S;
-  const hasContact = !!(data.header.phone || data.header.email || data.header.linkedin);
+  const hasContact = !!(
+    data.header.location || data.header.phone || data.header.email || data.header.linkedin
+  );
   if (hasContact) h += 9.5 * S * 1.2 + 12 * S;
 
   for (const s of data.sections) {
