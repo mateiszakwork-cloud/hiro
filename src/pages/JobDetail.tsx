@@ -794,7 +794,6 @@ const JobDetail = () => {
           selected_bullets: cvOutput.selected_bullets,
           selected_hard_skills: cvOutput.selected_hard_skills,
           selected_soft_skills: cvOutput.selected_soft_skills,
-          section_config: cvOutput.section_config,
         },
         profile: userProfile,
         job: { company_name: job.company_name, location: job.location },
@@ -1347,9 +1346,6 @@ const JobDetail = () => {
             <div className="flex items-center gap-2">
               {cvOutput && !cvLoading && (
                 <>
-                <Button variant="outline" onClick={() => setLayoutOpen(v => !v)} className="gap-1.5">
-                  <FileText className="h-4 w-4" /> Layout
-                </Button>
                 <Button variant="outline" onClick={() => setPreviewOpen(true)} className="gap-1.5">
                   <Eye className="h-4 w-4" /> Preview
                 </Button>
@@ -1405,29 +1401,16 @@ const JobDetail = () => {
             <Card className="bg-muted/40 border-dashed">
               <CardContent className="p-3 flex items-center justify-between gap-3 flex-wrap">
                 <div className="flex items-center gap-3 min-w-0">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground shrink-0">Global Header</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground shrink-0">Header</span>
                   <span className="text-sm text-foreground truncate">
                     <span className="font-semibold">{userProfile.full_name || "Add your name"}</span>
                     {" · "}
                     <span className="text-muted-foreground">
-                      {[userProfile.phone, userProfile.email, userProfile.linkedin_url, userProfile.default_location].filter(Boolean).join(" · ") || "Add phone, email and LinkedIn"}
+                      {[userProfile.phone, userProfile.contact_email || userProfile.email, userProfile.linkedin_url, userProfile.default_location].filter(Boolean).join(" · ") || "Add phone, email and LinkedIn"}
                     </span>
                   </span>
                 </div>
-                <Link to="/profile" className="text-xs underline text-[#950606] shrink-0">Edit global details</Link>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Layout / section controls panel */}
-          {cvOutput && layoutOpen && (
-            <Card>
-              <CardContent className="p-4 space-y-3">
-                <div>
-                  <h4 className="text-sm font-semibold text-foreground">CV layout</h4>
-                  <p className="text-xs text-muted-foreground">Reorder, rename, or hide sections. Changes apply to this job only.</p>
-                </div>
-                <CvSectionControls config={sectionConfig} onChange={updateSectionConfig} />
+                <Link to="/profile" className="text-xs underline text-[#950606] shrink-0">Edit header details</Link>
               </CardContent>
             </Card>
           )}
