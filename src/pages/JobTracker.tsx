@@ -434,7 +434,7 @@ const JobTracker = () => {
         updated_at: output.updated_at,
       };
       setCvMap(prev => ({ ...prev, [jobId]: cvOutput }));
-      toast.success(`CV Builder ready for ${companyName || "this role"}`);
+      toast.success(`CV ready for ${companyName || "this role"}`);
       setKitModalJobId(jobId);
     } catch {
       toast.error("Kit generation failed. Please try again.");
@@ -1304,7 +1304,7 @@ const JobTracker = () => {
                           <button
                             onClick={(e) => handleKitClick(e, job)}
                             className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-green-50 border border-green-200 text-green-700 hover:bg-green-100 transition-colors"
-                            title="Open CV Builder"
+                            title="Open CV"
                           >
                             <Check className="h-3 w-3" />
                             Ready
@@ -1313,7 +1313,7 @@ const JobTracker = () => {
                           <button
                             onClick={(e) => handleKitClick(e, job)}
                             className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-background border border-input text-foreground hover:border-primary hover:text-primary transition-colors"
-                            title="Generate CV Builder"
+                            title="Generate CV"
                           >
                             <Wand2 className="h-3 w-3" />
                             Generate
@@ -1499,13 +1499,13 @@ const JobTracker = () => {
               {!modalCv && generatingKit !== modalJob.id && (
                 <div className="px-6 pb-6 pt-8 flex flex-col items-center justify-center text-center gap-4">
                   <Wand2 className="h-10 w-10 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">No CV Builder generated yet for this role.</p>
+                  <p className="text-sm text-muted-foreground">No CV generated yet for this role.</p>
                   <Button
                     onClick={() => handleGenerateKit(modalJob.id, modalJob.company_name)}
                     className="gap-2"
                     style={{ backgroundColor: '#950606' }}
                   >
-                    <Wand2 className="h-4 w-4" /> Generate CV Builder
+                    <Wand2 className="h-4 w-4" /> Generate CV
                   </Button>
                 </div>
               )}
@@ -1514,7 +1514,7 @@ const JobTracker = () => {
               {generatingKit === modalJob.id && (
                 <div className="px-6 pb-6 pt-8 flex flex-col items-center justify-center text-center gap-4">
                   <Loader2 className="h-8 w-8 animate-spin text-[#950606]" />
-                  <p className="text-sm text-muted-foreground">Building your CV Builder...</p>
+                  <p className="text-sm text-muted-foreground">Building your CV...</p>
                 </div>
               )}
 

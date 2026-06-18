@@ -762,7 +762,7 @@ const JobDetail = () => {
         return;
       }
       setCvOutput(data.data as CvOutput);
-      toast.success("CV Builder generated!");
+      toast.success("CV generated!");
 
       const { data: histData } = await supabase
         .from("cv_output_history")
@@ -1412,7 +1412,7 @@ const JobDetail = () => {
                   {cvLoading ? (
                     <><RefreshCw className="h-4 w-4 animate-spin" /> Generating...</>
                   ) : (
-                    <><FileText className="h-4 w-4" /> Generate CV Builder</>
+                    <><FileText className="h-4 w-4" /> Generate CV</>
                   )}
                 </Button>
               )}
@@ -1474,7 +1474,7 @@ const JobDetail = () => {
               <CardContent className="p-8 space-y-6">
                 <div className="text-center space-y-3">
                   <RefreshCw className="h-8 w-8 text-[#950606] animate-spin mx-auto" />
-                  <p className="text-sm font-medium text-foreground">Building your CV Builder...</p>
+                  <p className="text-sm font-medium text-foreground">Building your CV...</p>
                   <p className="text-xs text-muted-foreground">This usually takes 10–15 seconds. Hiro is selecting the best bullets, rewriting your summary, and picking skills.</p>
                 </div>
                 <div className="space-y-4">
@@ -1507,7 +1507,7 @@ const JobDetail = () => {
             <Card>
               <CardContent className="p-8 text-center">
                 <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground">Click "Generate CV Builder" to create a tailored CV for this role.</p>
+                <p className="text-muted-foreground">Click "Generate CV" to create a tailored CV for this role.</p>
               </CardContent>
             </Card>
           )}
