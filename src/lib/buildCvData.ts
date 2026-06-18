@@ -2,7 +2,7 @@
 // CvData object used by all CV renderers (DOCX, PDF, on-screen preview).
 //
 // Global header fields (name, phone, email, linkedin, location) come ONLY from the
-// user profile. Section ordering / visibility / labels come from cv_outputs.section_config.
+// user profile. Section ordering / visibility / labels are FIXED (see cvLayout.ts).
 
 import {
   CvSectionConfig,
