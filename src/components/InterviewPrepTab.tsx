@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Loader2, Download, RotateCcw, AlertTriangle, Plus, Trash2, Pencil, Info, GripVertical } from "lucide-react";
+import { Loader2, Download, RotateCcw, AlertTriangle, Plus, Trash2, Info, GripVertical } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import {
@@ -83,7 +83,7 @@ function AutoTextarea({ value, onChange, placeholder }: { value: string; onChang
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="w-full resize-none border border-border/60 rounded-lg px-4 py-3 text-[15px] leading-relaxed bg-background focus:outline-none focus:ring-1 focus:ring-[#950606]/40 focus:border-[#950606]/50 font-normal text-foreground placeholder:text-muted-foreground/60 overflow-hidden"
+      className="w-full resize-none border border-transparent rounded-md px-4 py-3 text-[15px] leading-relaxed bg-background focus:outline-none focus:border-border/50 font-normal text-foreground placeholder:text-muted-foreground/60 overflow-hidden"
       style={{ minHeight: "80px", fontFamily: "inherit" }}
     />
   );
@@ -133,7 +133,7 @@ function QuestionBlock({
     <div
       ref={dragId ? sortable.setNodeRef : undefined}
       style={style}
-      className="space-y-2 group/qb relative"
+      className="group/qb relative border-t border-border/40 py-6 first:border-t-0"
     >
       <div className="flex items-start justify-between gap-3">
         {draggable && dragId ? (
@@ -142,7 +142,7 @@ function QuestionBlock({
             ref={sortable.setActivatorNodeRef}
             {...sortable.attributes}
             {...sortable.listeners}
-            className="absolute -left-6 top-1 text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover/qb:opacity-100 cursor-grab active:cursor-grabbing"
+            className="absolute -left-6 top-7 text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover/qb:opacity-100 cursor-grab active:cursor-grabbing"
             title="Drag to reorder"
             aria-label="Drag to reorder"
           >
@@ -155,12 +155,12 @@ function QuestionBlock({
               value={title}
               onChange={(e) => onTitleChange(e.target.value)}
               placeholder="Type your question..."
-              className="font-semibold text-[15px] h-9"
+              className="font-semibold text-base h-9 border-transparent focus-visible:border-border/50 px-0"
             />
           </div>
         ) : (
-          <h3 className="font-semibold text-foreground text-[15px] flex-1">
-            <span className="text-muted-foreground font-medium mr-2">{number}</span>
+          <h3 className="font-semibold text-foreground text-base flex-1">
+            <span className="text-muted-foreground font-normal mr-2">{number}</span>
             {title}
           </h3>
         )}
@@ -174,20 +174,18 @@ function QuestionBlock({
           </button>
         )}
       </div>
-      <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
-        <Pencil className="h-3 w-3" />
-        Editable draft answer
-      </div>
-      <AutoTextarea
+      <div className="mt-3">
+        <AutoTextarea
         value={value}
         onChange={onChange}
         placeholder={hasGenerated ? "Write or paste your answer..." : "Click Generate All to create a draft answer you can then edit"}
-      />
-      <p className="text-[11px] text-muted-foreground italic">
+        />
+      </div>
+      <p className="mt-2 text-[11px] text-muted-foreground italic">
         Edit this to match your real wording, examples, and speaking style.
       </p>
       {newsDisclaimer && (
-        <div className="flex items-start gap-2 p-3 rounded-md bg-amber-50 border border-amber-200 text-amber-900 text-xs">
+        <div className="mt-3 flex items-start gap-2 p-3 rounded-md bg-amber-50 border border-amber-200 text-amber-900 text-xs">
           <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
           <span>
             <strong>AI knowledge may be outdated.</strong> Verify these before your interview and replace with current news you find.
@@ -198,7 +196,7 @@ function QuestionBlock({
         <button
           onClick={onRegenerate}
           disabled={regenerating}
-          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-[#950606] transition-colors disabled:opacity-50"
+          className="mt-3 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-[#950606] transition-colors disabled:opacity-50"
         >
           {regenerating ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />}
           {regenerating ? "Regenerating..." : "Regenerate"}
@@ -208,15 +206,15 @@ function QuestionBlock({
   );
 }
 
-/* ── Full-width dashed "Add a question" button ── */
+/* ── Compact "Add question" button (sits flush right in section header) ── */
 function AddQuestionButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="w-full flex items-center justify-center gap-2 py-3 rounded-lg border-2 border-dashed border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-foreground/40 transition-colors"
+      className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-md border border-input bg-background text-foreground hover:bg-muted transition-colors"
     >
-      <Plus className="h-4 w-4" /> Add a question
+      <Plus className="h-3.5 w-3.5" /> Add question
     </button>
   );
 }
@@ -649,9 +647,9 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
   };
 
   return (
-    <div className="space-y-8 max-w-4xl">
+    <div className="space-y-8">
       {/* Top action bar */}
-      <div className="space-y-2">
+      <div className="space-y-3">
         <div className="flex items-center gap-3">
           <Button
             onClick={handleGenerateAll}
@@ -678,24 +676,22 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
           </div>
         )}
         {error && <p className="text-sm text-destructive">{error}</p>}
-      </div>
 
-      {/* Draft messaging banner */}
-      <div className="rounded-lg border border-[#950606]/20 bg-[#FFF5F5] p-4 space-y-1.5">
-        <div className="flex items-center gap-2 text-[#950606] font-semibold text-sm">
-          <Info className="h-4 w-4" />
-          These are draft answers — edit every one so it sounds like you.
+        {/* Draft messaging banner */}
+        <div className="flex items-center gap-2 rounded-md border border-[#950606]/20 bg-[#FFF5F5] px-3 py-2 text-[#950606] text-xs font-medium">
+          <Info className="h-3.5 w-3.5 shrink-0" />
+          <span>These are draft answers — edit every one so it sounds like you.</span>
         </div>
-        <p className="text-xs text-foreground/80 leading-relaxed">
-          Use them as prep notes, not a script. Don't memorize them word for word. Company and industry news answers must always be verified with current sources before your interview.
-        </p>
       </div>
 
       {/* Section 1 */}
-      <section className="space-y-6">
-        <div className="border-b pb-2">
-          <h2 className="text-xl font-bold text-foreground">Core Prep Questions</h2>
-          <p className="text-sm text-muted-foreground mt-1">The fixed questions every interviewer is likely to ask.</p>
+      <section>
+        <div className="flex items-end justify-between gap-3 border-b border-border pb-3 mb-6">
+          <div>
+            <h2 className="text-lg font-bold text-foreground">Core Prep Questions</h2>
+            <p className="text-sm text-muted-foreground mt-1">The fixed questions every interviewer is likely to ask.</p>
+          </div>
+          <AddQuestionButton onClick={addCoreCustomQuestion} />
         </div>
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleSection1DragEnd}>
           <SortableContext
@@ -747,19 +743,21 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
             })()}
           </SortableContext>
         </DndContext>
-        <AddQuestionButton onClick={addCoreCustomQuestion} />
       </section>
 
       {/* Section 2 */}
-      <section className="space-y-6">
-        <div className="border-b pb-2">
-          <h2 className="text-xl font-bold text-foreground">Role-Specific Questions</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Generated based on your specific role at {companyName}. Add your own to prep for what you expect.
-          </p>
+      <section>
+        <div className="flex items-end justify-between gap-3 border-b border-border pb-3 mb-6">
+          <div>
+            <h2 className="text-lg font-bold text-foreground">Role-Specific Questions</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Generated based on your specific role at {companyName}. Add your own to prep for what you expect.
+            </p>
+          </div>
+          <AddQuestionButton onClick={addRoleCustomQuestion} />
         </div>
         {!hasGenerated && (
-          <p className="text-sm text-muted-foreground italic">
+          <p className="text-sm text-muted-foreground italic mb-4">
             Click Generate All to create role-specific questions tailored to this position — or add your own below.
           </p>
         )}
@@ -788,13 +786,12 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
             ))}
           </SortableContext>
         </DndContext>
-        <AddQuestionButton onClick={addRoleCustomQuestion} />
       </section>
 
       {/* Section 3 — Question Bank (preserved as-is) */}
       {questionBank.length > 0 && (
-        <section className="space-y-4">
-          <h2 className="text-xl font-bold text-foreground border-b pb-2">Question Bank</h2>
+        <section>
+          <h2 className="text-lg font-bold text-foreground border-b border-border pb-3 mb-6">Question Bank</h2>
           <div className="space-y-2">
             {questionBank.map((q, i) => (
               <details key={i} className="border rounded-lg px-4 py-2 group">
