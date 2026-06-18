@@ -128,7 +128,6 @@ export function buildCvData(opts: {
     education: any[];
     languages: any[];
     interests?: string[];
-    awards?: any[];
     volunteering?: any[];
   };
   job: { company_name: string | null; location?: string | null };
