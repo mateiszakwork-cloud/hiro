@@ -536,6 +536,7 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
     const id = `rs-custom-${Date.now()}`;
     const newRole: RoleQ = { id, question: "", answer: "" };
     setAnswers({ ...base, role_specific: [...base.role_specific, newRole] });
+    setAssignment(id, defaultAssignmentForNew());
   };
 
   const deleteCustomQuestion = (id: string) => {
