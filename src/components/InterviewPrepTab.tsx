@@ -1,9 +1,8 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Loader2, Download, RotateCcw, AlertTriangle, Plus, Trash2, Pencil, Info } from "lucide-react";
+import { Loader2, Download, RotateCcw, AlertTriangle, Plus, Trash2, Pencil, Info, GripVertical } from "lucide-react";
 import { toast } from "sonner";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import {
   Document,
@@ -14,6 +13,23 @@ import {
   AlignmentType,
 } from "docx";
 import { saveAs } from "file-saver";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 type ExtraQ = { id: string; question: string; answer: string; insertAfter: string };
 type RoleQ = { id: string; question: string; answer: string };
