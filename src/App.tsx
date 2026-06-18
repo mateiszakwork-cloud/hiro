@@ -13,6 +13,7 @@ import Onboarding from "./pages/Onboarding";
 import DashboardLayout from "./components/DashboardLayout";
 import JobTracker from "./pages/JobTracker";
 import JobDetail from "./pages/JobDetail";
+import GlobalOutreachPage from "./pages/GlobalOutreachPage";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
@@ -36,6 +37,7 @@ const App = () => (
           <Route element={<DashboardLayout />}>
             <Route path="/dashboard" element={<JobTracker />} />
             <Route path="/jobs/:jobId" element={<JobDetail />} />
+            <Route path="/outreach" element={<GlobalOutreachPage />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/settings" element={<Settings />} />
           </Route>
