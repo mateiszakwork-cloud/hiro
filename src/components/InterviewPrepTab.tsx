@@ -83,7 +83,7 @@ function AutoTextarea({ value, onChange, placeholder }: { value: string; onChang
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="w-full resize-none border border-border/60 rounded-lg px-4 py-3 text-[15px] leading-relaxed bg-background focus:outline-none focus:ring-1 focus:ring-[#950606]/40 focus:border-[#950606]/50 font-normal text-foreground placeholder:text-muted-foreground/60 overflow-hidden"
+      className="w-full resize-none border border-transparent rounded-md px-4 py-3 text-[15px] leading-relaxed bg-background focus:outline-none focus:border-border/50 font-normal text-foreground placeholder:text-muted-foreground/60 overflow-hidden"
       style={{ minHeight: "80px", fontFamily: "inherit" }}
     />
   );
