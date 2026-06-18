@@ -17,7 +17,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Plus, Trash2, Linkedin, ExternalLink, Users } from "lucide-react";
+import { Plus, Trash2, Linkedin, ExternalLink, Users, Sparkles } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 type OutreachRow = {
   id: string;
@@ -164,6 +165,11 @@ export default function GlobalOutreachPage() {
         </Button>
       </div>
 
+      <div className="mb-4 flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+        <Sparkles className="h-4 w-4 text-[#950606] shrink-0" />
+        <span>We're working on surfacing relevant contacts at your target companies automatically.</span>
+      </div>
+
       <div className="rounded-lg border bg-white overflow-hidden">
         {loading ? (
           <div className="p-6 space-y-3">
@@ -308,7 +314,28 @@ export default function GlobalOutreachPage() {
                         {formatDate(r.date_added)}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <AlertDialog>
+                        <div className="flex items-center justify-end gap-1">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span tabIndex={0}>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  disabled
+                                  aria-disabled="true"
+                                  className="h-8 gap-1.5 text-xs pointer-events-none opacity-60"
+                                >
+                                  <Sparkles className="h-3.5 w-3.5" />
+                                  Draft message
+                                </Button>
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-xs text-xs">
+                              Coming soon — we'll draft a personalized message based on their role and your target company.
+                            </TooltipContent>
+                          </Tooltip>
+                          <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <button
                               className="text-muted-foreground hover:text-destructive transition-colors"
@@ -334,7 +361,8 @@ export default function GlobalOutreachPage() {
                               </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
-                        </AlertDialog>
+                          </AlertDialog>
+                        </div>
                       </td>
                     </tr>
                   );
