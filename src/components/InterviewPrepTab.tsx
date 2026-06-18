@@ -20,17 +20,18 @@ type RoleQ = { id: string; question: string; answer: string };
 
 type Answers = {
   q1: string; q2: string; q3: string; q4: string; q5: string;
-  q6: string; q7: string; q8: string; q9: string;
+  q6: string; q7: string; q8: string; q9: string; q10: string;
   section1_extra: ExtraQ[];
   role_specific: RoleQ[];
 };
 
-const FIXED_QUESTIONS: { id: "q1"|"q2"|"q3"|"q4"|"q5"|"q6"|"q7"|"q8"|"q9"; label: string; newsDisclaimer?: boolean }[] = [
+const FIXED_QUESTIONS: { id: "q1"|"q2"|"q3"|"q4"|"q5"|"q6"|"q7"|"q8"|"q9"|"q10"; label: string; newsDisclaimer?: boolean }[] = [
   { id: "q1", label: "Tell me about the company" },
   { id: "q2", label: "The role and its responsibilities, and how it fits in the big picture" },
   { id: "q3", label: "Tell me about yourself (2-minute pitch)" },
   { id: "q4", label: "Why are you applying for this role?" },
   { id: "q5", label: "Why are you applying to this company?" },
+  { id: "q10", label: "Company Values" },
   { id: "q9", label: "How would you approach your first 30, 60, and 90 days in this role?" },
   { id: "q6", label: "Recent company news that interests you", newsDisclaimer: true },
   { id: "q7", label: "Recent industry news that interests you", newsDisclaimer: true },
@@ -231,7 +232,7 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
         setAnswers({
           q1: a.q1 || "", q2: a.q2 || "", q3: a.q3 || "", q4: a.q4 || "",
           q5: a.q5 || "", q6: a.q6 || "", q7: a.q7 || "", q8: a.q8 || "",
-          q9: a.q9 || "",
+          q9: a.q9 || "", q10: a.q10 || "",
           section1_extra: (data.section1_extra as ExtraQ[]) || [],
           role_specific: (data.role_specific as RoleQ[]) || [],
         });
@@ -245,14 +246,14 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
   const persistAnswers = async (a: Answers) => {
     const uid = userIdRef.current;
     if (!uid || !jobId) return;
-    const { q1, q2, q3, q4, q5, q6, q7, q8, q9, section1_extra, role_specific } = a;
+    const { q1, q2, q3, q4, q5, q6, q7, q8, q9, q10, section1_extra, role_specific } = a;
     await supabase
       .from("interview_prep_answers")
       .upsert(
         {
           user_id: uid,
           job_id: jobId,
-          answers: { q1, q2, q3, q4, q5, q6, q7, q8, q9 },
+          answers: { q1, q2, q3, q4, q5, q6, q7, q8, q9, q10 },
           section1_extra,
           role_specific,
         },
@@ -263,7 +264,7 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
   /* ── Custom question helpers ── */
   const ensureAnswers = (): Answers =>
     answers || {
-      q1: "", q2: "", q3: "", q4: "", q5: "", q6: "", q7: "", q8: "", q9: "",
+      q1: "", q2: "", q3: "", q4: "", q5: "", q6: "", q7: "", q8: "", q9: "", q10: "",
       section1_extra: [], role_specific: [],
     };
 
@@ -321,23 +322,43 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
     });
   };
 
+  const callCompanyValues = async () => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData?.session?.access_token;
+    return supabase.functions.invoke("fetch-company-values", {
+      body: { companyName },
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+  };
+
   const handleGenerateAll = async () => {
     setLoading(true);
     setError(null);
     try {
-      const { data, error: fnErr } = await callFn({
-        jobTitle, companyName, jobDescription, cvSummary,
-        questions: REQUEST_QUESTIONS,
-      });
-      if (fnErr || !data?.success) {
+      // q10 (Company Values) has a dedicated retrieval path; everything else
+      // goes through the standard generator. Run both in parallel.
+      const standardQuestions = REQUEST_QUESTIONS.filter((q) => q.id !== "q10");
+      const [standardRes, valuesRes] = await Promise.all([
+        callFn({ jobTitle, companyName, jobDescription, cvSummary, questions: standardQuestions }),
+        callCompanyValues(),
+      ]);
+      if (standardRes.error || !standardRes.data?.success) {
         setError("Generation failed. Please try again.");
         setLoading(false);
         return;
       }
-      const generated = data.answers as Answers;
-      setAnswers(generated);
+      const generated = standardRes.data.answers as Answers;
+      const q10Answer =
+        valuesRes && !valuesRes.error && valuesRes.data?.success
+          ? (valuesRes.data.answer as string) || ""
+          : "";
+      const merged: Answers = { ...generated, q10: q10Answer };
+      setAnswers(merged);
       // Persist immediately after successful generation
-      persistAnswers(generated);
+      persistAnswers(merged);
+      if (!q10Answer) {
+        toast.warning("Company values could not be fetched — try regenerating that question.");
+      }
       toast.success("Interview prep generated");
     } catch {
       setError("Generation failed. Please try again.");
@@ -349,11 +370,14 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
   const handleRegenerate = async (questionId: string, label: string, newsDisclaimer?: boolean) => {
     setRegenerating(questionId);
     try {
-      const { data, error: fnErr } = await callFn({
-        jobTitle, companyName, jobDescription, cvSummary,
-        questions: [{ id: questionId, label, ...(newsDisclaimer ? { newsDisclaimer: true } : {}) }],
-        regenerateOnly: questionId,
-      });
+      const { data, error: fnErr } =
+        questionId === "q10"
+          ? await callCompanyValues()
+          : await callFn({
+              jobTitle, companyName, jobDescription, cvSummary,
+              questions: [{ id: questionId, label, ...(newsDisclaimer ? { newsDisclaimer: true } : {}) }],
+              regenerateOnly: questionId,
+            });
       if (fnErr || !data?.success) {
         toast.error("Could not regenerate. Please try again.");
         return;
