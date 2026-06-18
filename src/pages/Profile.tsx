@@ -103,7 +103,6 @@ const Profile = () => {
   const [edus, setEdus] = useState<Edu[]>([]);
   const [skills, setSkills] = useState<Skills>({ hard_skills: [], soft_skills: [] });
   const [langs, setLangs] = useState<Lang[]>([]);
-  const [vols, setVols] = useState<Vol[]>([]);
   const [interests, setInterests] = useState<string[]>([]);
 
   const [editSection, setEditSection] = useState<string | null>(null);
@@ -111,7 +110,6 @@ const Profile = () => {
   const [editEdu, setEditEdu] = useState<Edu[]>([]);
   const [editSkills, setEditSkills] = useState<Skills>({ hard_skills: [], soft_skills: [] });
   const [editLangs, setEditLangs] = useState<Lang[]>([]);
-  const [editVols, setEditVols] = useState<Vol[]>([]);
   const [editInterests, setEditInterests] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [removeWorkIdx, setRemoveWorkIdx] = useState<number | null>(null);
