@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation, Outlet } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Table, User, LogOut, Menu, X, Settings } from "lucide-react";
+import { Table, User, LogOut, Menu, X, Settings, Users } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const navItems = [
   { label: "Job Tracker", to: "/dashboard", icon: Table },
+  { label: "Outreach", to: "/outreach", icon: Users },
   { label: "Profile", to: "/profile", icon: User },
   { label: "Settings", to: "/settings", icon: Settings },
 ];
