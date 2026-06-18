@@ -69,15 +69,6 @@ type Job = {
   interview_rounds?: InterviewRound[] | null;
 };
 
-type Contact = {
-  id: string; linkedin_url: string | null; name: string | null; headline: string | null;
-  current_title: string | null; current_company: string | null; profile_picture_url: string | null;
-  connection_degree: string | null; is_alumni: boolean; shared_connections_count: number | null;
-  category: string | null; priority_score: number | null;
-  connection_note_draft: string | null; inmail_subject_draft: string | null; inmail_draft: string | null;
-  outreach_status: string; created_at: string; job_id: string; user_id: string;
-};
-
 const STATUS_OPTIONS = [
   { value: "Saved",     color: "bg-gray-200 text-gray-700",   description: "Bookmarked — not yet applied." },
   { value: "Applied",   color: "bg-blue-100 text-blue-700",   description: "Application submitted, no engagement yet from the company." },
@@ -86,8 +77,6 @@ const STATUS_OPTIONS = [
   { value: "Offer",     color: "bg-green-100 text-green-700", description: "Offer received." },
   { value: "Rejected",  color: "bg-red-100 text-red-700",     description: "No longer in process." },
 ];
-
-const OUTREACH_STATUSES = ["Not sent", "Request sent", "Connected", "Replied", "Meeting booked"];
 
 const getStatusColor = (status: string) =>
   STATUS_OPTIONS.find((s) => s.value === status)?.color || "bg-muted text-muted-foreground";
