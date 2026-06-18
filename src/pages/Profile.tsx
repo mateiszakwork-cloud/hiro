@@ -49,7 +49,6 @@ interface WorkExp { id?: string; company_name: string; job_title: string; locati
 interface Edu { id?: string; institution: string; degree: string; field_of_study: string; start_year: number; end_year: number | null; is_expected: boolean; grade: string | null; activities: string | null; description: string | null; }
 interface Skills { hard_skills: string[]; soft_skills: string[]; }
 interface Lang { id?: string; language_name: string; proficiency: string; }
-interface Award { id?: string; award_name: string; issuing_organization: string | null; year: number | null; description: string | null; }
 interface Vol { id?: string; organization: string; role: string | null; start_year: number | null; end_year: number | null; is_ongoing: boolean; description: string | null; }
 
 /* ── Skill Tag Input ── */
