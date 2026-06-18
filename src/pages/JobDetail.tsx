@@ -762,7 +762,7 @@ const JobDetail = () => {
         return;
       }
       setCvOutput(data.data as CvOutput);
-      toast.success("Application kit generated!");
+      toast.success("CV Builder generated!");
 
       const { data: histData } = await supabase
         .from("cv_output_history")
@@ -1127,7 +1127,7 @@ const JobDetail = () => {
         <TabsList className="hiro-tabs-bar h-auto justify-start rounded-none p-0">
           {([
             { value: "overview",  label: "Overview",        hint: "Role details, required skills, and how your background matches this job." },
-            { value: "cv",        label: "Application Kit", hint: "Generate a CV tailored to this role, then download it as PDF or Word." },
+            { value: "cv",        label: "CV Builder", hint: "Generate a CV tailored to this role, then download it as PDF or Word." },
             { value: "outreach",  label: "Outreach",        hint: "Find relevant contacts at the company and draft personalised messages." },
             { value: "interview", label: "Interview",       hint: "STAR answer drafts, your pitch, and a 30/60/90 day plan to prepare with." },
             { value: "notes",     label: "Notes",           hint: "Private scratchpad for anything you want to remember about this role." },
@@ -1352,13 +1352,13 @@ const JobDetail = () => {
           )}
         </TabsContent>
 
-        {/* CV Tab — Application Kit */}
+        {/* CV Tab — CV Builder */}
         <TabsContent value="cv" className="hiro-tab-content mt-0 space-y-6">
           {/* Generate / Regenerate button */}
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center gap-1.5">
-                <h3 className="font-semibold text-foreground">Application Kit</h3>
+                <h3 className="font-semibold text-foreground">CV Builder</h3>
                 <InfoHint label="A tailored CV draft for this role. Generate it, review every section, then download as PDF or Word." />
               </div>
               <p className="text-sm text-muted-foreground">AI-tailored CV components ready to review and download.</p>
@@ -1412,7 +1412,7 @@ const JobDetail = () => {
                   {cvLoading ? (
                     <><RefreshCw className="h-4 w-4 animate-spin" /> Generating...</>
                   ) : (
-                    <><FileText className="h-4 w-4" /> Generate Application Kit</>
+                    <><FileText className="h-4 w-4" /> Generate CV Builder</>
                   )}
                 </Button>
               )}
@@ -1474,7 +1474,7 @@ const JobDetail = () => {
               <CardContent className="p-8 space-y-6">
                 <div className="text-center space-y-3">
                   <RefreshCw className="h-8 w-8 text-[#950606] animate-spin mx-auto" />
-                  <p className="text-sm font-medium text-foreground">Building your application kit...</p>
+                  <p className="text-sm font-medium text-foreground">Building your CV Builder...</p>
                   <p className="text-xs text-muted-foreground">This usually takes 10–15 seconds. Hiro is selecting the best bullets, rewriting your summary, and picking skills.</p>
                 </div>
                 <div className="space-y-4">
@@ -1507,12 +1507,12 @@ const JobDetail = () => {
             <Card>
               <CardContent className="p-8 text-center">
                 <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground">Click "Generate Application Kit" to create a tailored CV for this role.</p>
+                <p className="text-muted-foreground">Click "Generate CV Builder" to create a tailored CV for this role.</p>
               </CardContent>
             </Card>
           )}
 
-          {/* Application Kit Cards */}
+          {/* CV Builder Cards */}
           {!cvLoading && cvOutput && (
             <>
               {/* Card 1: Professional Summary */}
