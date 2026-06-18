@@ -415,7 +415,7 @@ const OutreachTab = ({
                   <th className="text-left font-medium px-4 py-3">Connection</th>
                   <th className="text-left font-medium px-4 py-3">Status</th>
                   <th className="text-left font-medium px-4 py-3">Date added</th>
-                  <th className="text-right font-medium px-4 py-3 w-12">Actions</th>
+                  <th className="text-right font-medium px-4 py-3">Actions</th>
                 </tr>
               </thead>
               <tbody>
