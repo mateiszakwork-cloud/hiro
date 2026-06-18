@@ -29,8 +29,22 @@ import CvPreview from "@/components/cv/CvPreview";
 import { buildCvData } from "@/lib/buildCvData";
 import { Link } from "react-router-dom";
 
-type BulletItem = { original: string; tailored: string; use_tailored: boolean; origin?: "original" | "tailored" | "generated" };
+type BulletItem = {
+  original: string;
+  tailored: string;
+  use_tailored: boolean;
+  origin?: "original" | "tailored" | "generated";
+  relevance?: "high" | "medium" | "low";
+  why?: string;
+};
 type BulletBlock = { company: string; job_title: string; bullets: BulletItem[] | string[] };
+
+type KeywordCoverageItem = {
+  keyword: string;
+  status: "covered" | "partial" | "missing";
+  source?: "hard_skill" | "soft_skill" | "experience" | "theme";
+  evidence?: string;
+};
 
 type CvOutput = {
   id: string;
@@ -39,6 +53,7 @@ type CvOutput = {
   selected_hard_skills: Record<string, string[]> | string[] | null;
   selected_soft_skills: string[];
   tailoring_notes: string[];
+  keyword_coverage?: KeywordCoverageItem[] | null;
   created_at: string;
   updated_at: string;
 };
@@ -186,12 +201,14 @@ const TagInput = ({ tags, onChange, placeholder = "Type and press Enter" }: { ta
 
 /* ── Bullet toggle helper ── */
 function normalizeBullet(b: any): BulletItem {
-  if (typeof b === "string") return { original: b, tailored: b, use_tailored: true, origin: "original" };
+  if (typeof b === "string") return { original: b, tailored: b, use_tailored: false, origin: "original" };
   return {
     original: b.original || b.tailored || "",
     tailored: b.tailored || b.original || "",
     use_tailored: b.use_tailored !== false,
     origin: b.origin === "tailored" || b.origin === "generated" ? b.origin : "original",
+    relevance: b.relevance === "high" || b.relevance === "medium" || b.relevance === "low" ? b.relevance : undefined,
+    why: typeof b.why === "string" ? b.why : undefined,
   };
 }
 
