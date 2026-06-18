@@ -69,15 +69,6 @@ type Job = {
   interview_rounds?: InterviewRound[] | null;
 };
 
-type Contact = {
-  id: string; linkedin_url: string | null; name: string | null; headline: string | null;
-  current_title: string | null; current_company: string | null; profile_picture_url: string | null;
-  connection_degree: string | null; is_alumni: boolean; shared_connections_count: number | null;
-  category: string | null; priority_score: number | null;
-  connection_note_draft: string | null; inmail_subject_draft: string | null; inmail_draft: string | null;
-  outreach_status: string; created_at: string; job_id: string; user_id: string;
-};
-
 const STATUS_OPTIONS = [
   { value: "Saved",     color: "bg-gray-200 text-gray-700",   description: "Bookmarked — not yet applied." },
   { value: "Applied",   color: "bg-blue-100 text-blue-700",   description: "Application submitted, no engagement yet from the company." },
@@ -86,8 +77,6 @@ const STATUS_OPTIONS = [
   { value: "Offer",     color: "bg-green-100 text-green-700", description: "Offer received." },
   { value: "Rejected",  color: "bg-red-100 text-red-700",     description: "No longer in process." },
 ];
-
-const OUTREACH_STATUSES = ["Not sent", "Request sent", "Connected", "Replied", "Meeting booked"];
 
 const getStatusColor = (status: string) =>
   STATUS_OPTIONS.find((s) => s.value === status)?.color || "bg-muted text-muted-foreground";
@@ -216,131 +205,6 @@ function bulletsAreIdentical(b: BulletItem) {
   return b.original === b.tailored;
 }
 
-/* ── Contact Card ── */
-const ContactCard = ({ contact, onUpdate, onDelete }: {
-  contact: Contact;
-  onUpdate: (id: string, patch: Partial<Contact>) => void;
-  onDelete: (id: string) => void;
-}) => {
-  const [connOpen, setConnOpen] = useState(false);
-  const [inmailOpen, setInmailOpen] = useState(false);
-  const [editingConn, setEditingConn] = useState(false);
-  const [editingInmail, setEditingInmail] = useState(false);
-  const [connDraft, setConnDraft] = useState(contact.connection_note_draft || "");
-  const [inmailDraft, setInmailDraft] = useState(contact.inmail_draft || "");
-  const [copiedConn, setCopiedConn] = useState(false);
-  const [copiedInmail, setCopiedInmail] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-
-  const copyText = async (text: string, setCopied: (v: boolean) => void) => {
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <Card className="overflow-hidden">
-      <CardContent className="p-4 space-y-3">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="font-semibold text-foreground">{contact.name || "Unknown"}</p>
-            {contact.headline && <p className="text-sm text-muted-foreground">{contact.headline}</p>}
-            {contact.current_title && <p className="text-xs text-muted-foreground">{contact.current_title}</p>}
-            {contact.is_alumni && (
-              <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary/10 text-primary">Alumni</span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <Select value={contact.outreach_status} onValueChange={(v) => onUpdate(contact.id, { outreach_status: v })}>
-              <SelectTrigger className="h-7 w-auto border-0 gap-1 px-2.5 rounded-full text-xs font-medium bg-muted">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {OUTREACH_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <button onClick={() => setDeleteOpen(true)} className="text-muted-foreground hover:text-destructive transition-colors">
-              <Trash2 className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* Connection Note */}
-        <div className="border rounded-lg">
-          <button onClick={() => setConnOpen(!connOpen)} className="flex items-center justify-between w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground">
-            300-char connection note {connOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-          </button>
-          {connOpen && (
-            <div className="px-3 pb-3 space-y-2">
-              {editingConn ? (
-                <>
-                  <Textarea value={connDraft} onChange={(e) => setConnDraft(e.target.value)} rows={3} maxLength={300} className="text-sm" />
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="outline" onClick={() => setEditingConn(false)}>Cancel</Button>
-                    <Button size="sm" onClick={() => { onUpdate(contact.id, { connection_note_draft: connDraft }); setEditingConn(false); }}>Save</Button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <p className="text-sm text-foreground whitespace-pre-wrap">{contact.connection_note_draft || <span className="text-muted-foreground italic">No draft yet</span>}</p>
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="outline" className="gap-1" onClick={() => copyText(contact.connection_note_draft || "", setCopiedConn)}>
-                      {copiedConn ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />} {copiedConn ? "Copied" : "Copy"}
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => { setConnDraft(contact.connection_note_draft || ""); setEditingConn(true); }}>Edit</Button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* InMail Draft */}
-        <div className="border rounded-lg">
-          <button onClick={() => setInmailOpen(!inmailOpen)} className="flex items-center justify-between w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground">
-            InMail draft {inmailOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-          </button>
-          {inmailOpen && (
-            <div className="px-3 pb-3 space-y-2">
-              {editingInmail ? (
-                <>
-                  <Textarea value={inmailDraft} onChange={(e) => setInmailDraft(e.target.value)} rows={5} className="text-sm" />
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="outline" onClick={() => setEditingInmail(false)}>Cancel</Button>
-                    <Button size="sm" onClick={() => { onUpdate(contact.id, { inmail_draft: inmailDraft }); setEditingInmail(false); }}>Save</Button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <p className="text-sm text-foreground whitespace-pre-wrap">{contact.inmail_draft || <span className="text-muted-foreground italic">No draft yet</span>}</p>
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="outline" className="gap-1" onClick={() => copyText(contact.inmail_draft || "", setCopiedInmail)}>
-                      {copiedInmail ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />} {copiedInmail ? "Copied" : "Copy"}
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => { setInmailDraft(contact.inmail_draft || ""); setEditingInmail(true); }}>Edit</Button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-
-        <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Remove this contact?</AlertDialogTitle>
-              <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={() => { onDelete(contact.id); setDeleteOpen(false); }} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Remove</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </CardContent>
-    </Card>
-  );
-};
 
 /* ── Main Page ── */
 const JobDetail = () => {
@@ -361,8 +225,6 @@ const JobDetail = () => {
     total: number; not_contacted: number; messaged: number; replied: number; meeting_booked: number;
   }>({ total: 0, not_contacted: 0, messaged: 0, replied: 0, meeting_booked: 0 });
   const [job, setJob] = useState<Job | null>(null);
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [linkedinUrl, setLinkedinUrl] = useState("");
   const [notes, setNotes] = useState("");
   const [notesSaved, setNotesSaved] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
@@ -492,14 +354,6 @@ const JobDetail = () => {
         });
       }
 
-
-      const { data: contactData } = await supabase
-        .from("contacts")
-        .select("*")
-        .eq("job_id", jobId!)
-        .eq("user_id", session.user.id)
-        .order("created_at", { ascending: true });
-      if (contactData) setContacts(contactData as any);
 
       const { data: cvData } = await supabase
         .from("cv_outputs")
@@ -691,30 +545,6 @@ const JobDetail = () => {
       return next;
     });
   }, [jobId]);
-
-  const addContact = async () => {
-    if (!userId || !jobId) return;
-    const url = linkedinUrl.trim();
-    const { data, error } = await supabase
-      .from("contacts")
-      .insert({ job_id: jobId, user_id: userId, linkedin_url: url || null, name: url ? "Loading..." : "New Contact" })
-      .select("*")
-      .single();
-    if (!error && data) {
-      setContacts(prev => [...prev, data as any]);
-      setLinkedinUrl("");
-    }
-  };
-
-  const updateContact = async (id: string, patch: Partial<Contact>) => {
-    await supabase.from("contacts").update(patch as any).eq("id", id);
-    setContacts(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c));
-  };
-
-  const deleteContact = async (id: string) => {
-    await supabase.from("contacts").delete().eq("id", id);
-    setContacts(prev => prev.filter(c => c.id !== id));
-  };
 
   const handleGenerateCv = async (skipConfirm = false) => {
     if (!jobId || !userId) return;
