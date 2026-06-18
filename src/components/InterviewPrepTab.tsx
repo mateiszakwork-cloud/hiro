@@ -100,6 +100,68 @@ function AutoTextarea({ value, onChange, placeholder }: { value: string; onChang
   );
 }
 
+/* ── Round assignment popover for a single question ── */
+function RoundAssignmentControl({
+  assignment,
+  rounds,
+  onChange,
+}: {
+  assignment: string[];
+  rounds: InterviewRound[];
+  onChange: (next: string[]) => void;
+}) {
+  const isAll = assignment.includes("all") || assignment.length === 0;
+  const label = isAll
+    ? "All rounds"
+    : assignment.length === 1
+    ? rounds.find((r) => r.id === assignment[0])?.name ?? "1 round"
+    : `${assignment.length} rounds`;
+
+  const toggle = (id: string) => {
+    if (id === "all") {
+      onChange(["all"]);
+      return;
+    }
+    const without = assignment.filter((x) => x !== "all");
+    const next = without.includes(id) ? without.filter((x) => x !== id) : [...without, id];
+    onChange(next.length === 0 ? ["all"] : next);
+  };
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex items-center gap-1 px-2 h-6 rounded-full bg-muted text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {label}
+          <ChevronDown className="h-3 w-3" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-56 p-2">
+        <label className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer">
+          <Checkbox checked={isAll} onCheckedChange={() => toggle("all")} />
+          <span className="text-sm">All rounds</span>
+        </label>
+        <div className="my-1 border-t" />
+        {rounds.length === 0 ? (
+          <div className="px-2 py-1.5 text-xs text-muted-foreground">No rounds yet — add one above.</div>
+        ) : (
+          rounds.map((r) => (
+            <label key={r.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer">
+              <Checkbox
+                checked={!isAll && assignment.includes(r.id)}
+                onCheckedChange={() => toggle(r.id)}
+              />
+              <span className="text-sm">{r.name}</span>
+            </label>
+          ))
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 /* ── Question block (used by Section 1, extras, and role-specific) ── */
 function QuestionBlock({
   number,
