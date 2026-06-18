@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Loader2, Download, RotateCcw, AlertTriangle, Plus, Trash2, Pencil, Info, GripVertical } from "lucide-react";
+import { Loader2, Download, RotateCcw, AlertTriangle, Plus, Trash2, Info, GripVertical } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import {
@@ -647,9 +647,9 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
   };
 
   return (
-    <div className="space-y-8 max-w-4xl">
+    <div className="space-y-8">
       {/* Top action bar */}
-      <div className="space-y-2">
+      <div className="space-y-3">
         <div className="flex items-center gap-3">
           <Button
             onClick={handleGenerateAll}
@@ -676,24 +676,22 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
           </div>
         )}
         {error && <p className="text-sm text-destructive">{error}</p>}
-      </div>
 
-      {/* Draft messaging banner */}
-      <div className="rounded-lg border border-[#950606]/20 bg-[#FFF5F5] p-4 space-y-1.5">
-        <div className="flex items-center gap-2 text-[#950606] font-semibold text-sm">
-          <Info className="h-4 w-4" />
-          These are draft answers — edit every one so it sounds like you.
+        {/* Draft messaging banner */}
+        <div className="flex items-center gap-2 rounded-md border border-[#950606]/20 bg-[#FFF5F5] px-3 py-2 text-[#950606] text-xs font-medium">
+          <Info className="h-3.5 w-3.5 shrink-0" />
+          <span>These are draft answers — edit every one so it sounds like you.</span>
         </div>
-        <p className="text-xs text-foreground/80 leading-relaxed">
-          Use them as prep notes, not a script. Don't memorize them word for word. Company and industry news answers must always be verified with current sources before your interview.
-        </p>
       </div>
 
       {/* Section 1 */}
-      <section className="space-y-6">
-        <div className="border-b pb-2">
-          <h2 className="text-xl font-bold text-foreground">Core Prep Questions</h2>
-          <p className="text-sm text-muted-foreground mt-1">The fixed questions every interviewer is likely to ask.</p>
+      <section>
+        <div className="flex items-end justify-between gap-3 border-b border-border pb-3 mb-6">
+          <div>
+            <h2 className="text-lg font-bold text-foreground">Core Prep Questions</h2>
+            <p className="text-sm text-muted-foreground mt-1">The fixed questions every interviewer is likely to ask.</p>
+          </div>
+          <AddQuestionButton onClick={addCoreCustomQuestion} />
         </div>
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleSection1DragEnd}>
           <SortableContext
@@ -745,19 +743,21 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
             })()}
           </SortableContext>
         </DndContext>
-        <AddQuestionButton onClick={addCoreCustomQuestion} />
       </section>
 
       {/* Section 2 */}
-      <section className="space-y-6">
-        <div className="border-b pb-2">
-          <h2 className="text-xl font-bold text-foreground">Role-Specific Questions</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Generated based on your specific role at {companyName}. Add your own to prep for what you expect.
-          </p>
+      <section>
+        <div className="flex items-end justify-between gap-3 border-b border-border pb-3 mb-6">
+          <div>
+            <h2 className="text-lg font-bold text-foreground">Role-Specific Questions</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Generated based on your specific role at {companyName}. Add your own to prep for what you expect.
+            </p>
+          </div>
+          <AddQuestionButton onClick={addRoleCustomQuestion} />
         </div>
         {!hasGenerated && (
-          <p className="text-sm text-muted-foreground italic">
+          <p className="text-sm text-muted-foreground italic mb-4">
             Click Generate All to create role-specific questions tailored to this position — or add your own below.
           </p>
         )}
@@ -786,13 +786,12 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
             ))}
           </SortableContext>
         </DndContext>
-        <AddQuestionButton onClick={addRoleCustomQuestion} />
       </section>
 
       {/* Section 3 — Question Bank (preserved as-is) */}
       {questionBank.length > 0 && (
-        <section className="space-y-4">
-          <h2 className="text-xl font-bold text-foreground border-b pb-2">Question Bank</h2>
+        <section>
+          <h2 className="text-lg font-bold text-foreground border-b border-border pb-3 mb-6">Question Bank</h2>
           <div className="space-y-2">
             {questionBank.map((q, i) => (
               <details key={i} className="border rounded-lg px-4 py-2 group">
