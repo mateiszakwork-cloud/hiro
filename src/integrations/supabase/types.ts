@@ -162,6 +162,7 @@ export type Database = {
           created_at: string
           id: string
           job_id: string
+          keyword_coverage: Json
           profile_headline: string | null
           section_config: Json
           selected_awards: Json | null
@@ -181,6 +182,7 @@ export type Database = {
           created_at?: string
           id?: string
           job_id: string
+          keyword_coverage?: Json
           profile_headline?: string | null
           section_config?: Json
           selected_awards?: Json | null
@@ -200,6 +202,7 @@ export type Database = {
           created_at?: string
           id?: string
           job_id?: string
+          keyword_coverage?: Json
           profile_headline?: string | null
           section_config?: Json
           selected_awards?: Json | null
