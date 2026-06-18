@@ -30,6 +30,16 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown, ChevronRight } from "lucide-react";
+import {
+  type InterviewRound,
+  DEFAULT_ROUND_PRESETS,
+  newRound,
+  RoundDetailsPanel,
+} from "@/components/InterviewRounds";
 
 type ExtraQ = { id: string; question: string; answer: string; insertAfter: string };
 type RoleQ = { id: string; question: string; answer: string };
@@ -66,6 +76,7 @@ interface Props {
   jobDescription: string;
   cvSummary: string;
   questionBank?: Array<{ question: string; category: string; suggested_answer_framework?: string }>;
+  initialRounds?: InterviewRound[];
 }
 
 /* ── Auto-growing textarea ── */
