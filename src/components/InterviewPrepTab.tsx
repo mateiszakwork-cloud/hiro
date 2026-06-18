@@ -298,11 +298,73 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
       section1_extra: [], role_specific: [],
     };
 
-  const addCoreCustomQuestion = (insertAfter: string) => {
+  const addCoreCustomQuestion = () => {
     const base = ensureAnswers();
     const id = `extra-${Date.now()}`;
-    const newExtra: ExtraQ = { id, question: "", answer: "", insertAfter };
+    // Append at end: anchor to the last fixed question so it renders last.
+    const lastFixedId = FIXED_QUESTIONS[FIXED_QUESTIONS.length - 1].id;
+    const newExtra: ExtraQ = { id, question: "", answer: "", insertAfter: lastFixedId };
     setAnswers({ ...base, section1_extra: [...base.section1_extra, newExtra] });
+  };
+
+  /* ── Drag-and-drop sensors ── */
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  /* ── Section 1 drag handler: only extras move; fixed are anchors. ── */
+  const handleSection1DragEnd = (e: DragEndEvent) => {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    setAnswers((prev) => {
+      if (!prev) return prev;
+      // Build current visual order ids
+      const visibleIds: string[] = [];
+      FIXED_QUESTIONS.forEach((fq) => {
+        visibleIds.push(`fixed-${fq.id}`);
+        prev.section1_extra
+          .filter((e2) => e2.insertAfter === fq.id)
+          .forEach((e2) => visibleIds.push(e2.id));
+      });
+      const fromIdx = visibleIds.indexOf(String(active.id));
+      const toIdx = visibleIds.indexOf(String(over.id));
+      if (fromIdx < 0 || toIdx < 0) return prev;
+      const reordered = arrayMove(visibleIds, fromIdx, toIdx);
+
+      // Walk new order to derive new section1_extra (preserving order, updating insertAfter).
+      const fixedIds = new Set(FIXED_QUESTIONS.map((q) => `fixed-${q.id}`));
+      let anchor = FIXED_QUESTIONS[0].id;
+      const newExtras: ExtraQ[] = [];
+      const extrasById = new Map(prev.section1_extra.map((e2) => [e2.id, e2]));
+      reordered.forEach((id) => {
+        if (fixedIds.has(id)) {
+          anchor = id.replace(/^fixed-/, "") as ExtraQ["insertAfter"];
+        } else {
+          const ex = extrasById.get(id);
+          if (ex) newExtras.push({ ...ex, insertAfter: anchor });
+        }
+      });
+      const next = { ...prev, section1_extra: newExtras };
+      persistAnswers(next);
+      return next;
+    });
+  };
+
+  /* ── Section 2 drag handler: reorder role_specific array. ── */
+  const handleRoleDragEnd = (e: DragEndEvent) => {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    setAnswers((prev) => {
+      if (!prev) return prev;
+      const ids = prev.role_specific.map((r) => r.id);
+      const fromIdx = ids.indexOf(String(active.id));
+      const toIdx = ids.indexOf(String(over.id));
+      if (fromIdx < 0 || toIdx < 0) return prev;
+      const next = { ...prev, role_specific: arrayMove(prev.role_specific, fromIdx, toIdx) };
+      persistAnswers(next);
+      return next;
+    });
   };
 
   const addRoleCustomQuestion = () => {
@@ -631,91 +693,102 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
 
       {/* Section 1 */}
       <section className="space-y-6">
-        <div className="border-b pb-2 flex items-end justify-between gap-3">
-          <div>
-            <h2 className="text-xl font-bold text-foreground">Core Prep Questions</h2>
-            <p className="text-sm text-muted-foreground mt-1">The fixed questions every interviewer is likely to ask.</p>
-          </div>
-          <AddCoreQuestion onAdd={addCoreCustomQuestion} />
+        <div className="border-b pb-2">
+          <h2 className="text-xl font-bold text-foreground">Core Prep Questions</h2>
+          <p className="text-sm text-muted-foreground mt-1">The fixed questions every interviewer is likely to ask.</p>
         </div>
-        {(() => {
-          let qNum = 0;
-          return section1Items.map((item) => {
-            qNum++;
-            if (item.kind === "fixed") {
-              const fq = item.q;
-              const val = (answers as any)?.[fq.id] || "";
-              return (
-                <QuestionBlock
-                  key={fq.id}
-                  number={`Q${qNum}.`}
-                  title={fq.label}
-                  value={val}
-                  onChange={(v) => updateAnswer(fq.id, v)}
-                  onRegenerate={() => handleRegenerate(fq.id, fq.label, fq.newsDisclaimer)}
-                  regenerating={regenerating === fq.id}
-                  newsDisclaimer={fq.newsDisclaimer}
-                  hasGenerated={hasGenerated}
-                />
-              );
-            }
-            return (
-              <QuestionBlock
-                key={item.q.id}
-                number={`Q${qNum}.`}
-                title={item.q.question}
-                value={item.q.answer}
-                onChange={(v) => updateAnswer(item.q.id, v)}
-                onRegenerate={() => handleRegenerate(item.q.id, item.q.question)}
-                regenerating={regenerating === item.q.id}
-                hasGenerated={hasGenerated}
-                editableTitle
-                onTitleChange={(v) => updateCustomTitle(item.q.id, v)}
-                onDelete={() => deleteCustomQuestion(item.q.id)}
-                isCustom
-              />
-            );
-          });
-        })()}
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleSection1DragEnd}>
+          <SortableContext
+            items={section1Items.map((item) => (item.kind === "fixed" ? `fixed-${item.q.id}` : item.q.id))}
+            strategy={verticalListSortingStrategy}
+          >
+            {(() => {
+              let qNum = 0;
+              return section1Items.map((item) => {
+                qNum++;
+                if (item.kind === "fixed") {
+                  const fq = item.q;
+                  const val = (answers as any)?.[fq.id] || "";
+                  return (
+                    <QuestionBlock
+                      key={fq.id}
+                      dragId={`fixed-${fq.id}`}
+                      draggable={false}
+                      number={`Q${qNum}.`}
+                      title={fq.label}
+                      value={val}
+                      onChange={(v) => updateAnswer(fq.id, v)}
+                      onRegenerate={() => handleRegenerate(fq.id, fq.label, fq.newsDisclaimer)}
+                      regenerating={regenerating === fq.id}
+                      newsDisclaimer={fq.newsDisclaimer}
+                      hasGenerated={hasGenerated}
+                    />
+                  );
+                }
+                return (
+                  <QuestionBlock
+                    key={item.q.id}
+                    dragId={item.q.id}
+                    draggable
+                    number={`Q${qNum}.`}
+                    title={item.q.question}
+                    value={item.q.answer}
+                    onChange={(v) => updateAnswer(item.q.id, v)}
+                    onRegenerate={() => handleRegenerate(item.q.id, item.q.question)}
+                    regenerating={regenerating === item.q.id}
+                    hasGenerated={hasGenerated}
+                    editableTitle
+                    onTitleChange={(v) => updateCustomTitle(item.q.id, v)}
+                    onDelete={() => deleteCustomQuestion(item.q.id)}
+                    isCustom
+                  />
+                );
+              });
+            })()}
+          </SortableContext>
+        </DndContext>
+        <AddQuestionButton onClick={addCoreCustomQuestion} />
       </section>
 
       {/* Section 2 */}
       <section className="space-y-6">
-        <div className="border-b pb-2 flex items-end justify-between gap-3">
-          <div>
-            <h2 className="text-xl font-bold text-foreground">Role-Specific Questions</h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              Generated based on your specific role at {companyName}. Add your own to prep for what you expect.
-            </p>
-          </div>
-          <button
-            onClick={addRoleCustomQuestion}
-            className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-lg border border-input bg-background text-foreground hover:bg-muted transition-colors"
-          >
-            <Plus className="h-3.5 w-3.5" /> Add question
-          </button>
+        <div className="border-b pb-2">
+          <h2 className="text-xl font-bold text-foreground">Role-Specific Questions</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Generated based on your specific role at {companyName}. Add your own to prep for what you expect.
+          </p>
         </div>
         {!hasGenerated && (
           <p className="text-sm text-muted-foreground italic">
-            Click Generate All to create role-specific questions tailored to this position — or add your own above.
+            Click Generate All to create role-specific questions tailored to this position — or add your own below.
           </p>
         )}
-        {(answers?.role_specific || []).map((r, i) => (
-            <QuestionBlock
-              key={r.id}
-              number={`${i + 1}.`}
-              title={r.question}
-              value={r.answer}
-              onChange={(v) => updateAnswer(r.id, v)}
-              onRegenerate={() => handleRegenerate(r.id, r.question)}
-              regenerating={regenerating === r.id}
-              hasGenerated={hasGenerated}
-              editableTitle={r.id.startsWith("rs-custom")}
-              onTitleChange={r.id.startsWith("rs-custom") ? (v) => updateCustomTitle(r.id, v) : undefined}
-              onDelete={r.id.startsWith("rs-custom") ? () => deleteCustomQuestion(r.id) : undefined}
-              isCustom={r.id.startsWith("rs-custom")}
-            />
-          ))}
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleRoleDragEnd}>
+          <SortableContext
+            items={(answers?.role_specific || []).map((r) => r.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            {(answers?.role_specific || []).map((r, i) => (
+              <QuestionBlock
+                key={r.id}
+                dragId={r.id}
+                draggable={r.id.startsWith("rs-custom")}
+                number={`${i + 1}.`}
+                title={r.question}
+                value={r.answer}
+                onChange={(v) => updateAnswer(r.id, v)}
+                onRegenerate={() => handleRegenerate(r.id, r.question)}
+                regenerating={regenerating === r.id}
+                hasGenerated={hasGenerated}
+                editableTitle={r.id.startsWith("rs-custom")}
+                onTitleChange={r.id.startsWith("rs-custom") ? (v) => updateCustomTitle(r.id, v) : undefined}
+                onDelete={r.id.startsWith("rs-custom") ? () => deleteCustomQuestion(r.id) : undefined}
+                isCustom={r.id.startsWith("rs-custom")}
+              />
+            ))}
+          </SortableContext>
+        </DndContext>
+        <AddQuestionButton onClick={addRoleCustomQuestion} />
       </section>
 
       {/* Section 3 — Question Bank (preserved as-is) */}
