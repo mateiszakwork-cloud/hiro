@@ -86,53 +86,55 @@ serve(async (req) => {
       soft_skills: job.soft_skills,
     };
 
-    const systemPrompt = `You are an expert CV editor for competitive graduate and internship applications. You will receive a candidate's profile and a specific job description. Return ONLY a valid JSON object with these exact keys:
+    const systemPrompt = `You are an expert CV reviewer for competitive graduate and internship applications. You DO NOT rewrite bullets. You help the candidate select the strongest evidence they already have for a specific role, and you flag what is missing.
 
-- tailored_summary: string. Generate the professional summary following these strict rules:
-  - Always write in first person (never "Máté is..." always "CEMS student with...")
-  - Never use flattery or filler phrases like "accomplished professional", "ideal candidate", "perfectly aligns", "invaluable", "passionate", "eager"
-  - Open directly with your degree/current status and the most relevant functional experience for this role
-  - Reference 2-3 specific, concrete things from the candidate's actual experience that are relevant to this job
+Return ONLY a valid JSON object with these exact keys:
+
+- tailored_summary: string. Professional summary following these strict rules:
+  - Always first person (never "Máté is..."; e.g. "CEMS student with...")
+  - No flattery or filler ("accomplished", "ideal candidate", "passionate", "eager", "results-driven")
+  - Open with degree/current status and the most relevant functional experience for this role
+  - Reference 2-3 specific, concrete facts from the candidate's actual experience that connect to this job
   - End with exactly: "Looking to join [Company Name] in [Month/timing if known from job description]."
-  - Maximum 3 sentences. Never 4.
-  - Match the tone of these real examples:
-    Example 1 (CRM/Sales role): "CEMS Master in International Management student graduating soon with experience across sales development, go to market execution, and solution focused analytics in SaaS and AI startups. Comfortable working with CRM tools, product and revenue KPIs, and cross functional teams across Europe and Asia. Looking to join Salesforce in August."
-    Example 2 (Marketing role): "CEMS MSc student with experience in operational marketing and multi-market campaign execution. Proven track record managing product launches, creating marketing materials, and analyzing consumer engagement to drive activation and retention. Looking to join Estée Lauder Companies starting July."
-    Example 3 (Analytics role): "CEMS MSc student with experience in performance analysis, consumer insights, and data-driven content strategy across startups in Paris, Singapore, and Hong Kong. Track record of turning data into clear recommendations and identifying market trends. Looking to join a role in [Company] combining analytics and consumer understanding."
-    Example 4 (GTM/Strategy role): "CEMS MSc student with proven success in global go-to-market execution and performance-driven content strategy across international hubs. Experienced in building best practice libraries, creating playbooks and toolkits, and driving performance improvements through CRM insights and workflow automation. Looking to join [Company] starting [Month]."
-  Use these examples as the tone and structure reference. Never deviate from this style.
+  - Max 3 sentences. Truthful, grounded in the profile.
 
-- selected_bullets: array of objects, each with:
-  - company: string (exact company name)
-  - job_title: string
+- selected_bullets: array of objects, one per relevant experience. Each:
+  - company: string (exact company name from profile)
+  - job_title: string (exact)
   - bullets: array of objects, each with:
-    - original: string (exact text from the candidate's profile, completely unchanged)
-    - tailored: string (a meaningfully rephrased version aligned to the target role)
-    - use_tailored: boolean (default true)
-    - origin: string, always exactly "original"
+    - original: string — VERBATIM text of a bullet from that experience. Never alter, never invent.
+    - tailored: string — MUST equal "original" exactly. You are not rewriting bullets.
+    - use_tailored: boolean — always false.
+    - origin: string — always "original".
+    - relevance: "high" | "medium" | "low" — how directly this bullet supports the target role.
+    - why: string (max 90 chars) — short, concrete reason the bullet matters for this role. No filler.
 
-  Tailoring rules for the "tailored" field:
-    - Rewrite freely to mirror the wording, priorities, and terminology of the job description.
-    - You MAY change verbs, restructure the sentence, and reorder clauses to emphasise what the role values.
-    - You MUST preserve every concrete fact present in the original: numbers, percentages, currencies, named tools/companies/products, scope, and ownership level.
-    - You MUST NOT invent achievements, metrics, tools, ownership, or scope that are not in the original bullet.
-    - Keep a human, concrete tone — no corporate filler ("leveraged synergies", "spearheaded", "results-driven").
-    - If the bullet is already strongly aligned and any rewrite would weaken it, return the original text as "tailored".
-    - Aim for visibly different wording when the original is generic or weakly related to the role.
+  Bullet selection rules:
+    - Pick the MOST RELEVANT existing bullets for the role, in order of relevance.
+    - Include up to 4 bullets per experience, fewer if the experience genuinely has fewer relevant ones. Never pad with weak bullets to hit a quota.
+    - If an experience has no relevant bullets at all, omit that experience block entirely.
+    - Never invent, paraphrase, or merge bullets. The "original" string must appear verbatim in the candidate's profile.
 
-- selected_hard_skills: object where keys are skill categories (preserve the candidate's existing categories exactly, e.g. "Data and Analytics", "Revenue Ops and CRM", "AI and Automation", "Design and Visual") and values are arrays of the most relevant skills from each category for this role. Remove irrelevant skills. Keep relevant ones exactly as written.
+- selected_hard_skills: flat array of strings — the candidate's existing hard skills most relevant to this role, in priority order. Keep them written exactly as in the profile. Never add skills the candidate does not have.
 
-- selected_soft_skills: array of 4-5 strings, the most relevant soft skills for this role
+- selected_soft_skills: array of 4-5 strings — most relevant soft skills the candidate already has.
 
-- tailoring_notes: array of 3-5 short strings explaining the key tailoring decisions
+- keyword_coverage: array of objects describing how the job description maps to the candidate's profile. Aim for 8-14 entries covering the JD's most important hard skills, tools, and capability themes. Each:
+    - keyword: string (a concrete skill, tool, methodology, or capability the JD calls out — e.g. "SQL", "stakeholder management", "GTM playbooks")
+    - status: "covered" | "partial" | "missing"
+        - "covered": clearly present in selected bullets, skills, or summary with concrete evidence
+        - "partial": adjacent experience exists but the keyword itself is not stated in profile language
+        - "missing": no supporting evidence in the candidate's profile
+    - evidence: string (max 120 chars) — for "covered"/"partial", quote or paraphrase the supporting profile fact; for "missing", leave empty string ""
+    - source: "hard_skill" | "soft_skill" | "experience" | "theme"
 
-Rules:
-- For each work experience, select EXACTLY 3 bullet points that are most relevant to this specific role. Not 2, not 4 — exactly 3. The user can add or remove bullets after generation.
-- If the experience has fewer than 3 original bullets, use all of them (do not invent new ones).
-- Never invent experience or skills not present in the profile.
-- Tailored wording must remain truthful and grounded in the original bullet's facts.
-- The summary must always be rewritten specifically for this role following the strict rules above.
-- Match the tone of the original CV: professional, concise, achievement-focused.`;
+- tailoring_notes: array of 3-5 short strings explaining the key selection decisions (which bullets you picked and why, which JD themes are well covered, which gaps the user should address).
+
+Hard rules:
+- Never invent experience, skills, metrics, tools, scope, or ownership not present in the profile.
+- Never rewrite bullets. "tailored" MUST equal "original" verbatim.
+- The summary must be grounded only in the candidate's real experience.
+- Truthfulness over polish. If you are unsure, mark a keyword as "partial" or "missing" rather than overclaiming.`;
 
     const userPrompt = JSON.stringify({ job: jobData, candidate: candidateProfile });
 
@@ -177,35 +179,60 @@ Rules:
       });
     }
 
-    // Validation: target exactly 3 bullets per experience (or all available if fewer).
-    const selectedBullets = parsed.selected_bullets || [];
-    for (const block of selectedBullets) {
-      block.bullets = (block.bullets || []).map((b: any) => ({
-        original: b.original || b.tailored || "",
-        tailored: b.tailored || b.original || "",
-        use_tailored: b.use_tailored !== false,
-        origin: b.origin || "original",
-      }));
+    // Validation: enforce that every selected bullet is verbatim from the profile.
+    // Drop bullets the AI did not lift cleanly from the candidate's real experience.
+    const allowRelevance = (r: any): "high" | "medium" | "low" => {
+      const s = String(r || "").toLowerCase();
+      if (s === "high" || s === "medium" || s === "low") return s as any;
+      return "medium";
+    };
+    const selectedBullets = (parsed.selected_bullets || []).map((block: any) => {
       const match = workExperiences.find((w: any) =>
         w.company_name === block.company && w.job_title === block.job_title
       );
       const sourceBullets: string[] = (match && Array.isArray(match.bullet_points)) ? match.bullet_points : [];
-      const target = Math.min(3, sourceBullets.length || block.bullets.length);
-      // Pad up with unused originals
-      if (block.bullets.length < target && sourceBullets.length) {
-        const existing = new Set(block.bullets.map((b: any) => b.original));
-        for (const bp of sourceBullets) {
-          if (block.bullets.length >= target) break;
-          if (!existing.has(bp)) {
-            block.bullets.push({ original: bp, tailored: bp, use_tailored: true, origin: "original" });
-            existing.add(bp);
-          }
-        }
-      }
-      // Trim down to 3
-      if (block.bullets.length > 3) block.bullets = block.bullets.slice(0, 3);
-    }
+      const sourceSet = new Set(sourceBullets);
+      const seen = new Set<string>();
+      const bullets = (block.bullets || [])
+        .map((b: any) => {
+          // Only trust the original text. Ignore any "tailored" rewrite the AI tried to slip in.
+          const original = String(b.original || b.tailored || "").trim();
+          if (!original || seen.has(original)) return null;
+          // Must be a real bullet from this experience (defensive against hallucinated bullets).
+          if (sourceSet.size && !sourceSet.has(original)) return null;
+          seen.add(original);
+          return {
+            original,
+            tailored: original,
+            use_tailored: false,
+            origin: "original",
+            relevance: allowRelevance(b.relevance),
+            why: String(b.why || "").trim().slice(0, 140),
+          };
+        })
+        .filter(Boolean)
+        .slice(0, 4);
+      return { company: block.company, job_title: block.job_title, bullets };
+    }).filter((b: any) => b.bullets.length > 0);
     parsed.selected_bullets = selectedBullets;
+
+    // Normalise keyword_coverage to a safe shape.
+    const coverage = Array.isArray(parsed.keyword_coverage) ? parsed.keyword_coverage : [];
+    const normalisedCoverage = coverage
+      .map((c: any) => {
+        const keyword = String(c?.keyword || "").trim();
+        if (!keyword) return null;
+        const status = ["covered", "partial", "missing"].includes(c?.status) ? c.status : "missing";
+        const source = ["hard_skill", "soft_skill", "experience", "theme"].includes(c?.source) ? c.source : "theme";
+        return {
+          keyword,
+          status,
+          source,
+          evidence: String(c?.evidence || "").trim().slice(0, 160),
+        };
+      })
+      .filter(Boolean)
+      .slice(0, 16);
 
     const row = {
       job_id,
@@ -215,6 +242,7 @@ Rules:
       selected_hard_skills: parsed.selected_hard_skills || {},
       selected_soft_skills: parsed.selected_soft_skills || [],
       tailoring_notes: parsed.tailoring_notes || [],
+      keyword_coverage: normalisedCoverage,
       updated_at: new Date().toISOString(),
       profile_headline: null,
       selected_experiences: [],

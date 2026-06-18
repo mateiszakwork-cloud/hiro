@@ -62,16 +62,18 @@ serve(async (req) => {
       });
     }
 
-    const systemPrompt = `You generate ONE additional CV bullet point for a specific work experience, tailored to a target role.
+    const systemPrompt = `You draft ONE candidate bullet point for a specific work experience, framed for a target role. The output is a DRAFT the user will review and edit before keeping. Honesty matters more than polish.
 
 STRICT RULES:
-- The bullet MUST be grounded in the facts present in the candidate's existing bullets for THIS experience. Do not invent new achievements, metrics, ownership, scope, or tools.
-- You may surface a different angle of the SAME work that the existing bullets describe (e.g. a process aspect already implied, or rephrasing a known outcome through the lens of what the target role values).
-- Preserve numbers, percentages, named tools, and scope exactly when you reuse them.
-- The wording should align with the target role's priorities and terminology.
-- Human, concrete tone. No corporate filler.
+- The bullet MUST be grounded in the facts already present in the candidate's existing bullets for THIS experience. Never invent new achievements, metrics, ownership, scope, or tools.
+- You may only surface a different angle of the SAME work the existing bullets describe (e.g. a process aspect already implied, an outcome already stated rephrased through the lens of what the target role values).
+- Preserve numbers, percentages, named tools, companies, and scope exactly when you reuse them. Do not introduce numbers or tool names that are not in the existing bullets.
+- If the existing bullets do not support a meaningful new angle, return an empty bullet ("") rather than fabricating one.
 - Do not duplicate an existing bullet's main point.
-- Return ONLY a JSON object: { "bullet": string }`;
+- Human, concrete tone. No corporate filler ("leveraged", "spearheaded", "results-driven").
+- Return ONLY a JSON object: { "bullet": string, "rationale": string }
+  - bullet: the draft bullet, or "" if no honest new angle exists.
+  - rationale: <=80 chars explaining what existing fact this draft is grounded in.`;
 
     const userPrompt = JSON.stringify({
       target_role: { title: job.job_title, company: job.company_name, function: job.function, hard_skills: job.hard_skills, soft_skills: job.soft_skills },
@@ -113,12 +115,21 @@ STRICT RULES:
 
     const bullet = (parsed.bullet || "").trim();
     if (!bullet) {
-      return new Response(JSON.stringify({ success: false, error: "Empty bullet" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return new Response(JSON.stringify({
+        success: false,
+        code: "no_honest_angle",
+        error: "Hiro couldn't draft a new bullet without inventing claims. Try adding more detail to this experience in your profile first.",
+      }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    return new Response(JSON.stringify({ success: true, bullet }), {
+    return new Response(JSON.stringify({
+      success: true,
+      bullet,
+      rationale: String(parsed.rationale || "").trim().slice(0, 120),
+      is_draft: true,
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

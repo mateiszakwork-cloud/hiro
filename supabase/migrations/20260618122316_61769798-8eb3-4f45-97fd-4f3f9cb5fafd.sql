@@ -1,0 +1,1 @@
+ALTER TABLE public.cv_outputs ADD COLUMN IF NOT EXISTS keyword_coverage jsonb NOT NULL DEFAULT '[]'::jsonb;
