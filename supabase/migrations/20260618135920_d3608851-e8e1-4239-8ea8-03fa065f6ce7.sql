@@ -1,0 +1,1 @@
+ALTER TABLE public.interview_prep_answers ADD COLUMN IF NOT EXISTS question_round_assignments jsonb NOT NULL DEFAULT '{}'::jsonb;

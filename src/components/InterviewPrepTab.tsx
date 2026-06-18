@@ -30,6 +30,16 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown, ChevronRight } from "lucide-react";
+import {
+  type InterviewRound,
+  DEFAULT_ROUND_PRESETS,
+  newRound,
+  RoundDetailsPanel,
+} from "@/components/InterviewRounds";
 
 type ExtraQ = { id: string; question: string; answer: string; insertAfter: string };
 type RoleQ = { id: string; question: string; answer: string };
@@ -66,6 +76,7 @@ interface Props {
   jobDescription: string;
   cvSummary: string;
   questionBank?: Array<{ question: string; category: string; suggested_answer_framework?: string }>;
+  initialRounds?: InterviewRound[];
 }
 
 /* ── Auto-growing textarea ── */
@@ -89,6 +100,68 @@ function AutoTextarea({ value, onChange, placeholder }: { value: string; onChang
   );
 }
 
+/* ── Round assignment popover for a single question ── */
+function RoundAssignmentControl({
+  assignment,
+  rounds,
+  onChange,
+}: {
+  assignment: string[];
+  rounds: InterviewRound[];
+  onChange: (next: string[]) => void;
+}) {
+  const isAll = assignment.includes("all") || assignment.length === 0;
+  const label = isAll
+    ? "All rounds"
+    : assignment.length === 1
+    ? rounds.find((r) => r.id === assignment[0])?.name ?? "1 round"
+    : `${assignment.length} rounds`;
+
+  const toggle = (id: string) => {
+    if (id === "all") {
+      onChange(["all"]);
+      return;
+    }
+    const without = assignment.filter((x) => x !== "all");
+    const next = without.includes(id) ? without.filter((x) => x !== id) : [...without, id];
+    onChange(next.length === 0 ? ["all"] : next);
+  };
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex items-center gap-1 px-2 h-6 rounded-full bg-muted text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {label}
+          <ChevronDown className="h-3 w-3" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-56 p-2">
+        <label className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer">
+          <Checkbox checked={isAll} onCheckedChange={() => toggle("all")} />
+          <span className="text-sm">All rounds</span>
+        </label>
+        <div className="my-1 border-t" />
+        {rounds.length === 0 ? (
+          <div className="px-2 py-1.5 text-xs text-muted-foreground">No rounds yet — add one above.</div>
+        ) : (
+          rounds.map((r) => (
+            <label key={r.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer">
+              <Checkbox
+                checked={!isAll && assignment.includes(r.id)}
+                onCheckedChange={() => toggle(r.id)}
+              />
+              <span className="text-sm">{r.name}</span>
+            </label>
+          ))
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 /* ── Question block (used by Section 1, extras, and role-specific) ── */
 function QuestionBlock({
   number,
@@ -105,6 +178,10 @@ function QuestionBlock({
   isCustom,
   draggable,
   dragId,
+  showAssignment,
+  assignment,
+  rounds,
+  onAssignmentChange,
 }: {
   number: string;
   title: string;
@@ -120,6 +197,10 @@ function QuestionBlock({
   isCustom?: boolean;
   draggable?: boolean;
   dragId?: string;
+  showAssignment?: boolean;
+  assignment?: string[];
+  rounds?: InterviewRound[];
+  onAssignmentChange?: (next: string[]) => void;
 }) {
   const sortable = useSortable({ id: dragId ?? "static", disabled: !draggable || !dragId });
   const style = dragId
@@ -172,6 +253,13 @@ function QuestionBlock({
           >
             <Trash2 className="h-3.5 w-3.5" />
           </button>
+        )}
+        {showAssignment && rounds && onAssignmentChange && (
+          <RoundAssignmentControl
+            assignment={assignment ?? ["all"]}
+            rounds={rounds}
+            onChange={onAssignmentChange}
+          />
         )}
       </div>
       <div className="mt-3">
@@ -226,7 +314,7 @@ const CAT_COLORS: Record<string, string> = {
   Situational: "bg-orange-100 text-orange-700",
 };
 
-export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDescription, cvSummary, questionBank = [] }: Props) {
+export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDescription, cvSummary, questionBank = [], initialRounds = [] }: Props) {
   const [answers, setAnswers] = useState<Answers | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -235,7 +323,66 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
   const saveTimer = useRef<number | null>(null);
   const userIdRef = useRef<string | null>(null);
 
+  /* ── Rounds + per-question round assignments ── */
+  const [rounds, setRounds] = useState<InterviewRound[]>(initialRounds);
+  const [activeRoundId, setActiveRoundId] = useState<string>("all");
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [assignments, setAssignments] = useState<Record<string, string[]>>({});
+
+  const persistRounds = async (next: InterviewRound[]) => {
+    setRounds(next);
+    await supabase.from("jobs").update({ interview_rounds: next as any } as any).eq("id", jobId);
+  };
+
+  const addRound = (preset?: string) => {
+    const name = preset || `Round ${rounds.length + 1}`;
+    const created = newRound(name);
+    const next = [...rounds, created];
+    setActiveRoundId(created.id);
+    setDetailsOpen(true);
+    persistRounds(next);
+  };
+
+  const updateRound = (id: string, patch: Partial<InterviewRound>) => {
+    persistRounds(rounds.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+  };
+
+  const deleteRound = (id: string) => {
+    const next = rounds.filter((r) => r.id !== id);
+    if (activeRoundId === id) setActiveRoundId("all");
+    persistRounds(next);
+    // Strip the deleted round from any per-question assignments
+    setAssignments((prev) => {
+      const cleaned: Record<string, string[]> = {};
+      for (const [qid, list] of Object.entries(prev)) {
+        const filtered = list.filter((x) => x !== id);
+        cleaned[qid] = filtered.length === 0 ? ["all"] : filtered;
+      }
+      void persistAssignments(cleaned);
+      return cleaned;
+    });
+  };
+
   const hasGenerated = !!answers;
+
+  const getAssignment = (qid: string): string[] => assignments[qid] ?? ["all"];
+
+  const isVisibleInActiveRound = (qid: string): boolean => {
+    if (activeRoundId === "all") return true;
+    const a = getAssignment(qid);
+    return a.includes("all") || a.includes(activeRoundId);
+  };
+
+  const setAssignment = (qid: string, list: string[]) => {
+    setAssignments((prev) => {
+      const next = { ...prev, [qid]: list };
+      void persistAssignments(next);
+      return next;
+    });
+  };
+
+  const defaultAssignmentForNew = (): string[] =>
+    activeRoundId === "all" ? ["all"] : [activeRoundId];
 
   /* ── Load saved answers on mount / jobId change ── */
   useEffect(() => {
@@ -250,7 +397,7 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
       userIdRef.current = uid;
       const { data, error: loadErr } = await supabase
         .from("interview_prep_answers")
-        .select("answers, section1_extra, role_specific")
+        .select("answers, section1_extra, role_specific, question_round_assignments")
         .eq("user_id", uid)
         .eq("job_id", jobId)
         .maybeSingle();
@@ -264,6 +411,9 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
           section1_extra: (data.section1_extra as ExtraQ[]) || [],
           role_specific: (data.role_specific as RoleQ[]) || [],
         });
+      }
+      if (!loadErr && data?.question_round_assignments) {
+        setAssignments((data.question_round_assignments as Record<string, string[]>) || {});
       }
       setHydrated(true);
     })();
@@ -289,6 +439,21 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
       );
   };
 
+  const persistAssignments = async (next: Record<string, string[]>) => {
+    const uid = userIdRef.current;
+    if (!uid || !jobId) return;
+    await supabase
+      .from("interview_prep_answers")
+      .upsert(
+        {
+          user_id: uid,
+          job_id: jobId,
+          question_round_assignments: next as any,
+        } as any,
+        { onConflict: "user_id,job_id" }
+      );
+  };
+
   /* ── Custom question helpers ── */
   const ensureAnswers = (): Answers =>
     answers || {
@@ -303,6 +468,7 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
     const lastFixedId = FIXED_QUESTIONS[FIXED_QUESTIONS.length - 1].id;
     const newExtra: ExtraQ = { id, question: "", answer: "", insertAfter: lastFixedId };
     setAnswers({ ...base, section1_extra: [...base.section1_extra, newExtra] });
+    setAssignment(id, defaultAssignmentForNew());
   };
 
   /* ── Drag-and-drop sensors ── */
@@ -370,6 +536,7 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
     const id = `rs-custom-${Date.now()}`;
     const newRole: RoleQ = { id, question: "", answer: "" };
     setAnswers({ ...base, role_specific: [...base.role_specific, newRole] });
+    setAssignment(id, defaultAssignmentForNew());
   };
 
   const deleteCustomQuestion = (id: string) => {
@@ -684,6 +851,91 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
         </div>
       </div>
 
+      {/* Round tab strip + collapsible round details */}
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setActiveRoundId("all")}
+            className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+              activeRoundId === "all"
+                ? "bg-[#950606] text-white border-[#950606]"
+                : "bg-muted text-muted-foreground border-border hover:text-foreground"
+            }`}
+          >
+            All rounds
+          </button>
+          {rounds.map((r) => (
+            <button
+              key={r.id}
+              type="button"
+              onClick={() => setActiveRoundId(r.id)}
+              className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                activeRoundId === r.id
+                  ? "bg-[#950606] text-white border-[#950606]"
+                  : "bg-muted text-muted-foreground border-border hover:text-foreground"
+              }`}
+            >
+              {r.name}
+              {r.outcome && r.outcome !== "Pending" && (
+                <span className="ml-1.5 opacity-80">· {r.outcome}</span>
+              )}
+            </button>
+          ))}
+          {rounds.length === 0 ? (
+            DEFAULT_ROUND_PRESETS.map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => addRound(p)}
+                className="px-3 py-1 rounded-full text-xs font-medium border border-dashed border-border text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Plus className="inline h-3 w-3 mr-1" />{p}
+              </button>
+            ))
+          ) : (
+            <button
+              type="button"
+              onClick={() => addRound()}
+              className="px-3 py-1 rounded-full text-xs font-medium border border-dashed border-border text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Plus className="inline h-3 w-3 mr-1" />Add round
+            </button>
+          )}
+        </div>
+
+        {activeRoundId !== "all" && rounds.find((r) => r.id === activeRoundId) && (
+          <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen} className="rounded-md border border-border">
+            <CollapsibleTrigger asChild>
+              <button
+                type="button"
+                className="flex w-full items-center justify-between px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/40 transition-colors"
+              >
+                <span className="flex items-center gap-2">
+                  {detailsOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                  Round details
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {rounds.find((r) => r.id === activeRoundId)?.name}
+                </span>
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="px-4 pb-4 pt-2 border-t border-border">
+              {(() => {
+                const r = rounds.find((x) => x.id === activeRoundId)!;
+                return (
+                  <RoundDetailsPanel
+                    round={r}
+                    onChange={(patch) => updateRound(r.id, patch)}
+                    onDelete={() => deleteRound(r.id)}
+                  />
+                );
+              })()}
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+      </div>
+
       {/* Section 1 */}
       <section>
         <div className="flex items-end justify-between gap-3 border-b border-border pb-3 mb-6">
@@ -704,6 +956,7 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
                 qNum++;
                 if (item.kind === "fixed") {
                   const fq = item.q;
+                  if (!isVisibleInActiveRound(fq.id)) return null;
                   const val = (answers as any)?.[fq.id] || "";
                   return (
                     <QuestionBlock
@@ -718,9 +971,14 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
                       regenerating={regenerating === fq.id}
                       newsDisclaimer={fq.newsDisclaimer}
                       hasGenerated={hasGenerated}
+                      showAssignment={activeRoundId !== "all"}
+                      assignment={getAssignment(fq.id)}
+                      rounds={rounds}
+                      onAssignmentChange={(next) => setAssignment(fq.id, next)}
                     />
                   );
                 }
+                if (!isVisibleInActiveRound(item.q.id)) return null;
                 return (
                   <QuestionBlock
                     key={item.q.id}
@@ -737,6 +995,10 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
                     onTitleChange={(v) => updateCustomTitle(item.q.id, v)}
                     onDelete={() => deleteCustomQuestion(item.q.id)}
                     isCustom
+                    showAssignment={activeRoundId !== "all"}
+                    assignment={getAssignment(item.q.id)}
+                    rounds={rounds}
+                    onAssignmentChange={(next) => setAssignment(item.q.id, next)}
                   />
                 );
               });
@@ -766,7 +1028,10 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
             items={(answers?.role_specific || []).map((r) => r.id)}
             strategy={verticalListSortingStrategy}
           >
-            {(answers?.role_specific || []).map((r, i) => (
+            {(answers?.role_specific || [])
+              .map((r, i) => ({ r, i }))
+              .filter(({ r }) => isVisibleInActiveRound(r.id))
+              .map(({ r, i }) => (
               <QuestionBlock
                 key={r.id}
                 dragId={r.id}
@@ -782,6 +1047,10 @@ export default function InterviewPrepTab({ jobId, jobTitle, companyName, jobDesc
                 onTitleChange={r.id.startsWith("rs-custom") ? (v) => updateCustomTitle(r.id, v) : undefined}
                 onDelete={r.id.startsWith("rs-custom") ? () => deleteCustomQuestion(r.id) : undefined}
                 isCustom={r.id.startsWith("rs-custom")}
+                showAssignment={activeRoundId !== "all"}
+                assignment={getAssignment(r.id)}
+                rounds={rounds}
+                onAssignmentChange={(next) => setAssignment(r.id, next)}
               />
             ))}
           </SortableContext>

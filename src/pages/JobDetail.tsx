@@ -24,7 +24,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { cn, formatSkillName } from "@/lib/utils";
 import OutreachTab from "@/components/OutreachTab";
 import InterviewPrepTab from "@/components/InterviewPrepTab";
-import InterviewRounds, { type InterviewRound } from "@/components/InterviewRounds";
+import { type InterviewRound } from "@/components/InterviewRounds";
 import CvPreview from "@/components/cv/CvPreview";
 import { buildCvData } from "@/lib/buildCvData";
 import { Link } from "react-router-dom";
@@ -1972,12 +1972,6 @@ const JobDetail = () => {
 
         {/* Interview Prep Tab */}
         <TabsContent value="interview" className="hiro-tab-content mt-0">
-          {job && (
-            <InterviewRounds
-              jobId={job.id}
-              initial={(Array.isArray((job as any).interview_rounds) ? (job as any).interview_rounds : []) as InterviewRound[]}
-            />
-          )}
           {job && (() => {
             const cvSummaryParts: string[] = [];
             if (userProfile.full_name) cvSummaryParts.push(`Name: ${userProfile.full_name}`);
@@ -2021,6 +2015,7 @@ const JobDetail = () => {
                 jobDescription={jdParts.join("\n")}
                 cvSummary={cvSummaryParts.join("\n")}
                 questionBank={questionBank}
+                initialRounds={(Array.isArray((job as any).interview_rounds) ? (job as any).interview_rounds : []) as InterviewRound[]}
               />
             );
           })()}
