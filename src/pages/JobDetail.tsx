@@ -26,8 +26,6 @@ import OutreachTab from "@/components/OutreachTab";
 import InterviewPrepTab from "@/components/InterviewPrepTab";
 import InterviewRounds, { type InterviewRound } from "@/components/InterviewRounds";
 import CvPreview from "@/components/cv/CvPreview";
-import CvSectionControls from "@/components/cv/CvSectionControls";
-import { DEFAULT_SECTION_CONFIG, normalizeSectionConfig, type CvSectionConfig } from "@/lib/cvLayout";
 import { buildCvData } from "@/lib/buildCvData";
 import { Link } from "react-router-dom";
 
@@ -38,12 +36,11 @@ type CvOutput = {
   id: string;
   tailored_summary: string | null;
   selected_bullets: BulletBlock[] | null;
-  selected_hard_skills: Record<string, string[]> | null;
+  selected_hard_skills: Record<string, string[]> | string[] | null;
   selected_soft_skills: string[];
   tailoring_notes: string[];
   created_at: string;
   updated_at: string;
-  section_config?: any;
 };
 
 
