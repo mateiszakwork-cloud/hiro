@@ -579,15 +579,15 @@ export type Database = {
           category: string | null
           company: string | null
           connection_degree: string | null
-          date_added: string
+          created_at: string | null
+          date_added: string | null
           date_messaged: string | null
-          drafted_message: string | null
           id: string
-          job_id: string
+          job_id: string | null
           linkedin_url: string | null
           name: string | null
           notes: string | null
-          status: string
+          status: string | null
           title: string | null
           user_id: string
         }
@@ -595,15 +595,15 @@ export type Database = {
           category?: string | null
           company?: string | null
           connection_degree?: string | null
-          date_added?: string
+          created_at?: string | null
+          date_added?: string | null
           date_messaged?: string | null
-          drafted_message?: string | null
           id?: string
-          job_id: string
+          job_id?: string | null
           linkedin_url?: string | null
           name?: string | null
           notes?: string | null
-          status?: string
+          status?: string | null
           title?: string | null
           user_id: string
         }
@@ -611,15 +611,15 @@ export type Database = {
           category?: string | null
           company?: string | null
           connection_degree?: string | null
-          date_added?: string
+          created_at?: string | null
+          date_added?: string | null
           date_messaged?: string | null
-          drafted_message?: string | null
           id?: string
-          job_id?: string
+          job_id?: string | null
           linkedin_url?: string | null
           name?: string | null
           notes?: string | null
-          status?: string
+          status?: string | null
           title?: string | null
           user_id?: string
         }
