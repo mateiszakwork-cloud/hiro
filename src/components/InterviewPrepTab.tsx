@@ -192,6 +192,13 @@ function QuestionBlock({
             <Trash2 className="h-3.5 w-3.5" />
           </button>
         )}
+        {showAssignment && rounds && onAssignmentChange && (
+          <RoundAssignmentControl
+            assignment={assignment ?? ["all"]}
+            rounds={rounds}
+            onChange={onAssignmentChange}
+          />
+        )}
       </div>
       <div className="mt-3">
         <AutoTextarea
