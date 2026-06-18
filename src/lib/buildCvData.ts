@@ -2,13 +2,12 @@
 // CvData object used by all CV renderers (DOCX, PDF, on-screen preview).
 //
 // Global header fields (name, phone, email, linkedin, location) come ONLY from the
-// user profile. Section ordering / visibility / labels come from cv_outputs.section_config.
+// user profile. Section ordering / visibility / labels are FIXED (see cvLayout.ts).
 
 import {
   CvSectionConfig,
   CvSectionId,
   DEFAULT_SECTION_CONFIG,
-  normalizeSectionConfig,
 } from "./cvLayout";
 
 type BulletItem = { original: string; tailored: string; use_tailored: boolean };
@@ -115,7 +114,6 @@ export function buildCvData(opts: {
     selected_bullets: BulletBlock[] | null;
     selected_hard_skills: Record<string, string[]> | string[] | null;
     selected_soft_skills?: string[];
-    section_config?: unknown;
   };
   profile: {
     full_name: string | null;
@@ -128,7 +126,6 @@ export function buildCvData(opts: {
     education: any[];
     languages: any[];
     interests?: string[];
-    volunteering?: any[];
   };
   job: { company_name: string | null; location?: string | null };
 }): CvData {
@@ -158,7 +155,8 @@ export function buildCvData(opts: {
   const hardSkills = cvOutput.selected_hard_skills || null;
   const softSkills = (cvOutput.selected_soft_skills || []).filter(Boolean);
 
-  const config: CvSectionConfig = normalizeSectionConfig(cvOutput.section_config);
+  // Layout is fixed — no per-job reordering.
+  const config: CvSectionConfig = DEFAULT_SECTION_CONFIG;
 
   const dataById: Record<CvSectionId, CvSectionData> = {
     education: { kind: "education", entries: eduEntries },
@@ -195,4 +193,4 @@ export function buildCvData(opts: {
   };
 }
 
-export { DEFAULT_SECTION_CONFIG, normalizeSectionConfig };
+export { DEFAULT_SECTION_CONFIG };

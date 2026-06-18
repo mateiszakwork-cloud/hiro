@@ -1598,7 +1598,7 @@ const JobTracker = () => {
                             const parts = Object.entries(modalCv.selected_hard_skills!).map(
                               ([cat, skills]) => `${cat}: ${(skills as string[]).join(", ")}`
                             );
-                            copyToClipboard("Software Skills: " + parts.join("; ") + ".", "Hard skills");
+                            copyToClipboard("Hard skills: " + parts.join("; ") + ".", "Hard skills");
                           }}>
                             <Copy className="h-3 w-3" /> Copy all
                           </Button>

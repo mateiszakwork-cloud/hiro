@@ -220,7 +220,6 @@ Rules:
       selected_experiences: [],
       selected_education: [],
       selected_languages: [],
-      selected_volunteering: [],
     };
 
     const serviceClient = createClient(

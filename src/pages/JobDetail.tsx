@@ -26,8 +26,6 @@ import OutreachTab from "@/components/OutreachTab";
 import InterviewPrepTab from "@/components/InterviewPrepTab";
 import InterviewRounds, { type InterviewRound } from "@/components/InterviewRounds";
 import CvPreview from "@/components/cv/CvPreview";
-import CvSectionControls from "@/components/cv/CvSectionControls";
-import { DEFAULT_SECTION_CONFIG, normalizeSectionConfig, type CvSectionConfig } from "@/lib/cvLayout";
 import { buildCvData } from "@/lib/buildCvData";
 import { Link } from "react-router-dom";
 
@@ -38,12 +36,11 @@ type CvOutput = {
   id: string;
   tailored_summary: string | null;
   selected_bullets: BulletBlock[] | null;
-  selected_hard_skills: Record<string, string[]> | null;
+  selected_hard_skills: Record<string, string[]> | string[] | null;
   selected_soft_skills: string[];
   tailoring_notes: string[];
   created_at: string;
   updated_at: string;
-  section_config?: any;
 };
 
 
@@ -364,8 +361,8 @@ const JobDetail = () => {
     full_name: string | null; email: string | null; contact_email: string | null;
     phone: string | null; linkedin_url: string | null; default_location: string | null;
     work_experiences: any[]; education: any[]; languages: any[];
-    interests: string[]; volunteering: any[];
-  }>({ full_name: null, email: null, contact_email: null, phone: null, linkedin_url: null, default_location: null, work_experiences: [], education: [], languages: [], interests: [], volunteering: [] });
+    interests: string[];
+  }>({ full_name: null, email: null, contact_email: null, phone: null, linkedin_url: null, default_location: null, work_experiences: [], education: [], languages: [], interests: [] });
   const [cvHistory, setCvHistory] = useState<any[]>([]);
   const [regenConfirmOpen, setRegenConfirmOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -381,19 +378,6 @@ const JobDetail = () => {
   // CV download state
   const [downloadingCv, setDownloadingCv] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [layoutOpen, setLayoutOpen] = useState(false);
-
-  // Persist section_config to cv_outputs (debounced lightly via inline await).
-  const sectionConfig: CvSectionConfig = normalizeSectionConfig(cvOutput?.section_config);
-  const updateSectionConfig = async (next: CvSectionConfig) => {
-    if (!cvOutput) return;
-    setCvOutput({ ...cvOutput, section_config: next as any });
-    const { error } = await supabase
-      .from("cv_outputs")
-      .update({ section_config: next as any })
-      .eq("id", cvOutput.id);
-    if (error) toast.error("Couldn't save layout changes.");
-  };
 
   // Live preview data (kept in sync with current cvOutput + profile).
   const previewData = (cvOutput && job)
@@ -403,7 +387,6 @@ const JobDetail = () => {
           selected_bullets: cvOutput.selected_bullets,
           selected_hard_skills: cvOutput.selected_hard_skills,
           selected_soft_skills: cvOutput.selected_soft_skills,
-          section_config: cvOutput.section_config,
         },
         profile: userProfile,
         job: { company_name: job.company_name, location: job.location },
@@ -416,6 +399,10 @@ const JobDetail = () => {
 
   // Skill add animation
   const [recentlyAdded, setRecentlyAdded] = useState<Set<string>>(new Set());
+
+  // Inline add inputs for hard / soft skills in the CV builder
+  const [hardSkillInput, setHardSkillInput] = useState("");
+  const [softSkillInput, setSoftSkillInput] = useState("");
 
   // Interview prep state
   const [interviewPrep, setInterviewPrep] = useState<any | null>(null);
@@ -521,13 +508,12 @@ const JobDetail = () => {
       setInterviewFetched(true);
 
       const uid = session.user.id;
-      const [profileRes, workRes, eduRes, langRes, interestsRes, volRes, skillsRes] = await Promise.all([
+      const [profileRes, workRes, eduRes, langRes, interestsRes, skillsRes] = await Promise.all([
         supabase.from("profiles").select("full_name, email, contact_email, phone, linkedin_url, default_location").eq("id", uid).single(),
         supabase.from("work_experiences").select("*").eq("user_id", uid).order("start_year", { ascending: false }),
         supabase.from("education").select("*").eq("user_id", uid).order("start_year", { ascending: false }),
         supabase.from("languages").select("*").eq("user_id", uid),
         supabase.from("interests").select("*").eq("user_id", uid).maybeSingle(),
-        supabase.from("volunteering").select("*").eq("user_id", uid).order("start_year", { ascending: false }),
         supabase.from("skills").select("*").eq("user_id", uid).maybeSingle(),
       ]);
       setUserProfile({
@@ -541,7 +527,6 @@ const JobDetail = () => {
         education: eduRes.data || [],
         languages: langRes.data || [],
         interests: (interestsRes.data as any)?.interests || [],
-        volunteering: volRes.data || [],
       });
       setMasterHardSkills((skillsRes.data as any)?.hard_skills || []);
       setMasterSoftSkills((skillsRes.data as any)?.soft_skills || []);
@@ -811,7 +796,6 @@ const JobDetail = () => {
           selected_bullets: cvOutput.selected_bullets,
           selected_hard_skills: cvOutput.selected_hard_skills,
           selected_soft_skills: cvOutput.selected_soft_skills,
-          section_config: cvOutput.section_config,
         },
         profile: userProfile,
         job: { company_name: job.company_name, location: job.location },
@@ -923,32 +907,50 @@ const JobDetail = () => {
     return bulletToggles[key] === undefined ? true : bulletToggles[key];
   };
 
-  // Add a hard skill to the cv_output
-  const addHardSkill = async (skill: string) => {
-    if (!cvOutput || !jobId) return;
-    const current = { ...(cvOutput.selected_hard_skills || {}) };
-    // Add to "Other" category or first available
-    const categories = Object.keys(current);
-    const targetCat = categories.length > 0 ? categories[categories.length - 1] : "Other";
-    if (!current[targetCat]) current[targetCat] = [];
-    current[targetCat] = [...current[targetCat], skill];
+  // Flatten the stored hard skills (which may be a Record<category, string[]> for legacy
+  // CV outputs, or a flat string[] for new ones) into a single editable list.
+  const flattenHardSkills = (raw: Record<string, string[]> | string[] | null | undefined): string[] => {
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw.filter(Boolean);
+    return Object.values(raw).flat().filter(Boolean);
+  };
+  const flatHardSkills: string[] = flattenHardSkills(cvOutput?.selected_hard_skills);
 
-    setCvOutput(prev => prev ? { ...prev, selected_hard_skills: current } : prev);
-    setRecentlyAdded(prev => new Set(prev).add(skill));
-    setTimeout(() => setRecentlyAdded(prev => { const n = new Set(prev); n.delete(skill); return n; }), 600);
-
-    await supabase.from("cv_outputs").update({ selected_hard_skills: current as any }).eq("id", cvOutput.id);
+  const persistHardSkills = async (next: string[]) => {
+    if (!cvOutput) return;
+    setCvOutput(prev => prev ? { ...prev, selected_hard_skills: next } : prev);
+    await supabase.from("cv_outputs").update({ selected_hard_skills: next as any }).eq("id", cvOutput.id);
+  };
+  const persistSoftSkills = async (next: string[]) => {
+    if (!cvOutput) return;
+    setCvOutput(prev => prev ? { ...prev, selected_soft_skills: next } : prev);
+    await supabase.from("cv_outputs").update({ selected_soft_skills: next }).eq("id", cvOutput.id);
   };
 
-  // Add a soft skill to the cv_output
+  const addHardSkill = async (skill: string) => {
+    const trimmed = skill.trim();
+    if (!cvOutput || !trimmed) return;
+    if (flatHardSkills.some(s => s.toLowerCase() === trimmed.toLowerCase())) return;
+    const next = [...flatHardSkills, trimmed];
+    setRecentlyAdded(prev => new Set(prev).add(trimmed));
+    setTimeout(() => setRecentlyAdded(prev => { const n = new Set(prev); n.delete(trimmed); return n; }), 600);
+    await persistHardSkills(next);
+  };
+  const removeHardSkill = async (skill: string) => {
+    await persistHardSkills(flatHardSkills.filter(s => s !== skill));
+  };
   const addSoftSkill = async (skill: string) => {
-    if (!cvOutput || !jobId) return;
-    const current = [...(cvOutput.selected_soft_skills || []), skill];
-    setCvOutput(prev => prev ? { ...prev, selected_soft_skills: current } : prev);
-    setRecentlyAdded(prev => new Set(prev).add(skill));
-    setTimeout(() => setRecentlyAdded(prev => { const n = new Set(prev); n.delete(skill); return n; }), 600);
-
-    await supabase.from("cv_outputs").update({ selected_soft_skills: current }).eq("id", cvOutput.id);
+    const trimmed = skill.trim();
+    if (!cvOutput || !trimmed) return;
+    const current = cvOutput.selected_soft_skills || [];
+    if (current.some(s => s.toLowerCase() === trimmed.toLowerCase())) return;
+    setRecentlyAdded(prev => new Set(prev).add(trimmed));
+    setTimeout(() => setRecentlyAdded(prev => { const n = new Set(prev); n.delete(trimmed); return n; }), 600);
+    await persistSoftSkills([...current, trimmed]);
+  };
+  const removeSoftSkill = async (skill: string) => {
+    const current = cvOutput?.selected_soft_skills || [];
+    await persistSoftSkills(current.filter(s => s !== skill));
   };
 
   // Compute hard skill suggestions
@@ -966,9 +968,7 @@ const JobDetail = () => {
 
   const getHardSkillSuggestions = () => {
     if (!cvOutput || !job) return { fromJob: [] as string[], fromProfile: [] as string[] };
-    const selectedFlat = new Set(
-      Object.values(cvOutput.selected_hard_skills || {}).flat().map(s => s.toLowerCase())
-    );
+    const selectedFlat = new Set(flatHardSkills.map(s => s.toLowerCase()));
 
     const jobSkills = [...(job.hard_skills || []), ...(job.skills_nice_to_have || [])];
     const fromJob = jobSkills.filter(s => !selectedFlat.has(s.toLowerCase())).slice(0, 14);
@@ -1364,9 +1364,6 @@ const JobDetail = () => {
             <div className="flex items-center gap-2">
               {cvOutput && !cvLoading && (
                 <>
-                <Button variant="outline" onClick={() => setLayoutOpen(v => !v)} className="gap-1.5">
-                  <FileText className="h-4 w-4" /> Layout
-                </Button>
                 <Button variant="outline" onClick={() => setPreviewOpen(true)} className="gap-1.5">
                   <Eye className="h-4 w-4" /> Preview
                 </Button>
@@ -1422,29 +1419,16 @@ const JobDetail = () => {
             <Card className="bg-muted/40 border-dashed">
               <CardContent className="p-3 flex items-center justify-between gap-3 flex-wrap">
                 <div className="flex items-center gap-3 min-w-0">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground shrink-0">Global Header</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground shrink-0">Header</span>
                   <span className="text-sm text-foreground truncate">
                     <span className="font-semibold">{userProfile.full_name || "Add your name"}</span>
                     {" · "}
                     <span className="text-muted-foreground">
-                      {[userProfile.phone, userProfile.email, userProfile.linkedin_url, userProfile.default_location].filter(Boolean).join(" · ") || "Add phone, email and LinkedIn"}
+                      {[userProfile.phone, userProfile.contact_email || userProfile.email, userProfile.linkedin_url, userProfile.default_location].filter(Boolean).join(" · ") || "Add phone, email and LinkedIn"}
                     </span>
                   </span>
                 </div>
-                <Link to="/profile" className="text-xs underline text-[#950606] shrink-0">Edit global details</Link>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Layout / section controls panel */}
-          {cvOutput && layoutOpen && (
-            <Card>
-              <CardContent className="p-4 space-y-3">
-                <div>
-                  <h4 className="text-sm font-semibold text-foreground">CV layout</h4>
-                  <p className="text-xs text-muted-foreground">Reorder, rename, or hide sections. Changes apply to this job only.</p>
-                </div>
-                <CvSectionControls config={sectionConfig} onChange={updateSectionConfig} />
+                <Link to="/profile" className="text-xs underline text-[#950606] shrink-0">Edit header details</Link>
               </CardContent>
             </Card>
           )}
@@ -1692,41 +1676,67 @@ const JobDetail = () => {
                 </Card>
               )}
 
-              {/* Card 3: Hard Skills */}
-              {cvOutput.selected_hard_skills && Object.keys(cvOutput.selected_hard_skills).length > 0 && (
-                <Card>
-                    <CardContent className="p-5">
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="font-semibold text-foreground">Hard Skills</h4>
-                        <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => {
-                          const parts = Object.entries(cvOutput.selected_hard_skills!).map(
-                            ([cat, skills]) => `${cat}: ${(skills as string[]).join(", ")}`
-                          );
-                          copyToClipboard("Software Skills: " + parts.join("; ") + ".", "Hard skills");
-                        }}>
-                          <Copy className="h-3 w-3" /> Copy all
-                        </Button>
-                      </div>
-                      <div className="space-y-3">
-                        {Object.entries(cvOutput.selected_hard_skills).map(([category, skills]) => (
-                          <div key={category}>
-                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5">{category}</p>
-                            <div className="flex flex-wrap gap-1.5">
-                              {(skills as string[]).map((skill, i) => (
-                                <span
-                                  key={i}
-                                  className={cn(
-                                    "inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground transition-all",
-                                    recentlyAdded.has(skill) && "animate-in fade-in-0 zoom-in-95 duration-300 ring-1 ring-green-400"
-                                  )}
-                                >
-                                  {formatSkillName(skill)}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+              {/* Card 3: Hard skills */}
+              <Card>
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold text-foreground">Hard skills</h4>
+                    {flatHardSkills.length > 0 && (
+                      <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => {
+                        copyToClipboard("Hard skills: " + flatHardSkills.join(", ") + ".", "Hard skills");
+                      }}>
+                        <Copy className="h-3 w-3" /> Copy all
+                      </Button>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {flatHardSkills.map((skill) => (
+                      <span
+                        key={skill}
+                        className={cn(
+                          "group inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground transition-all",
+                          recentlyAdded.has(skill) && "animate-in fade-in-0 zoom-in-95 duration-300 ring-1 ring-green-400"
+                        )}
+                      >
+                        {formatSkillName(skill)}
+                        <button
+                          type="button"
+                          onClick={() => removeHardSkill(skill)}
+                          className="ml-0.5 text-muted-foreground hover:text-destructive opacity-60 group-hover:opacity-100 transition-opacity"
+                          aria-label={`Remove ${skill}`}
+                        >
+                          <XIcon className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                    {flatHardSkills.length === 0 && (
+                      <p className="text-xs text-muted-foreground">No hard skills yet. Add one below or pick from the suggestions.</p>
+                    )}
+                  </div>
+                  <div className="mt-3 flex items-center gap-2">
+                    <Input
+                      value={hardSkillInput}
+                      onChange={e => setHardSkillInput(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addHardSkill(hardSkillInput);
+                          setHardSkillInput("");
+                        }
+                      }}
+                      placeholder="Add a hard skill and press Enter"
+                      className="h-8 text-xs"
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 gap-1 text-xs"
+                      onClick={() => { addHardSkill(hardSkillInput); setHardSkillInput(""); }}
+                      disabled={!hardSkillInput.trim()}
+                    >
+                      <Plus className="h-3 w-3" /> Add
+                    </Button>
+                  </div>
                       {(() => {
                         const { fromJob, fromProfile } = getHardSkillSuggestions();
                         if (fromJob.length === 0 && fromProfile.length === 0) return null;
@@ -1734,8 +1744,8 @@ const JobDetail = () => {
                           <div className="mt-5 pt-4 border-t border-border space-y-3">
                             <div className="flex items-center gap-1.5">
                               <Sparkles className="h-3.5 w-3.5 text-[#950606]" />
-                              <p className="text-sm font-semibold text-foreground">Add more skills</p>
-                              <span className="text-xs text-muted-foreground">— click to add to your CV</span>
+                              <p className="text-sm font-semibold text-foreground">Suggested hard skills</p>
+                              <span className="text-xs text-muted-foreground">— click to add</span>
                             </div>
                             {fromJob.length > 0 && (
                               <div>
@@ -1772,35 +1782,70 @@ const JobDetail = () => {
                           </div>
                         );
                       })()}
-                    </CardContent>
-                  </Card>
-              )}
+                </CardContent>
+              </Card>
 
-              {/* Card 4: Soft Skills */}
-              {cvOutput.selected_soft_skills?.length > 0 && (
-                <Card>
-                    <CardContent className="p-5">
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="font-semibold text-foreground">Soft Skills</h4>
-                        <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => {
-                          copyToClipboard(cvOutput.selected_soft_skills.join(", "), "Soft skills");
-                        }}>
-                          <Copy className="h-3 w-3" /> Copy all
-                        </Button>
-                      </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {cvOutput.selected_soft_skills.map((skill, i) => (
-                          <span
-                            key={i}
-                            className={cn(
-                              "inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground transition-all",
-                              recentlyAdded.has(skill) && "animate-in fade-in-0 zoom-in-95 duration-300 ring-1 ring-green-400"
-                            )}
-                          >
-                            {formatSkillName(skill)}
-                          </span>
-                        ))}
-                      </div>
+              {/* Card 4: Soft skills */}
+              <Card>
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold text-foreground">Soft skills</h4>
+                    {cvOutput.selected_soft_skills?.length > 0 && (
+                      <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => {
+                        copyToClipboard("Soft skills: " + cvOutput.selected_soft_skills.join(", ") + ".", "Soft skills");
+                      }}>
+                        <Copy className="h-3 w-3" /> Copy all
+                      </Button>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(cvOutput.selected_soft_skills || []).map((skill) => (
+                      <span
+                        key={skill}
+                        className={cn(
+                          "group inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground transition-all",
+                          recentlyAdded.has(skill) && "animate-in fade-in-0 zoom-in-95 duration-300 ring-1 ring-green-400"
+                        )}
+                      >
+                        {formatSkillName(skill)}
+                        <button
+                          type="button"
+                          onClick={() => removeSoftSkill(skill)}
+                          className="ml-0.5 text-muted-foreground hover:text-destructive opacity-60 group-hover:opacity-100 transition-opacity"
+                          aria-label={`Remove ${skill}`}
+                        >
+                          <XIcon className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                    {(!cvOutput.selected_soft_skills || cvOutput.selected_soft_skills.length === 0) && (
+                      <p className="text-xs text-muted-foreground">No soft skills yet. Add one below or pick from the suggestions.</p>
+                    )}
+                  </div>
+                  <div className="mt-3 flex items-center gap-2">
+                    <Input
+                      value={softSkillInput}
+                      onChange={e => setSoftSkillInput(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addSoftSkill(softSkillInput);
+                          setSoftSkillInput("");
+                        }
+                      }}
+                      placeholder="Add a soft skill and press Enter"
+                      className="h-8 text-xs"
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 gap-1 text-xs"
+                      onClick={() => { addSoftSkill(softSkillInput); setSoftSkillInput(""); }}
+                      disabled={!softSkillInput.trim()}
+                    >
+                      <Plus className="h-3 w-3" /> Add
+                    </Button>
+                  </div>
                       {(() => {
                         const { fromJob, fromProfile } = getSoftSkillSuggestions();
                         if (fromJob.length === 0 && fromProfile.length === 0) return null;
@@ -1808,8 +1853,8 @@ const JobDetail = () => {
                           <div className="mt-5 pt-4 border-t border-border space-y-3">
                             <div className="flex items-center gap-1.5">
                               <Sparkles className="h-3.5 w-3.5 text-[#950606]" />
-                              <p className="text-sm font-semibold text-foreground">Add more skills</p>
-                              <span className="text-xs text-muted-foreground">— click to add to your CV</span>
+                              <p className="text-sm font-semibold text-foreground">Suggested soft skills</p>
+                              <span className="text-xs text-muted-foreground">— click to add</span>
                             </div>
                             {fromJob.length > 0 && (
                               <div>
@@ -1846,9 +1891,8 @@ const JobDetail = () => {
                           </div>
                         );
                       })()}
-                    </CardContent>
-                  </Card>
-              )}
+                </CardContent>
+              </Card>
 
               {/* Tailoring Notes */}
               {cvOutput.tailoring_notes?.length > 0 && (
