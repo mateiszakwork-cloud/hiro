@@ -103,6 +103,8 @@ function QuestionBlock({
   onTitleChange,
   onDelete,
   isCustom,
+  draggable,
+  dragId,
 }: {
   number: string;
   title: string;
@@ -116,10 +118,37 @@ function QuestionBlock({
   onTitleChange?: (v: string) => void;
   onDelete?: () => void;
   isCustom?: boolean;
+  draggable?: boolean;
+  dragId?: string;
 }) {
+  const sortable = useSortable({ id: dragId ?? "static", disabled: !draggable || !dragId });
+  const style = dragId
+    ? {
+        transform: CSS.Transform.toString(sortable.transform),
+        transition: sortable.transition,
+        opacity: sortable.isDragging ? 0.6 : 1,
+      }
+    : undefined;
   return (
-    <div className="space-y-2 group/qb">
+    <div
+      ref={dragId ? sortable.setNodeRef : undefined}
+      style={style}
+      className="space-y-2 group/qb relative"
+    >
       <div className="flex items-start justify-between gap-3">
+        {draggable && dragId ? (
+          <button
+            type="button"
+            ref={sortable.setActivatorNodeRef}
+            {...sortable.attributes}
+            {...sortable.listeners}
+            className="absolute -left-6 top-1 text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover/qb:opacity-100 cursor-grab active:cursor-grabbing"
+            title="Drag to reorder"
+            aria-label="Drag to reorder"
+          >
+            <GripVertical className="h-4 w-4" />
+          </button>
+        ) : null}
         {editableTitle && onTitleChange ? (
           <div className="flex-1">
             <Input
@@ -179,31 +208,16 @@ function QuestionBlock({
   );
 }
 
-/* ── Add Core Question control with insertAfter selector ── */
-function AddCoreQuestion({ onAdd }: { onAdd: (insertAfter: string) => void }) {
-  const [pos, setPos] = useState<string>(FIXED_QUESTIONS[FIXED_QUESTIONS.length - 1].id);
+/* ── Full-width dashed "Add a question" button ── */
+function AddQuestionButton({ onClick }: { onClick: () => void }) {
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-xs text-muted-foreground hidden sm:inline">Insert after</span>
-      <Select value={pos} onValueChange={setPos}>
-        <SelectTrigger className="h-8 w-[150px] text-xs">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {FIXED_QUESTIONS.map((q, i) => (
-            <SelectItem key={q.id} value={q.id} className="text-xs">
-              Q{i + 1}. {q.label.length > 28 ? q.label.slice(0, 28) + "…" : q.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <button
-        onClick={() => onAdd(pos)}
-        className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-lg border border-input bg-background text-foreground hover:bg-muted transition-colors"
-      >
-        <Plus className="h-3.5 w-3.5" /> Add question
-      </button>
-    </div>
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full flex items-center justify-center gap-2 py-3 rounded-lg border-2 border-dashed border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-foreground/40 transition-colors"
+    >
+      <Plus className="h-4 w-4" /> Add a question
+    </button>
   );
 }
 
