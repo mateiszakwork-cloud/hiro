@@ -1365,8 +1365,6 @@ const JobDetail = () => {
               jobLocation={job.location}
               jobFunction={job.function}
               jobDescription={job.notes}
-              contacts={contacts as any}
-              setContacts={setContacts as any}
             />
           )}
         </TabsContent>
