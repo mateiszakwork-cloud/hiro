@@ -905,32 +905,50 @@ const JobDetail = () => {
     return bulletToggles[key] === undefined ? true : bulletToggles[key];
   };
 
-  // Add a hard skill to the cv_output
-  const addHardSkill = async (skill: string) => {
-    if (!cvOutput || !jobId) return;
-    const current = { ...(cvOutput.selected_hard_skills || {}) };
-    // Add to "Other" category or first available
-    const categories = Object.keys(current);
-    const targetCat = categories.length > 0 ? categories[categories.length - 1] : "Other";
-    if (!current[targetCat]) current[targetCat] = [];
-    current[targetCat] = [...current[targetCat], skill];
+  // Flatten the stored hard skills (which may be a Record<category, string[]> for legacy
+  // CV outputs, or a flat string[] for new ones) into a single editable list.
+  const flattenHardSkills = (raw: Record<string, string[]> | string[] | null | undefined): string[] => {
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw.filter(Boolean);
+    return Object.values(raw).flat().filter(Boolean);
+  };
+  const flatHardSkills: string[] = flattenHardSkills(cvOutput?.selected_hard_skills);
 
-    setCvOutput(prev => prev ? { ...prev, selected_hard_skills: current } : prev);
-    setRecentlyAdded(prev => new Set(prev).add(skill));
-    setTimeout(() => setRecentlyAdded(prev => { const n = new Set(prev); n.delete(skill); return n; }), 600);
-
-    await supabase.from("cv_outputs").update({ selected_hard_skills: current as any }).eq("id", cvOutput.id);
+  const persistHardSkills = async (next: string[]) => {
+    if (!cvOutput) return;
+    setCvOutput(prev => prev ? { ...prev, selected_hard_skills: next } : prev);
+    await supabase.from("cv_outputs").update({ selected_hard_skills: next as any }).eq("id", cvOutput.id);
+  };
+  const persistSoftSkills = async (next: string[]) => {
+    if (!cvOutput) return;
+    setCvOutput(prev => prev ? { ...prev, selected_soft_skills: next } : prev);
+    await supabase.from("cv_outputs").update({ selected_soft_skills: next }).eq("id", cvOutput.id);
   };
 
-  // Add a soft skill to the cv_output
+  const addHardSkill = async (skill: string) => {
+    const trimmed = skill.trim();
+    if (!cvOutput || !trimmed) return;
+    if (flatHardSkills.some(s => s.toLowerCase() === trimmed.toLowerCase())) return;
+    const next = [...flatHardSkills, trimmed];
+    setRecentlyAdded(prev => new Set(prev).add(trimmed));
+    setTimeout(() => setRecentlyAdded(prev => { const n = new Set(prev); n.delete(trimmed); return n; }), 600);
+    await persistHardSkills(next);
+  };
+  const removeHardSkill = async (skill: string) => {
+    await persistHardSkills(flatHardSkills.filter(s => s !== skill));
+  };
   const addSoftSkill = async (skill: string) => {
-    if (!cvOutput || !jobId) return;
-    const current = [...(cvOutput.selected_soft_skills || []), skill];
-    setCvOutput(prev => prev ? { ...prev, selected_soft_skills: current } : prev);
-    setRecentlyAdded(prev => new Set(prev).add(skill));
-    setTimeout(() => setRecentlyAdded(prev => { const n = new Set(prev); n.delete(skill); return n; }), 600);
-
-    await supabase.from("cv_outputs").update({ selected_soft_skills: current }).eq("id", cvOutput.id);
+    const trimmed = skill.trim();
+    if (!cvOutput || !trimmed) return;
+    const current = cvOutput.selected_soft_skills || [];
+    if (current.some(s => s.toLowerCase() === trimmed.toLowerCase())) return;
+    setRecentlyAdded(prev => new Set(prev).add(trimmed));
+    setTimeout(() => setRecentlyAdded(prev => { const n = new Set(prev); n.delete(trimmed); return n; }), 600);
+    await persistSoftSkills([...current, trimmed]);
+  };
+  const removeSoftSkill = async (skill: string) => {
+    const current = cvOutput?.selected_soft_skills || [];
+    await persistSoftSkills(current.filter(s => s !== skill));
   };
 
   // Compute hard skill suggestions
@@ -948,9 +966,7 @@ const JobDetail = () => {
 
   const getHardSkillSuggestions = () => {
     if (!cvOutput || !job) return { fromJob: [] as string[], fromProfile: [] as string[] };
-    const selectedFlat = new Set(
-      Object.values(cvOutput.selected_hard_skills || {}).flat().map(s => s.toLowerCase())
-    );
+    const selectedFlat = new Set(flatHardSkills.map(s => s.toLowerCase()));
 
     const jobSkills = [...(job.hard_skills || []), ...(job.skills_nice_to_have || [])];
     const fromJob = jobSkills.filter(s => !selectedFlat.has(s.toLowerCase())).slice(0, 14);
